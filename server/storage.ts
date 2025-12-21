@@ -1,12 +1,20 @@
 import { 
   users, userCoins, watchlists, notifications, sources, imageAssets, similarMatches,
+  coinTypes, entities,
   type User, type UpsertUser, type UserCoin, type InsertUserCoin,
   type Watchlist, type InsertWatchlist, type Notification, type InsertNotification,
   type Source, type InsertSource, type ImageAsset, type InsertImageAsset,
-  type SimilarMatch, type InsertSimilarMatch
+  type SimilarMatch, type InsertSimilarMatch, type CoinType, type InsertCoinType,
+  type Entity, type InsertEntity
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, or, ilike, between, sql } from "drizzle-orm";
+
+export interface CoinTypeMatch {
+  coinType: CoinType;
+  confidence: number;
+  reasons: string[];
+}
 
 export interface IStorage {
   // Users
@@ -39,9 +47,26 @@ export interface IStorage {
   createSource(source: InsertSource): Promise<Source>;
   updateSource(id: string, source: Partial<InsertSource>): Promise<Source | undefined>;
   
+  // Image Assets
+  createImageAsset(image: InsertImageAsset): Promise<ImageAsset>;
+  getImageAssetById(id: string): Promise<ImageAsset | undefined>;
+  
+  // Coin Types
+  searchCoinTypes(filters: { ruler?: string; denomination?: string; dateFrom?: number; dateTo?: number; limit?: number }): Promise<CoinType[]>;
+  getCoinTypeById(id: string): Promise<CoinType | undefined>;
+  createCoinType(coinType: InsertCoinType): Promise<CoinType>;
+  
+  // Entities
+  searchEntities(filters: { type?: string; search?: string }): Promise<Entity[]>;
+  createEntity(entity: InsertEntity): Promise<Entity>;
+  
   // Similar Matches
   getMatchesByCoin(coinId: string): Promise<SimilarMatch[]>;
-  createMatch(match: InsertSimilarMatch): Promise<SimilarMatch>;
+  createSimilarMatch(match: InsertSimilarMatch): Promise<SimilarMatch>;
+  findMatchingCoinTypes(coin: UserCoin): Promise<CoinTypeMatch[]>;
+  
+  // Seeding
+  seedMuseumData(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -163,14 +188,352 @@ export class DatabaseStorage implements IStorage {
     return updated || undefined;
   }
 
+  // Image Assets
+  async createImageAsset(image: InsertImageAsset): Promise<ImageAsset> {
+    const [created] = await db.insert(imageAssets).values(image).returning();
+    return created;
+  }
+
+  async getImageAssetById(id: string): Promise<ImageAsset | undefined> {
+    const [image] = await db.select().from(imageAssets).where(eq(imageAssets.id, id));
+    return image || undefined;
+  }
+
+  // Coin Types
+  async searchCoinTypes(filters: { ruler?: string; denomination?: string; dateFrom?: number; dateTo?: number; limit?: number }): Promise<CoinType[]> {
+    const conditions = [];
+    
+    if (filters.ruler) {
+      conditions.push(ilike(coinTypes.label, `%${filters.ruler}%`));
+    }
+    if (filters.denomination) {
+      conditions.push(ilike(coinTypes.label, `%${filters.denomination}%`));
+    }
+    if (filters.dateFrom !== undefined) {
+      conditions.push(sql`${coinTypes.dateFrom} >= ${filters.dateFrom} OR ${coinTypes.dateTo} >= ${filters.dateFrom}`);
+    }
+    if (filters.dateTo !== undefined) {
+      conditions.push(sql`${coinTypes.dateTo} <= ${filters.dateTo} OR ${coinTypes.dateFrom} <= ${filters.dateTo}`);
+    }
+    
+    const query = conditions.length > 0
+      ? db.select().from(coinTypes).where(and(...conditions)).limit(filters.limit || 50)
+      : db.select().from(coinTypes).limit(filters.limit || 50);
+    
+    return query;
+  }
+
+  async getCoinTypeById(id: string): Promise<CoinType | undefined> {
+    const [coinType] = await db.select().from(coinTypes).where(eq(coinTypes.id, id));
+    return coinType || undefined;
+  }
+
+  async createCoinType(coinType: InsertCoinType): Promise<CoinType> {
+    const [created] = await db.insert(coinTypes).values(coinType).returning();
+    return created;
+  }
+
+  // Entities
+  async searchEntities(filters: { type?: string; search?: string }): Promise<Entity[]> {
+    const conditions = [];
+    
+    if (filters.type) {
+      conditions.push(eq(entities.type, filters.type));
+    }
+    if (filters.search) {
+      conditions.push(ilike(entities.label, `%${filters.search}%`));
+    }
+    
+    const query = conditions.length > 0
+      ? db.select().from(entities).where(and(...conditions)).limit(100)
+      : db.select().from(entities).limit(100);
+    
+    return query;
+  }
+
+  async createEntity(entity: InsertEntity): Promise<Entity> {
+    const [created] = await db.insert(entities).values(entity).returning();
+    return created;
+  }
+
   // Similar Matches
   async getMatchesByCoin(coinId: string): Promise<SimilarMatch[]> {
     return db.select().from(similarMatches).where(eq(similarMatches.userCoinId, coinId)).orderBy(desc(similarMatches.confidence));
   }
 
-  async createMatch(match: InsertSimilarMatch): Promise<SimilarMatch> {
+  async createSimilarMatch(match: InsertSimilarMatch): Promise<SimilarMatch> {
     const [created] = await db.insert(similarMatches).values(match).returning();
     return created;
+  }
+
+  // Matching service - find similar coin types based on metadata
+  async findMatchingCoinTypes(coin: UserCoin): Promise<CoinTypeMatch[]> {
+    // Get all coin types for matching
+    const allCoinTypes = await db.select().from(coinTypes).limit(100);
+    
+    const matches: CoinTypeMatch[] = [];
+    
+    for (const ct of allCoinTypes) {
+      let confidence = 0;
+      const reasons: string[] = [];
+      
+      // Match by ruler (in label)
+      if (coin.ruler && ct.label.toLowerCase().includes(coin.ruler.toLowerCase())) {
+        confidence += 0.3;
+        reasons.push(`Ruler match: ${coin.ruler}`);
+      }
+      
+      // Match by denomination
+      if (coin.denomination && ct.label.toLowerCase().includes(coin.denomination.toLowerCase())) {
+        confidence += 0.2;
+        reasons.push(`Denomination match: ${coin.denomination}`);
+      }
+      
+      // Match by date range overlap
+      if (coin.dateFrom && coin.dateTo && ct.dateFrom && ct.dateTo) {
+        const coinStart = coin.dateFrom;
+        const coinEnd = coin.dateTo;
+        const typeStart = ct.dateFrom;
+        const typeEnd = ct.dateTo;
+        
+        // Check for overlap
+        if (coinStart <= typeEnd && coinEnd >= typeStart) {
+          confidence += 0.25;
+          reasons.push(`Date range overlap: ${typeStart} - ${typeEnd} CE`);
+        }
+      } else if (coin.dateFrom && ct.dateFrom && ct.dateTo) {
+        if (coin.dateFrom >= ct.dateFrom && coin.dateFrom <= ct.dateTo) {
+          confidence += 0.2;
+          reasons.push(`Date within range: ${ct.dateFrom} - ${ct.dateTo} CE`);
+        }
+      }
+      
+      // Match by mint
+      if (coin.mint && ct.label.toLowerCase().includes(coin.mint.toLowerCase())) {
+        confidence += 0.15;
+        reasons.push(`Mint match: ${coin.mint}`);
+      }
+      
+      // Match by metal
+      if (coin.metal && ct.label.toLowerCase().includes(coin.metal.toLowerCase())) {
+        confidence += 0.1;
+        reasons.push(`Metal match: ${coin.metal}`);
+      }
+      
+      // Only include matches with some confidence
+      if (confidence > 0) {
+        matches.push({
+          coinType: ct,
+          confidence: Math.min(confidence, 0.99), // Cap at 99%
+          reasons,
+        });
+      }
+    }
+    
+    // Sort by confidence descending and return top 10
+    return matches
+      .sort((a, b) => b.confidence - a.confidence)
+      .slice(0, 10);
+  }
+
+  // Seed museum data
+  async seedMuseumData(): Promise<void> {
+    // Check if data already exists
+    const existingSources = await db.select().from(sources).limit(1);
+    if (existingSources.length > 0) {
+      console.log("Museum data already seeded");
+      return;
+    }
+
+    // Seed sources (museum collections)
+    const museumSources = [
+      {
+        id: "british-museum",
+        name: "British Museum",
+        homepageUrl: "https://www.britishmuseum.org",
+        accessMethod: "API",
+        defaultLicenseMetadata: "CC_BY_NC_SA",
+        defaultLicenseImages: "CC_BY_NC_SA",
+        defaultActions: { embed: true, cache: true },
+        attributionTemplate: "Image courtesy of the British Museum, under CC BY-NC-SA 4.0",
+      },
+      {
+        id: "ans",
+        name: "American Numismatic Society",
+        homepageUrl: "https://numismatics.org",
+        accessMethod: "IIIF",
+        defaultLicenseMetadata: "CC_BY",
+        defaultLicenseImages: "CC_BY",
+        defaultActions: { embed: true, cache: true, compute: true },
+        attributionTemplate: "Courtesy of the American Numismatic Society",
+      },
+      {
+        id: "wildwinds",
+        name: "Wildwinds",
+        homepageUrl: "https://www.wildwinds.com",
+        accessMethod: "SCRAPE",
+        defaultLicenseMetadata: "UNKNOWN",
+        defaultLicenseImages: "ALL_RIGHTS_RESERVED",
+        defaultActions: { embed: false, cache: false },
+        attributionTemplate: "Reference from Wildwinds.com",
+      },
+      {
+        id: "coinarchives",
+        name: "CoinArchives",
+        homepageUrl: "https://www.coinarchives.com",
+        accessMethod: "MANUAL",
+        defaultLicenseMetadata: "ALL_RIGHTS_RESERVED",
+        defaultLicenseImages: "ALL_RIGHTS_RESERVED",
+        defaultActions: {},
+        attributionTemplate: "From CoinArchives auction records",
+      },
+    ];
+
+    for (const source of museumSources) {
+      await db.insert(sources).values(source).onConflictDoNothing();
+    }
+
+    // Seed entities (rulers, mints, denominations)
+    const seedEntities = [
+      // Roman Emperors
+      { type: "PERSON", label: "Augustus", wikidataQid: "Q1405" },
+      { type: "PERSON", label: "Nero", wikidataQid: "Q1413" },
+      { type: "PERSON", label: "Trajan", wikidataQid: "Q1425" },
+      { type: "PERSON", label: "Hadrian", wikidataQid: "Q1427" },
+      { type: "PERSON", label: "Marcus Aurelius", wikidataQid: "Q1430" },
+      { type: "PERSON", label: "Constantine I", wikidataQid: "Q8413" },
+      // Greek rulers
+      { type: "PERSON", label: "Alexander the Great", wikidataQid: "Q8409" },
+      { type: "PERSON", label: "Philip II of Macedon", wikidataQid: "Q41076" },
+      // Mints
+      { type: "MINT", label: "Rome" },
+      { type: "MINT", label: "Alexandria" },
+      { type: "MINT", label: "Antioch" },
+      { type: "MINT", label: "Constantinople" },
+      { type: "MINT", label: "Lugdunum" },
+      { type: "MINT", label: "Athens" },
+      { type: "MINT", label: "Corinth" },
+      // Denominations
+      { type: "DENOMINATION", label: "Denarius" },
+      { type: "DENOMINATION", label: "Aureus" },
+      { type: "DENOMINATION", label: "Sestertius" },
+      { type: "DENOMINATION", label: "As" },
+      { type: "DENOMINATION", label: "Follis" },
+      { type: "DENOMINATION", label: "Solidus" },
+      { type: "DENOMINATION", label: "Tetradrachm" },
+      { type: "DENOMINATION", label: "Drachm" },
+      { type: "DENOMINATION", label: "Stater" },
+      // Metals
+      { type: "METAL", label: "Gold" },
+      { type: "METAL", label: "Silver" },
+      { type: "METAL", label: "Bronze" },
+      { type: "METAL", label: "Copper" },
+      { type: "METAL", label: "Electrum" },
+    ];
+
+    for (const entity of seedEntities) {
+      await db.insert(entities).values(entity).onConflictDoNothing();
+    }
+
+    // Seed coin types (reference coins from museums)
+    const seedCoinTypes = [
+      {
+        sourceId: "british-museum",
+        label: "Augustus Denarius - Capricorn reverse",
+        dateFrom: -27,
+        dateTo: 14,
+        obvLegend: "CAESAR AVGVSTVS",
+        revLegend: "CAPRICORN",
+        referenceText: "RIC I 126",
+      },
+      {
+        sourceId: "british-museum",
+        label: "Nero Sestertius - Roma seated",
+        dateFrom: 54,
+        dateTo: 68,
+        obvLegend: "NERO CLAVD CAESAR AVG GER",
+        revLegend: "ROMA S C",
+        referenceText: "RIC I 273",
+      },
+      {
+        sourceId: "ans",
+        label: "Trajan Denarius - Optimus Princeps",
+        dateFrom: 98,
+        dateTo: 117,
+        obvLegend: "IMP TRAIANO AVG GER DAC P M TR P",
+        revLegend: "COS V P P S P Q R OPTIMO PRINC",
+        referenceText: "RIC II 147",
+      },
+      {
+        sourceId: "ans",
+        label: "Hadrian Denarius - Travel series",
+        dateFrom: 117,
+        dateTo: 138,
+        obvLegend: "HADRIANVS AVG COS III P P",
+        revLegend: "AEGYPTOS",
+        referenceText: "RIC II 297",
+      },
+      {
+        sourceId: "british-museum",
+        label: "Marcus Aurelius Aureus",
+        dateFrom: 161,
+        dateTo: 180,
+        obvLegend: "M AVREL ANTONINVS AVG",
+        revLegend: "PROVIDENTIA DEORVM",
+        referenceText: "RIC III 456",
+      },
+      {
+        sourceId: "ans",
+        label: "Constantine I Follis - Sol Invictus",
+        dateFrom: 306,
+        dateTo: 337,
+        obvLegend: "CONSTANTINVS P F AVG",
+        revLegend: "SOLI INVICTO COMITI",
+        referenceText: "RIC VII 51",
+      },
+      {
+        sourceId: "british-museum",
+        label: "Alexander III Tetradrachm - Zeus seated",
+        dateFrom: -336,
+        dateTo: -323,
+        obvLegend: "Head of Herakles",
+        revLegend: "ALEXANDROY Zeus seated",
+        referenceText: "Price 3998",
+      },
+      {
+        sourceId: "ans",
+        label: "Philip II Gold Stater - Apollo",
+        dateFrom: -359,
+        dateTo: -336,
+        obvLegend: "Head of Apollo",
+        revLegend: "FILIPPOY Charioteer",
+        referenceText: "Le Rider 145",
+      },
+      {
+        sourceId: "wildwinds",
+        label: "Athens Silver Tetradrachm - Owl",
+        dateFrom: -454,
+        dateTo: -404,
+        obvLegend: "Head of Athena",
+        revLegend: "AOE Owl",
+        referenceText: "Svoronos 23.1",
+      },
+      {
+        sourceId: "coinarchives",
+        label: "Byzantine Solidus - Justinian I",
+        dateFrom: 527,
+        dateTo: 565,
+        obvLegend: "DN IVSTINIANVS PP AVG",
+        revLegend: "VICTORIA AVGGG",
+        referenceText: "Sear 140",
+      },
+    ];
+
+    for (const coinType of seedCoinTypes) {
+      await db.insert(coinTypes).values(coinType).onConflictDoNothing();
+    }
+
+    console.log("Museum data seeded successfully");
   }
 }
 

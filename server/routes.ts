@@ -1,9 +1,10 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema } from "@shared/schema";
+import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insertImageAssetSchema, insertSimilarMatchSchema } from "@shared/schema";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 
 // Middleware to check authentication
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -286,6 +287,192 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating source:", error);
       res.status(500).json({ error: "Failed to update source" });
+    }
+  });
+
+  // ============ IMAGE ASSETS ============
+
+  const objectStorageService = new ObjectStorageService();
+
+  // Register base object storage routes (request-url, serve objects)
+  registerObjectStorageRoutes(app);
+
+  // Save image metadata after upload completes
+  app.post("/api/images", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const createImageSchema = insertImageAssetSchema.extend({
+        ownerUserId: z.string(),
+      });
+      const validated = validateBody(createImageSchema, {
+        ...req.body,
+        ownerUserId: userId,
+      });
+      
+      // Normalize the storage URL to object path
+      if (validated.storageUrl) {
+        validated.storageUrl = objectStorageService.normalizeObjectEntityPath(validated.storageUrl);
+      }
+      
+      const image = await storage.createImageAsset(validated);
+      res.status(201).json(image);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return res.status(400).json({ error: fromZodError(error).message });
+      }
+      console.error("Error creating image asset:", error);
+      res.status(500).json({ error: "Failed to create image asset" });
+    }
+  });
+
+  // Get image by ID
+  app.get("/api/images/:id", async (req, res) => {
+    try {
+      const image = await storage.getImageAssetById(req.params.id);
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      res.json(image);
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      res.status(500).json({ error: "Failed to fetch image" });
+    }
+  });
+
+  // ============ COIN TYPES (Museum Data) ============
+
+  // Get all coin types with optional filtering
+  app.get("/api/coin-types", async (req, res) => {
+    try {
+      const { ruler, denomination, dateFrom, dateTo, limit } = req.query;
+      const coinTypes = await storage.searchCoinTypes({
+        ruler: ruler as string,
+        denomination: denomination as string,
+        dateFrom: dateFrom ? parseInt(dateFrom as string) : undefined,
+        dateTo: dateTo ? parseInt(dateTo as string) : undefined,
+        limit: limit ? parseInt(limit as string) : 50,
+      });
+      res.json(coinTypes);
+    } catch (error) {
+      console.error("Error fetching coin types:", error);
+      res.status(500).json({ error: "Failed to fetch coin types" });
+    }
+  });
+
+  // Get coin type by ID
+  app.get("/api/coin-types/:id", async (req, res) => {
+    try {
+      const coinType = await storage.getCoinTypeById(req.params.id);
+      if (!coinType) {
+        return res.status(404).json({ error: "Coin type not found" });
+      }
+      res.json(coinType);
+    } catch (error) {
+      console.error("Error fetching coin type:", error);
+      res.status(500).json({ error: "Failed to fetch coin type" });
+    }
+  });
+
+  // ============ ENTITIES ============
+
+  // Get entities with optional filtering by type
+  app.get("/api/entities", async (req, res) => {
+    try {
+      const { type, search } = req.query;
+      const entities = await storage.searchEntities({
+        type: type as string,
+        search: search as string,
+      });
+      res.json(entities);
+    } catch (error) {
+      console.error("Error fetching entities:", error);
+      res.status(500).json({ error: "Failed to fetch entities" });
+    }
+  });
+
+  // ============ MATCHING SERVICE ============
+
+  // Analyze a coin and find similar matches
+  app.post("/api/coins/:id/analyze", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const coin = await storage.getCoinById(req.params.id);
+      
+      if (!coin) {
+        return res.status(404).json({ error: "Coin not found" });
+      }
+      if (coin.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      // Find matching coin types based on metadata
+      const matches = await storage.findMatchingCoinTypes(coin);
+      
+      // Create similar match entries
+      const similarMatches = [];
+      for (const match of matches) {
+        const similarMatch = await storage.createSimilarMatch({
+          userCoinId: coin.id,
+          coinTypeId: match.coinType.id,
+          confidence: match.confidence.toString(),
+          reasons: match.reasons,
+        });
+        similarMatches.push({
+          ...similarMatch,
+          coinType: match.coinType,
+        });
+      }
+
+      res.json(similarMatches);
+    } catch (error) {
+      console.error("Error analyzing coin:", error);
+      res.status(500).json({ error: "Failed to analyze coin" });
+    }
+  });
+
+  // Get matches for a coin
+  app.get("/api/coins/:id/matches", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const coin = await storage.getCoinById(req.params.id);
+      
+      if (!coin) {
+        return res.status(404).json({ error: "Coin not found" });
+      }
+      if (coin.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const matches = await storage.getMatchesByCoin(coin.id);
+      
+      // Enrich matches with coin type data
+      const enrichedMatches = await Promise.all(
+        matches.map(async (match) => {
+          if (match.coinTypeId) {
+            const coinType = await storage.getCoinTypeById(match.coinTypeId);
+            return { ...match, coinType };
+          }
+          return match;
+        })
+      );
+      
+      res.json(enrichedMatches);
+    } catch (error) {
+      console.error("Error fetching matches:", error);
+      res.status(500).json({ error: "Failed to fetch matches" });
+    }
+  });
+
+  // ============ SEED DATA ============
+
+  // Seed museum data (admin only, for development)
+  app.post("/api/admin/seed", requireAuth, async (req, res) => {
+    try {
+      await storage.seedMuseumData();
+      res.json({ message: "Museum data seeded successfully" });
+    } catch (error) {
+      console.error("Error seeding museum data:", error);
+      res.status(500).json({ error: "Failed to seed museum data" });
     }
   });
 

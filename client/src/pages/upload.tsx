@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { useUpload } from "@/hooks/use-upload";
 import { 
   Upload, 
   X, 
@@ -18,16 +19,18 @@ import {
   Loader2,
   ArrowRight,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Search
 } from "lucide-react";
 
 export default function UploadPage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { uploadFile, isUploading: isUploadingImage } = useUpload();
   
-  const [obvImage, setObvImage] = useState<{ file: File; preview: string } | null>(null);
-  const [revImage, setRevImage] = useState<{ file: File; preview: string } | null>(null);
+  const [obvImage, setObvImage] = useState<{ file: File; preview: string; objectPath?: string } | null>(null);
+  const [revImage, setRevImage] = useState<{ file: File; preview: string; objectPath?: string } | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [ruler, setRuler] = useState("");
@@ -37,6 +40,27 @@ export default function UploadPage() {
   const [weight, setWeight] = useState("");
   const [diameter, setDiameter] = useState("");
   const [reference, setReference] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Upload image to object storage and save metadata
+  const uploadImageToStorage = async (file: File, kind: string): Promise<string | null> => {
+    try {
+      const uploadResult = await uploadFile(file);
+      if (!uploadResult) return null;
+
+      // Save image metadata to database
+      const res = await apiRequest("POST", "/api/images", {
+        kind,
+        storageUrl: uploadResult.uploadURL,
+        mimeType: file.type,
+      });
+      const imageAsset = await res.json();
+      return imageAsset.id;
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      return null;
+    }
+  };
 
   const createCoinMutation = useMutation({
     mutationFn: async (data: {
@@ -49,16 +73,32 @@ export default function UploadPage() {
       weightG?: string;
       diameterMm?: string;
       reference?: string;
+      obvImageId?: string;
+      revImageId?: string;
     }) => {
       const res = await apiRequest("POST", "/api/coins", data);
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/coins"] });
-      toast({
-        title: "Coin added!",
-        description: "Your coin has been added to your portfolio.",
-      });
+      
+      // Trigger analysis to find matches
+      setIsAnalyzing(true);
+      try {
+        await apiRequest("POST", `/api/coins/${data.id}/analyze`);
+        toast({
+          title: "Coin added and analyzed!",
+          description: "Your coin has been added and matched against museum collections.",
+        });
+      } catch {
+        toast({
+          title: "Coin added!",
+          description: "Your coin has been added to your portfolio.",
+        });
+      } finally {
+        setIsAnalyzing(false);
+      }
+      
       navigate(`/coin/${data.id}`);
     },
     onError: (error: Error) => {
@@ -99,7 +139,9 @@ export default function UploadPage() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!title.trim()) {
@@ -111,17 +153,41 @@ export default function UploadPage() {
       return;
     }
 
-    createCoinMutation.mutate({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      ruler: ruler.trim() || undefined,
-      denomination: denomination.trim() || undefined,
-      mint: mint.trim() || undefined,
-      metal: metal.trim() || undefined,
-      weightG: weight.trim() || undefined,
-      diameterMm: diameter.trim() || undefined,
-      reference: reference.trim() || undefined,
-    });
+    setIsSubmitting(true);
+
+    try {
+      // Upload images if present
+      let obvImageId: string | undefined;
+      let revImageId: string | undefined;
+
+      if (obvImage?.file) {
+        obvImageId = (await uploadImageToStorage(obvImage.file, "obverse")) || undefined;
+      }
+      if (revImage?.file) {
+        revImageId = (await uploadImageToStorage(revImage.file, "reverse")) || undefined;
+      }
+
+      createCoinMutation.mutate({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        ruler: ruler.trim() || undefined,
+        denomination: denomination.trim() || undefined,
+        mint: mint.trim() || undefined,
+        metal: metal.trim() || undefined,
+        weightG: weight.trim() || undefined,
+        diameterMm: diameter.trim() || undefined,
+        reference: reference.trim() || undefined,
+        obvImageId,
+        revImageId,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload images",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
   };
 
   const handleReset = () => {
@@ -308,22 +374,32 @@ export default function UploadPage() {
             <div className="flex items-center gap-3">
               <Badge variant="secondary" className="gap-1.5">
                 <Sparkles className="h-3 w-3" />
-                AI matching coming soon
+                Auto-matching enabled
               </Badge>
               <Button 
                 type="submit" 
                 className="gap-2"
-                disabled={createCoinMutation.isPending}
+                disabled={isSubmitting || createCoinMutation.isPending || isAnalyzing}
                 data-testid="button-submit"
               >
-                {createCoinMutation.isPending ? (
+                {isSubmitting || isUploadingImage ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : createCoinMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Saving...
                   </>
+                ) : isAnalyzing ? (
+                  <>
+                    <Search className="h-4 w-4 animate-pulse" />
+                    Finding matches...
+                  </>
                 ) : (
                   <>
-                    Save Coin
+                    Save & Analyze
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

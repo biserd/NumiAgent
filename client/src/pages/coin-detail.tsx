@@ -48,6 +48,11 @@ export default function CoinDetailPage() {
 
   const { data: matches, isLoading: matchesLoading } = useQuery<SimilarMatch[]>({
     queryKey: ["/api/coins", params.id, "matches"],
+    queryFn: async () => {
+      const res = await fetch(`/api/coins/${params.id}/matches`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch matches");
+      return res.json();
+    },
     enabled: !!params.id,
   });
 
@@ -304,22 +309,59 @@ function MetadataRow({
   );
 }
 
-function MatchCard({ match }: { match: SimilarMatch }) {
+interface MatchWithCoinType extends SimilarMatch {
+  coinType?: {
+    id: string;
+    label: string;
+    sourceId: string;
+    dateFrom?: number | null;
+    dateTo?: number | null;
+    obvLegend?: string | null;
+    revLegend?: string | null;
+    referenceText?: string | null;
+  };
+}
+
+function MatchCard({ match }: { match: MatchWithCoinType }) {
   const confidence = Number(match.confidence) * 100;
+  const reasons = (match.reasons as string[]) || [];
   
   return (
     <Card className="overflow-hidden hover-elevate">
-      <div className="aspect-square bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-chart-2/30 to-chart-2/10 border-4 border-chart-2/20" />
+      <div className="aspect-video bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-chart-2/30 to-chart-2/10 border-4 border-chart-2/20" />
         <Badge className="absolute top-2 right-2" variant="secondary">
           {confidence.toFixed(0)}% match
         </Badge>
       </div>
-      <CardContent className="p-4">
-        <h4 className="font-medium text-sm truncate">Reference Match</h4>
-        <p className="text-xs text-muted-foreground mt-1">
-          From museum collection
-        </p>
+      <CardContent className="p-4 space-y-2">
+        <h4 className="font-medium text-sm line-clamp-2">
+          {match.coinType?.label || "Reference Match"}
+        </h4>
+        {match.coinType?.referenceText && (
+          <Badge variant="outline" className="text-xs">
+            {match.coinType.referenceText}
+          </Badge>
+        )}
+        {match.coinType?.dateFrom && match.coinType?.dateTo && (
+          <p className="text-xs text-muted-foreground">
+            {match.coinType.dateFrom < 0 ? `${Math.abs(match.coinType.dateFrom)} BCE` : `${match.coinType.dateFrom} CE`} 
+            {" - "} 
+            {match.coinType.dateTo < 0 ? `${Math.abs(match.coinType.dateTo)} BCE` : `${match.coinType.dateTo} CE`}
+          </p>
+        )}
+        {reasons.length > 0 && (
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground">Match reasons:</p>
+            <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+              {reasons.slice(0, 3).map((reason, i) => (
+                <li key={i} className="flex items-center gap-1">
+                  <span className="text-primary">•</span> {reason}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

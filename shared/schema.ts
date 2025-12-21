@@ -32,6 +32,7 @@ export const sources = pgTable("sources", {
   rightsStatementUrl: text("rights_statement_url"),
   rateLimitPerMin: integer("rate_limit_per_min"),
   isEnabled: boolean("is_enabled").notNull().default(true),
+  isSample: boolean("is_sample").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -136,6 +137,7 @@ export const entities = pgTable("entities", {
   nomismaUri: text("nomisma_uri"),
   pleiadesUri: text("pleiades_uri"),
   geonamesId: text("geonames_id"),
+  isSample: boolean("is_sample").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -156,6 +158,7 @@ export const coinTypes = pgTable("coin_types", {
   referenceText: text("reference_text"),
   rightsId: varchar("rights_id").references(() => rightsRecords.id),
   imageUrl: text("image_url"),
+  isSample: boolean("is_sample").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

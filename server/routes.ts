@@ -5,14 +5,7 @@ import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insert
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-
-// Middleware to check authentication
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.isAuthenticated() || !req.user) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  next();
-}
+import { setupAuth, registerAuthRoutes, requireAuth } from "./auth";
 
 // Validation helper
 function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
@@ -23,6 +16,10 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // Setup custom authentication
+  setupAuth(app);
+  registerAuthRoutes(app);
   
   // ============ USER COINS ============
   

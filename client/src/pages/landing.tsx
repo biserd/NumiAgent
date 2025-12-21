@@ -15,10 +15,9 @@ import {
   Eye
 } from "lucide-react";
 
+import { Link } from "wouter";
+
 export default function LandingPage() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,9 +33,11 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Button onClick={handleLogin} data-testid="button-login">
-                Sign In
-              </Button>
+              <Link href="/login">
+                <Button data-testid="button-login">
+                  Sign In
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -66,10 +67,12 @@ export default function LandingPage() {
               </div>
               
               <div className="flex flex-wrap gap-4">
-                <Button size="lg" onClick={handleLogin} className="gap-2" data-testid="button-get-started">
-                  Get Started Free
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
+                <Link href="/register">
+                  <Button size="lg" className="gap-2" data-testid="button-get-started">
+                    Get Started Free
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
                 <Button size="lg" variant="outline" className="gap-2" data-testid="button-learn-more">
                   <BookOpen className="h-4 w-4" />
                   Learn More
@@ -223,10 +226,12 @@ export default function LandingPage() {
             <p className="text-lg text-muted-foreground max-w-xl mx-auto">
               Join collectors and researchers who trust NumisVault for their ancient coin research.
             </p>
-            <Button size="lg" onClick={handleLogin} className="gap-2" data-testid="button-cta-signup">
-              Create Free Account
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Link href="/register">
+              <Button size="lg" className="gap-2" data-testid="button-cta-signup">
+                Create Free Account
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -234,16 +239,20 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <Coins className="h-4 w-4 text-primary-foreground" />
               </div>
               <span className="font-display text-lg font-semibold">NumisVault</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Built with open data from leading museums. All rights respected.
-            </p>
+            <nav className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+              <Link href="/about" className="hover:text-foreground transition-colors" data-testid="link-about">About</Link>
+              <Link href="/faq" className="hover:text-foreground transition-colors" data-testid="link-faq">FAQ</Link>
+              <Link href="/contact" className="hover:text-foreground transition-colors" data-testid="link-contact">Contact</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors" data-testid="link-terms">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-foreground transition-colors" data-testid="link-privacy">Privacy Policy</Link>
+            </nav>
           </div>
         </div>
       </footer>

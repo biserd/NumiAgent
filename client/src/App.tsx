@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import LandingPage from "@/pages/landing";
+import LoginPage from "@/pages/login";
+import RegisterPage from "@/pages/register";
 import DashboardPage from "@/pages/dashboard";
 import UploadPage from "@/pages/upload";
 import PortfolioPage from "@/pages/portfolio";
@@ -17,6 +19,11 @@ import WatchlistsPage from "@/pages/watchlists";
 import NotificationsPage from "@/pages/notifications";
 import SettingsPage from "@/pages/settings";
 import AdminSourcesPage from "@/pages/admin/sources";
+import PrivacyPage from "@/pages/privacy";
+import TermsPage from "@/pages/terms";
+import AboutPage from "@/pages/about";
+import FAQPage from "@/pages/faq";
+import ContactPage from "@/pages/contact";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedRoutes() {
@@ -32,6 +39,11 @@ function AuthenticatedRoutes() {
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/admin/sources" component={AdminSourcesPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/faq" component={FAQPage} />
+      <Route path="/contact" component={ContactPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -41,6 +53,13 @@ function UnauthenticatedRoutes() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/about" component={AboutPage} />
+      <Route path="/faq" component={FAQPage} />
+      <Route path="/contact" component={ContactPage} />
       <Route component={LandingPage} />
     </Switch>
   );

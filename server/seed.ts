@@ -11,7 +11,7 @@ async function seedMuseumData() {
     return;
   }
 
-  // Seed sources (museum collections)
+  // Seed sources (museum collections) - marked as sample data
   const museumSources = [
     {
       id: "british-museum",
@@ -22,6 +22,7 @@ async function seedMuseumData() {
       defaultLicenseImages: "CC_BY_NC_SA",
       defaultActions: { embed: true, cache: true },
       attributionTemplate: "Image courtesy of the British Museum, under CC BY-NC-SA 4.0",
+      isSample: true,
     },
     {
       id: "ans",
@@ -32,6 +33,7 @@ async function seedMuseumData() {
       defaultLicenseImages: "CC_BY",
       defaultActions: { embed: true, cache: true, compute: true },
       attributionTemplate: "Courtesy of the American Numismatic Society",
+      isSample: true,
     },
     {
       id: "wildwinds",
@@ -42,6 +44,7 @@ async function seedMuseumData() {
       defaultLicenseImages: "ALL_RIGHTS_RESERVED",
       defaultActions: { embed: false, cache: false },
       attributionTemplate: "Reference from Wildwinds.com",
+      isSample: true,
     },
     {
       id: "coinarchives",
@@ -52,6 +55,7 @@ async function seedMuseumData() {
       defaultLicenseImages: "ALL_RIGHTS_RESERVED",
       defaultActions: {},
       attributionTemplate: "From CoinArchives auction records",
+      isSample: true,
     },
   ];
 
@@ -60,37 +64,37 @@ async function seedMuseumData() {
   }
   console.log("Seeded sources");
 
-  // Seed entities (rulers, mints, denominations)
+  // Seed entities (rulers, mints, denominations) - marked as sample data
   const seedEntities = [
-    { type: "PERSON", label: "Augustus", wikidataQid: "Q1405" },
-    { type: "PERSON", label: "Nero", wikidataQid: "Q1413" },
-    { type: "PERSON", label: "Trajan", wikidataQid: "Q1425" },
-    { type: "PERSON", label: "Hadrian", wikidataQid: "Q1427" },
-    { type: "PERSON", label: "Marcus Aurelius", wikidataQid: "Q1430" },
-    { type: "PERSON", label: "Constantine I", wikidataQid: "Q8413" },
-    { type: "PERSON", label: "Alexander the Great", wikidataQid: "Q8409" },
-    { type: "PERSON", label: "Philip II of Macedon", wikidataQid: "Q41076" },
-    { type: "MINT", label: "Rome" },
-    { type: "MINT", label: "Alexandria" },
-    { type: "MINT", label: "Antioch" },
-    { type: "MINT", label: "Constantinople" },
-    { type: "MINT", label: "Lugdunum" },
-    { type: "MINT", label: "Athens" },
-    { type: "MINT", label: "Corinth" },
-    { type: "DENOMINATION", label: "Denarius" },
-    { type: "DENOMINATION", label: "Aureus" },
-    { type: "DENOMINATION", label: "Sestertius" },
-    { type: "DENOMINATION", label: "As" },
-    { type: "DENOMINATION", label: "Follis" },
-    { type: "DENOMINATION", label: "Solidus" },
-    { type: "DENOMINATION", label: "Tetradrachm" },
-    { type: "DENOMINATION", label: "Drachm" },
-    { type: "DENOMINATION", label: "Stater" },
-    { type: "METAL", label: "Gold" },
-    { type: "METAL", label: "Silver" },
-    { type: "METAL", label: "Bronze" },
-    { type: "METAL", label: "Copper" },
-    { type: "METAL", label: "Electrum" },
+    { type: "PERSON", label: "Augustus", wikidataQid: "Q1405", isSample: true },
+    { type: "PERSON", label: "Nero", wikidataQid: "Q1413", isSample: true },
+    { type: "PERSON", label: "Trajan", wikidataQid: "Q1425", isSample: true },
+    { type: "PERSON", label: "Hadrian", wikidataQid: "Q1427", isSample: true },
+    { type: "PERSON", label: "Marcus Aurelius", wikidataQid: "Q1430", isSample: true },
+    { type: "PERSON", label: "Constantine I", wikidataQid: "Q8413", isSample: true },
+    { type: "PERSON", label: "Alexander the Great", wikidataQid: "Q8409", isSample: true },
+    { type: "PERSON", label: "Philip II of Macedon", wikidataQid: "Q41076", isSample: true },
+    { type: "MINT", label: "Rome", isSample: true },
+    { type: "MINT", label: "Alexandria", isSample: true },
+    { type: "MINT", label: "Antioch", isSample: true },
+    { type: "MINT", label: "Constantinople", isSample: true },
+    { type: "MINT", label: "Lugdunum", isSample: true },
+    { type: "MINT", label: "Athens", isSample: true },
+    { type: "MINT", label: "Corinth", isSample: true },
+    { type: "DENOMINATION", label: "Denarius", isSample: true },
+    { type: "DENOMINATION", label: "Aureus", isSample: true },
+    { type: "DENOMINATION", label: "Sestertius", isSample: true },
+    { type: "DENOMINATION", label: "As", isSample: true },
+    { type: "DENOMINATION", label: "Follis", isSample: true },
+    { type: "DENOMINATION", label: "Solidus", isSample: true },
+    { type: "DENOMINATION", label: "Tetradrachm", isSample: true },
+    { type: "DENOMINATION", label: "Drachm", isSample: true },
+    { type: "DENOMINATION", label: "Stater", isSample: true },
+    { type: "METAL", label: "Gold", isSample: true },
+    { type: "METAL", label: "Silver", isSample: true },
+    { type: "METAL", label: "Bronze", isSample: true },
+    { type: "METAL", label: "Copper", isSample: true },
+    { type: "METAL", label: "Electrum", isSample: true },
   ];
 
   for (const entity of seedEntities) {
@@ -98,7 +102,7 @@ async function seedMuseumData() {
   }
   console.log("Seeded entities");
 
-  // Seed coin types (reference coins from museums)
+  // Seed coin types (reference coins from museums) - marked as sample data
   const seedCoinTypes = [
     {
       sourceId: "british-museum",
@@ -108,6 +112,7 @@ async function seedMuseumData() {
       obvLegend: "CAESAR AVGVSTVS",
       revLegend: "CAPRICORN",
       referenceText: "RIC I 126",
+      isSample: true,
     },
     {
       sourceId: "british-museum",
@@ -117,6 +122,7 @@ async function seedMuseumData() {
       obvLegend: "NERO CLAVD CAESAR AVG GER",
       revLegend: "ROMA S C",
       referenceText: "RIC I 273",
+      isSample: true,
     },
     {
       sourceId: "ans",
@@ -126,6 +132,7 @@ async function seedMuseumData() {
       obvLegend: "IMP TRAIANO AVG GER DAC P M TR P",
       revLegend: "COS V P P S P Q R OPTIMO PRINC",
       referenceText: "RIC II 147",
+      isSample: true,
     },
     {
       sourceId: "ans",
@@ -135,6 +142,7 @@ async function seedMuseumData() {
       obvLegend: "HADRIANVS AVG COS III P P",
       revLegend: "AEGYPTOS",
       referenceText: "RIC II 297",
+      isSample: true,
     },
     {
       sourceId: "british-museum",
@@ -144,6 +152,7 @@ async function seedMuseumData() {
       obvLegend: "M AVREL ANTONINVS AVG",
       revLegend: "PROVIDENTIA DEORVM",
       referenceText: "RIC III 456",
+      isSample: true,
     },
     {
       sourceId: "ans",
@@ -153,6 +162,7 @@ async function seedMuseumData() {
       obvLegend: "CONSTANTINVS P F AVG",
       revLegend: "SOLI INVICTO COMITI",
       referenceText: "RIC VII 51",
+      isSample: true,
     },
     {
       sourceId: "british-museum",
@@ -162,6 +172,7 @@ async function seedMuseumData() {
       obvLegend: "Head of Herakles",
       revLegend: "ALEXANDROY Zeus seated",
       referenceText: "Price 3998",
+      isSample: true,
     },
     {
       sourceId: "ans",
@@ -171,6 +182,7 @@ async function seedMuseumData() {
       obvLegend: "Head of Apollo",
       revLegend: "FILIPPOY Charioteer",
       referenceText: "Le Rider 145",
+      isSample: true,
     },
     {
       sourceId: "wildwinds",
@@ -180,6 +192,7 @@ async function seedMuseumData() {
       obvLegend: "Head of Athena",
       revLegend: "AOE Owl",
       referenceText: "Svoronos 23.1",
+      isSample: true,
     },
     {
       sourceId: "coinarchives",
@@ -189,6 +202,7 @@ async function seedMuseumData() {
       obvLegend: "DN IVSTINIANVS PP AVG",
       revLegend: "VICTORIA AVGGG",
       referenceText: "Sear 140",
+      isSample: true,
     },
   ];
 

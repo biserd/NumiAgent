@@ -1,0 +1,692 @@
+Below is a developer-ready **PRD/BRD + DB schema + API spec** for the Replit build. It assumes **no explicit permissions from third parties**, so everything is **rights-gated** from Day 1.
+
+---
+
+# Ancient Coins Collector & Research SaaS (Replit) — PRD/BRD v1
+
+## 1) Product summary
+
+Build a collector-first ancient coin research product where the primary entry point is **photo upload (obv/rev)**. The app:
+
+* finds visually similar coins from a **commercial-safe open-image “haystack”**
+* normalizes metadata into a **canonical numismatic graph** (ruler, mint, denom, refs)
+* supports portfolio, watchlists, alerts
+* lays foundations for duplicates → provenance → die matching → risk indicators.
+
+**Core wedge:** “Upload photo → get matches + attribution shortlist + save coin → alerts & research”.
+
+---
+
+## 2) Day-1 non-negotiable: Rights & Attribution System
+
+### Why it’s Day 1
+
+Without it, you cannot safely scale ingestion or monetize. With it, you can ingest broadly (open data + link-out) and evolve toward licensing later.
+
+### Required capabilities (must be built before any crawler runs)
+
+1. **Source Registry**
+
+   * One record per source that defines:
+
+     * expected license class for metadata & images
+     * permitted access method (API/IIIF/dump/crawl)
+     * default “allowed actions”
+     * attribution rules and required link-back
+     * rate limits
+     * takedown contact & process
+
+2. **Per-record Rights Resolution**
+
+   * Every ingested record and every image must store:
+
+     * license code (CC0/PDM/CC-BY/ODbL/Unknown/etc.)
+     * commercial_ok, rehost_ok, cache_ok, embed_ok, compute_embeddings_ok
+     * attribution_text and attribution_url
+     * evidence: where license was found (rights_statement_url + raw snippet if available)
+
+3. **Enforcement in code**
+
+   * The UI and API must enforce:
+
+     * if `rehost_ok=false`: never store image bytes
+     * if `embed_ok=false`: don’t hotlink; show “View on Source”
+     * if `compute_embeddings_ok=false`: don’t download pixels to embed
+     * if `commercial_ok=false`: exclude from paid features (or exclude entirely)
+
+4. **Attribution everywhere**
+
+   * If any external asset is shown (even link-out), display its attribution.
+
+---
+
+## 3) Scope & phases
+
+### Phase 0 (MVP): Photo upload → match → save → basic research & alerts
+
+* User auth
+* Upload obv/rev photos (user-owned)
+* Similarity search against open-image haystack
+* Basic OCR/legend fragments (optional but recommended)
+* Save to portfolio with canonical fields
+* Research tab: similar matches + link-out citations
+* Watchlists + email alerts
+* Admin: ingestion runs dashboard + rights registry UI
+
+### Phase 1: Coverage + normalization (real research product)
+
+* Add more open sources + stronger canonical entity resolution
+* “One-click listing builder” (safe-mode):
+
+  * user pastes lot URL → store URL, ask user to confirm fields or paste description; do NOT scrape prohibited sites
+* Exports: listing templates, coin cards, attribution citations
+
+### Phase 2: Duplicate detection (“same coin resold”)
+
+* Same-coin candidate matching (image + metadata)
+* Appearance timeline UI (evidence-backed)
+* Review queue for confirmations (build labeled set)
+
+### Phase 3: Provenance graph
+
+* Coin → appearances → collections/auctions
+* User “claim” + docs (invoice/tags)
+* Provenance packet export
+
+### Phase 4: Die matching + die graph
+
+* Start narrow (one series/denom)
+* Die clustering + “same die candidates”
+* Die graph queries
+
+### Phase 5: Risk indicators (no “auth verdicts”)
+
+* Explainable risk signals
+* Optional expert review workflow
+
+---
+
+## 4) Technical architecture (Replit-first)
+
+### Runtime components
+
+* **Web/API (Autoscale deployment)**: Next.js + API (or Next.js frontend + FastAPI backend)
+* **Worker (Scheduled deployment)**: ingestion + embedding jobs + alert dispatch
+* **DB**: Postgres + `pgvector`
+* **Object storage**: S3/R2/GCS for user uploads (and only rehosted external images when permitted)
+
+### Key design choices
+
+* Graph implemented as `edges` table in Postgres initially.
+* Source ingestion via adapters; each adapter must implement rights extraction + evidence.
+
+---
+
+## 5) Definitive “no-permission” source plan (with ingestion method)
+
+### Tier A — Safe for commercial use (store images + embeddings; show inline)
+
+**Your image haystack MUST start here.**
+
+* **IKMK Berlin (Münzkabinett Berlin / ikmk.smb.museum)**
+  Ingest: crawl/IIIF/HTML+JSON (adapter), store per-record license (many PD).
+  Link: `https://ikmk.smb.museum/ndp/content`
+* **Smithsonian Open Access**
+  Ingest: open access bulk/API; store CC0 items.
+  Link: `https://www.si.edu/openaccess`
+* **The Met Collection API (Open Access subset)**
+  Ingest: API; filter open access flag; store CC0 items.
+  Link: `https://metmuseum.github.io/`
+* **Art Institute of Chicago API + IIIF**
+  Ingest: API; use `iiif_url`; ingest only Open Access/CC0 items.
+  Link: `https://api.artic.edu/docs/`
+* **National Gallery of Art (Open Access)**
+  Ingest: open images dataset/pages; if no API, ingest from their open access feeds/pages (adapter).
+  Link: `https://www.nga.gov/open-access-images.html`
+* **Walters Art Museum Open Data / API**
+  Ingest: API/dumps; CC0 posture.
+  Link: `https://api.thewalters.org/`
+
+### Tier B — Metadata backbone (commercial OK, but images often restricted → link-out)
+
+* **Wikidata (entities: rulers/mints/refs)**
+  Ingest: SPARQL queries + dumps for periodic refresh.
+  Link: `https://query.wikidata.org/`
+* **OpenAlex (bibliography metadata)**
+  Ingest: API or snapshots; CC0.
+  Link: `https://docs.openalex.org/`
+* **Pleiades (ancient places)**
+  Ingest: dataset downloads; CC BY (store attribution).
+  Link: `https://pleiades.stoa.org/downloads`
+* **GeoNames (places, geocoding)**
+  Ingest: dumps/API; CC BY (store attribution).
+  Link: `https://www.geonames.org/`
+* **Nomisma (controlled vocabulary / URIs)**
+  Ingest: concept pages + SPARQL/endpoints; store as authority graph.
+  Link: `http://nomisma.org/`
+
+### Tier C — High-value typologies (type metadata OK; images link-out unless per-record is open)
+
+* **OCRE (Roman Imperial types; type data often ODbL; images institution-owned)**
+  Ingest: type metadata; store links; do not rehost images by default.
+  Link: `https://isaw.nyu.edu/publications/research-reference/ocre`
+* **ARCH (Greek coinage portal)**
+  Ingest: metadata and links; treat images as link-out unless rights confirmed.
+  Link: `https://greekcoinage.org/arch/`
+
+### Tier D — Restricted / non-commercial / anti-scraping (link-out only; future partnerships)
+
+* Large auction portals & paid archives: do **not** crawl without licensing.
+  MVP: “paste URL + user-provided text/photos” workflow only.
+
+---
+
+# 6) Database schema (Postgres + pgvector)
+
+Below is a solid v1 schema that supports MVP → Phase 5.
+
+## 6.1 Extensions & enums
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- License codes you normalize to
+CREATE TYPE license_code AS ENUM (
+  'CC0', 'PDM', 'CC_BY', 'CC_BY_SA', 'CC_BY_NC', 'CC_BY_NC_SA',
+  'ODBL', 'ALL_RIGHTS_RESERVED', 'UNKNOWN'
+);
+
+CREATE TYPE entity_type AS ENUM (
+  'PERSON', 'MINT', 'DENOMINATION', 'METAL', 'PLACE', 'REFERENCE_WORK', 'KEYWORD'
+);
+
+CREATE TYPE edge_type AS ENUM (
+  'ISSUED_BY', 'MINTED_AT', 'HAS_DENOMINATION', 'HAS_METAL', 'CITES_REFERENCE',
+  'CANDIDATE_TYPE', 'PRIMARY_TYPE',
+  'APPEARED_IN', 'MATCHES_LOT',
+  'DIE_OBV', 'DIE_REV', 'DIE_LINK'
+);
+
+CREATE TYPE job_status AS ENUM ('QUEUED','RUNNING','SUCCEEDED','FAILED','CANCELLED');
+```
+
+## 6.2 Rights system tables (DAY 1)
+
+```sql
+CREATE TABLE sources (
+  id TEXT PRIMARY KEY,                    -- e.g. 'ikmk_berlin'
+  name TEXT NOT NULL,
+  homepage_url TEXT,
+  access_method TEXT NOT NULL,            -- 'API'|'IIIF'|'DUMP'|'CRAWL'|'MANUAL'
+  base_url TEXT,
+  default_license_metadata license_code NOT NULL DEFAULT 'UNKNOWN',
+  default_license_images license_code NOT NULL DEFAULT 'UNKNOWN',
+  default_actions JSONB NOT NULL DEFAULT '{}'::jsonb,
+  attribution_template TEXT,              -- e.g. "© {holder} / {source}"
+  rights_statement_url TEXT,
+  rate_limit_per_min INT,
+  is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- One row per ingested object/asset describing rights at record-level
+CREATE TABLE rights_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_id TEXT NOT NULL REFERENCES sources(id),
+  source_record_id TEXT,                  -- ID from the source if available
+  source_url TEXT NOT NULL,
+  license_metadata license_code NOT NULL DEFAULT 'UNKNOWN',
+  license_images license_code NOT NULL DEFAULT 'UNKNOWN',
+  commercial_ok BOOLEAN NOT NULL DEFAULT FALSE,
+  rehost_ok BOOLEAN NOT NULL DEFAULT FALSE,
+  cache_ok BOOLEAN NOT NULL DEFAULT FALSE,
+  embed_ok BOOLEAN NOT NULL DEFAULT FALSE,
+  compute_embeddings_ok BOOLEAN NOT NULL DEFAULT FALSE,
+  attribution_text TEXT,
+  attribution_url TEXT,
+  rights_statement_url TEXT,
+  rights_raw JSONB,                       -- store raw rights snippet/fields
+  resolved_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX rights_records_source_idx ON rights_records(source_id);
+CREATE INDEX rights_records_url_idx ON rights_records(source_url);
+```
+
+## 6.3 Core user & portfolio
+
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT,
+  name TEXT,
+  role TEXT NOT NULL DEFAULT 'user',       -- 'user'|'admin'
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE user_coins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  weight_g NUMERIC(10,3),
+  diameter_mm NUMERIC(10,2),
+  axis INT,
+  metal_id UUID,
+  denomination_id UUID,
+  mint_id UUID,
+  primary_coin_type_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX user_coins_user_idx ON user_coins(user_id);
+```
+
+## 6.4 Images & derived features (hashes/embeddings)
+
+```sql
+CREATE TABLE image_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_user_id UUID REFERENCES users(id),       -- null if external
+  rights_id UUID REFERENCES rights_records(id),
+  kind TEXT NOT NULL,                             -- 'USER_UPLOAD'|'EXTERNAL'
+  original_url TEXT,                              -- for external
+  storage_url TEXT,                               -- for stored objects (S3)
+  width INT,
+  height INT,
+  mime_type TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE image_hashes (
+  image_id UUID PRIMARY KEY REFERENCES image_assets(id) ON DELETE CASCADE,
+  phash TEXT,
+  ahash TEXT,
+  dhash TEXT
+);
+
+-- embeddings for images, coins, lots, etc.
+CREATE TABLE embeddings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_kind TEXT NOT NULL,          -- 'IMAGE'|'USER_COIN'|'LOT'|'COIN_TYPE'
+  entity_id UUID NOT NULL,
+  model_version TEXT NOT NULL,
+  vec vector(1536) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX embeddings_entity_idx ON embeddings(entity_kind, entity_id);
+CREATE INDEX embeddings_vec_idx ON embeddings USING ivfflat (vec vector_cosine_ops);
+```
+
+## 6.5 Canonical entities & coin types
+
+```sql
+CREATE TABLE entities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type entity_type NOT NULL,
+  label TEXT NOT NULL,
+  wikidata_qid TEXT,
+  nomisma_uri TEXT,
+  pleiades_uri TEXT,
+  geonames_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE entity_aliases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_id UUID NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+  alias TEXT NOT NULL,
+  lang TEXT
+);
+
+CREATE INDEX entity_aliases_alias_idx ON entity_aliases(alias);
+
+CREATE TABLE coin_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_id TEXT NOT NULL REFERENCES sources(id), -- e.g. 'ocre'
+  source_record_id TEXT,
+  label TEXT NOT NULL,
+  date_from INT,
+  date_to INT,
+  obv_legend TEXT,
+  rev_legend TEXT,
+  reference_text TEXT,                             -- RIC, etc (freeform v1)
+  rights_id UUID REFERENCES rights_records(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- type relationships to canonical entities
+CREATE TABLE coin_type_facts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  coin_type_id UUID NOT NULL REFERENCES coin_types(id) ON DELETE CASCADE,
+  fact edge_type NOT NULL,                          -- ISSUED_BY, MINTED_AT, etc.
+  entity_id UUID NOT NULL REFERENCES entities(id),
+  confidence NUMERIC(4,3) NOT NULL DEFAULT 1.0,
+  evidence JSONB
+);
+
+CREATE INDEX coin_type_facts_type_idx ON coin_type_facts(coin_type_id);
+```
+
+## 6.6 External lots/sales (open sources + user-imported)
+
+```sql
+CREATE TABLE auction_houses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  homepage_url TEXT
+);
+
+CREATE TABLE sales (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  auction_house_id UUID REFERENCES auction_houses(id),
+  title TEXT,
+  start_date DATE,
+  end_date DATE,
+  source_id TEXT REFERENCES sources(id),
+  source_url TEXT
+);
+
+CREATE TABLE lots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sale_id UUID REFERENCES sales(id),
+  source_id TEXT REFERENCES sources(id),
+  source_record_id TEXT,
+  source_url TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  weight_g NUMERIC(10,3),
+  diameter_mm NUMERIC(10,2),
+  price_realized NUMERIC(12,2),
+  currency TEXT,
+  rights_id UUID REFERENCES rights_records(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX lots_source_idx ON lots(source_id);
+CREATE INDEX lots_url_idx ON lots(source_url);
+```
+
+## 6.7 Graph edges (provenance, matches, die graph)
+
+```sql
+CREATE TABLE edges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_kind TEXT NOT NULL,          -- 'USER_COIN'|'LOT'|'COIN_TYPE'|'ENTITY'|'DIE'
+  from_id UUID NOT NULL,
+  to_kind TEXT NOT NULL,
+  to_id UUID NOT NULL,
+  type edge_type NOT NULL,
+  confidence NUMERIC(4,3) NOT NULL DEFAULT 0.5,
+  method TEXT,                      -- 'OCR'|'EMBEDDING'|'USER'|'ADMIN'|'IMPORT'
+  evidence JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX edges_from_idx ON edges(from_kind, from_id);
+CREATE INDEX edges_to_idx ON edges(to_kind, to_id);
+```
+
+## 6.8 Evidence ledger (field-level provenance)
+
+```sql
+CREATE TABLE evidence (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_kind TEXT NOT NULL,
+  subject_id UUID NOT NULL,
+  field TEXT NOT NULL,
+  value TEXT,
+  source_id TEXT REFERENCES sources(id),
+  source_url TEXT,
+  extractor TEXT,                    -- 'PARSER_V1','OCR_V1','USER_ENTRY'
+  confidence NUMERIC(4,3),
+  raw JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX evidence_subject_idx ON evidence(subject_kind, subject_id);
+```
+
+## 6.9 Watchlists, alerts, notifications
+
+```sql
+CREATE TABLE watchlists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL,
+  rules JSONB NOT NULL,              -- e.g. {type_ids:[], entity_ids:[], keywords:[], similar_to_coin_id:...}
+  is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  kind TEXT NOT NULL,                -- 'ALERT'|'SYSTEM'
+  payload JSONB NOT NULL,
+  sent_via TEXT,                     -- 'EMAIL'|'IN_APP'
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX notifications_user_idx ON notifications(user_id, created_at DESC);
+```
+
+## 6.10 Jobs & ingestion runs
+
+```sql
+CREATE TABLE ingestion_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_id TEXT NOT NULL REFERENCES sources(id),
+  run_type TEXT NOT NULL,            -- 'FULL'|'INCREMENTAL'
+  status job_status NOT NULL DEFAULT 'QUEUED',
+  started_at TIMESTAMPTZ,
+  finished_at TIMESTAMPTZ,
+  stats JSONB NOT NULL DEFAULT '{}'::jsonb,
+  error TEXT
+);
+
+CREATE TABLE jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind TEXT NOT NULL,                -- 'INGEST_SOURCE'|'EMBED_IMAGE'|'ANALYZE_COIN'|'MATCH_WATCHLIST'
+  status job_status NOT NULL DEFAULT 'QUEUED',
+  payload JSONB NOT NULL,
+  run_id UUID REFERENCES ingestion_runs(id),
+  attempts INT NOT NULL DEFAULT 0,
+  locked_at TIMESTAMPTZ,
+  last_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX jobs_status_idx ON jobs(status, created_at);
+```
+
+---
+
+# 7) API spec (v1)
+
+## 7.1 Auth
+
+* `POST /v1/auth/signup`
+  Body: `{ email, password, name }`
+* `POST /v1/auth/login`
+  Body: `{ email, password }` → `{ token }`
+* `GET /v1/me` (auth)
+
+## 7.2 Uploads & images
+
+* `POST /v1/uploads/presign` (auth)
+  Body: `{ filename, mime_type }` → `{ upload_url, storage_url }`
+* `POST /v1/images` (auth)
+  Body: `{ kind:'USER_UPLOAD', storage_url, width, height, mime_type }` → `{ image_id }`
+
+## 7.3 Portfolio coins
+
+* `POST /v1/coins` (auth)
+  Body:
+
+  ```json
+  {
+    "title":"My denarius",
+    "obv_image_id":"uuid",
+    "rev_image_id":"uuid",
+    "weight_g":3.21,
+    "diameter_mm":18.5,
+    "notes":"bought 2025"
+  }
+  ```
+
+  → `{ coin_id }`
+
+* `GET /v1/coins?limit=&offset=` (auth)
+
+* `GET /v1/coins/{coin_id}` (auth)
+
+* `PATCH /v1/coins/{coin_id}` (auth)
+
+* `DELETE /v1/coins/{coin_id}` (auth)
+
+## 7.4 Analyze (attribution + matches)
+
+* `POST /v1/coins/{coin_id}/analyze` (auth)
+  Enqueues job(s): OCR + embeddings + similarity search
+  → `{ job_id }`
+
+* `GET /v1/coins/{coin_id}/analysis` (auth)
+  Returns:
+
+  ```json
+  {
+    "status":"READY",
+    "candidates":[
+      {
+        "coin_type_id":"uuid",
+        "label":"…",
+        "confidence":0.82,
+        "reasons":["portrait similarity","reverse motif","legend tokens"],
+        "citations":[{"source":"ikmk_berlin","url":"…"}]
+      }
+    ],
+    "similar_images":[{"image_id":"…","source_url":"…","score":0.91}],
+    "similar_lots":[{"lot_id":"…","source_url":"…","score":0.88}]
+  }
+  ```
+
+* `POST /v1/coins/{coin_id}/set-primary-type` (auth)
+  Body: `{ coin_type_id }` → creates `edges` record type `PRIMARY_TYPE`
+
+## 7.5 Search (optional but useful)
+
+* `POST /v1/search/similar-image` (auth)
+  Body: `{ image_id, top_k }` → list of matches (images/types/lots)
+
+## 7.6 Watchlists & alerts
+
+* `POST /v1/watchlists` (auth)
+  Body:
+
+  ```json
+  {
+    "name":"Roman denarii",
+    "rules":{"entity_ids":["ruler_uuid"],"keywords":["denarius"],"similar_to_coin_id":"uuid"}
+  }
+  ```
+
+* `GET /v1/watchlists` (auth)
+
+* `PATCH /v1/watchlists/{id}` (auth)
+
+* `DELETE /v1/watchlists/{id}` (auth)
+
+* `GET /v1/notifications` (auth)
+
+* `POST /v1/notifications/{id}/read` (auth)
+
+## 7.7 Link import (safe-mode listing builder)
+
+* `POST /v1/imports/link` (auth)
+  Body: `{ url, user_notes, pasted_description?, pasted_fields? }`
+  Behavior:
+
+  * Creates `lots` record with `source_url`
+  * Does **not** fetch or parse prohibited sources
+  * Lets user attach their own images if needed
+
+## 7.8 Admin (role=admin)
+
+* `GET /v1/admin/sources`
+* `POST /v1/admin/sources`
+* `PATCH /v1/admin/sources/{source_id}`
+* `POST /v1/admin/ingestion/{source_id}/run` → `{ run_id }`
+* `GET /v1/admin/ingestion/runs?source_id=`
+* `GET /v1/admin/jobs?status=`
+
+---
+
+# 8) Source adapters (developer checklist)
+
+Every adapter must implement:
+
+1. `discover_records(since)`
+2. `fetch_record(record_ref)`
+3. `parse_metadata(raw)` → normalized fields + evidence
+4. `extract_rights(raw)` → populate `rights_records` reliably
+5. `ingest_images(raw)` only if rights permit:
+
+   * if `rehost_ok`: download/store
+   * if `compute_embeddings_ok`: download pixels transiently to compute embeddings (if allowed)
+   * else: store only URLs + link-out
+
+---
+
+# 9) Milestones (8-week “vibe coder but production-safe” plan)
+
+### Week 1: Foundations
+
+* DB + schema + pgvector
+* Auth
+* Rights system (sources + rights_records + enforcement)
+* Admin UI for source registry
+
+**Acceptance:** cannot ingest anything unless rights resolved; UI shows attribution stub.
+
+### Week 2–3: MVP portfolio + upload
+
+* Image upload pipeline (user-owned)
+* Coin CRUD + coin detail UI
+
+**Acceptance:** user can create portfolio coins with images.
+
+### Week 4: Similarity search
+
+* Ingest IKMK Berlin + one CC0 museum source
+* Compute embeddings
+* `/analyze` returns matches with citations
+
+**Acceptance:** upload → top matches in < 30s async.
+
+### Week 5: Research tab + watchlists
+
+* Similar lots/images list + link-out
+* Watchlists + daily email digest
+
+**Acceptance:** alerts fire from ingestion updates.
+
+### Week 6–8: Phase 1 upgrades
+
+* Better normalization + entity resolution
+* Safe link import (“listing builder” without scraping restricted sites)
+* Export coin card
+
+---
+
+If you want, tell me your preferred implementation choice:
+
+* **Option A:** Next.js (frontend) + FastAPI (backend) + worker in Python
+* **Option B:** Next.js fullstack (API routes) + Node worker
+
+…and I’ll rewrite the API section into a full **OpenAPI 3.0 YAML** plus concrete endpoint request/response examples for your dev.

@@ -3,26 +3,79 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/theme-provider";
+import { useAuth } from "@/hooks/use-auth";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import LandingPage from "@/pages/landing";
+import DashboardPage from "@/pages/dashboard";
+import UploadPage from "@/pages/upload";
+import PortfolioPage from "@/pages/portfolio";
+import CoinDetailPage from "@/pages/coin-detail";
+import ResearchPage from "@/pages/research";
+import WatchlistsPage from "@/pages/watchlists";
+import NotificationsPage from "@/pages/notifications";
+import SettingsPage from "@/pages/settings";
+import AdminSourcesPage from "@/pages/admin/sources";
 import NotFound from "@/pages/not-found";
 
-function Router() {
+function AuthenticatedRoutes() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
+      <Route path="/" component={DashboardPage} />
+      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/upload" component={UploadPage} />
+      <Route path="/portfolio" component={PortfolioPage} />
+      <Route path="/coin/:id" component={CoinDetailPage} />
+      <Route path="/research" component={ResearchPage} />
+      <Route path="/watchlists" component={WatchlistsPage} />
+      <Route path="/notifications" component={NotificationsPage} />
+      <Route path="/settings" component={SettingsPage} />
+      <Route path="/admin/sources" component={AdminSourcesPage} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
+function UnauthenticatedRoutes() {
+  return (
+    <Switch>
+      <Route path="/" component={LandingPage} />
+      <Route component={LandingPage} />
+    </Switch>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="space-y-4 text-center">
+        <Skeleton className="h-12 w-12 rounded-lg mx-auto" />
+        <Skeleton className="h-4 w-32 mx-auto" />
+      </div>
+    </div>
+  );
+}
+
+function Router() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return user ? <AuthenticatedRoutes /> : <UnauthenticatedRoutes />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider defaultTheme="light" storageKey="numis-ui-theme">
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

@@ -7,7 +7,6 @@ import {
   FolderOpen, 
   Bell, 
   Shield,
-  Sparkles,
   ArrowRight,
   ChevronRight,
   Coins,
@@ -53,8 +52,8 @@ export default function LandingPage() {
             <div className="space-y-8">
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>AI-Powered Research Platform</span>
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Privacy-First Research Platform</span>
                 </div>
                 <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
                   Discover, Research,{" "}
@@ -62,7 +61,7 @@ export default function LandingPage() {
                   Ancient Coins
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-xl">
-                  Upload photos of your coins and instantly find similar matches from museum collections worldwide. Build your portfolio, track provenance, and never miss a rare find.
+                  Your collection deserves protection. Upload photos securely to find matches from museum collections worldwide. Build your portfolio with confidence knowing your data stays private.
                 </p>
               </div>
               
@@ -79,20 +78,20 @@ export default function LandingPage() {
                 </Button>
               </div>
 
-              <div className="flex items-center gap-6 pt-4 border-t border-border">
+              <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-border">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">AES-256</p>
+                  <p className="text-sm text-muted-foreground">Encryption</p>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">Zero</p>
+                  <p className="text-sm text-muted-foreground">Third-Party Tracking</p>
+                </div>
+                <div className="h-8 w-px bg-border" />
                 <div className="text-center">
                   <p className="text-2xl font-bold text-foreground">50K+</p>
                   <p className="text-sm text-muted-foreground">Reference Images</p>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-foreground">6</p>
-                  <p className="text-sm text-muted-foreground">Museum Sources</p>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-foreground">100%</p>
-                  <p className="text-sm text-muted-foreground">Rights-Safe</p>
                 </div>
               </div>
             </div>
@@ -177,8 +176,8 @@ export default function LandingPage() {
             />
             <FeatureCard
               icon={Shield}
-              title="Rights-Safe Platform"
-              description="All images are sourced from open-access collections. Use with confidence for personal or commercial purposes."
+              title="Your Collection, Protected"
+              description="AES-256 encryption, no third-party tracking, and full data ownership. Your coins and research stay private."
             />
           </div>
         </div>

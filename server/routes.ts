@@ -373,6 +373,23 @@ export async function registerRoutes(
     }
   });
 
+  // ============ RIGHTS COMPLIANCE ============
+
+  // Get rights compliance issues
+  app.get("/api/admin/rights/issues", requireAdmin, async (req, res) => {
+    try {
+      const { sourceId, licenseType } = req.query;
+      const result = await storage.getRightsIssues({
+        sourceId: sourceId as string,
+        licenseType: licenseType as string,
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching rights issues:", error);
+      res.status(500).json({ error: "Failed to fetch rights issues" });
+    }
+  });
+
   // ============ NORMALIZATION PIPELINE ============
 
   // Run normalization on coin types
@@ -890,6 +907,60 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error processing embeddings:", error);
       res.status(500).json({ error: "Failed to process embeddings" });
+    }
+  });
+
+  // List embedding jobs with filters
+  app.get("/api/admin/embeddings/jobs", requireAdmin, async (req, res) => {
+    try {
+      const { status, limit = "50", offset = "0" } = req.query;
+      const jobs = await storage.getEmbeddingJobs({
+        status: status as string | undefined,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      });
+      res.json(jobs);
+    } catch (error) {
+      console.error("Error fetching embedding jobs:", error);
+      res.status(500).json({ error: "Failed to fetch embedding jobs" });
+    }
+  });
+
+  // Retry a specific embedding job (only failed or skipped jobs)
+  app.post("/api/admin/embeddings/jobs/:id/retry", requireAdmin, async (req, res) => {
+    try {
+      const jobId = req.params.id;
+      if (!jobId || typeof jobId !== 'string') {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+      
+      const job = await storage.retryEmbeddingJob(jobId);
+      if (!job) {
+        return res.status(400).json({ error: "Job not found or not in a retryable state (must be FAILED or SKIPPED)" });
+      }
+      res.json({ message: "Job queued for retry", job });
+    } catch (error) {
+      console.error("Error retrying embedding job:", error);
+      res.status(500).json({ error: "Failed to retry job" });
+    }
+  });
+
+  // Cancel a pending embedding job
+  app.post("/api/admin/embeddings/jobs/:id/cancel", requireAdmin, async (req, res) => {
+    try {
+      const jobId = req.params.id;
+      if (!jobId || typeof jobId !== 'string') {
+        return res.status(400).json({ error: "Invalid job ID" });
+      }
+      
+      const job = await storage.cancelEmbeddingJob(jobId);
+      if (!job) {
+        return res.status(400).json({ error: "Job not found or not in a cancelable state (must be PENDING)" });
+      }
+      res.json({ message: "Job cancelled", job });
+    } catch (error) {
+      console.error("Error cancelling embedding job:", error);
+      res.status(500).json({ error: "Failed to cancel job" });
     }
   });
 

@@ -18,8 +18,11 @@ import ResearchPage from "@/pages/research";
 import WatchlistsPage from "@/pages/watchlists";
 import NotificationsPage from "@/pages/notifications";
 import SettingsPage from "@/pages/settings";
+import AdminDashboardPage from "@/pages/admin/dashboard";
 import AdminSourcesPage from "@/pages/admin/sources";
 import AdminIngestionPage from "@/pages/admin/ingestion";
+import AdminJobsPage from "@/pages/admin/jobs";
+import AdminRightsPage from "@/pages/admin/rights";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import AboutPage from "@/pages/about";
@@ -39,8 +42,11 @@ function AuthenticatedRoutes() {
       <Route path="/watchlists" component={WatchlistsPage} />
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/admin" component={AdminDashboardPage} />
       <Route path="/admin/sources" component={AdminSourcesPage} />
       <Route path="/admin/ingestion" component={AdminIngestionPage} />
+      <Route path="/admin/jobs" component={AdminJobsPage} />
+      <Route path="/admin/rights" component={AdminRightsPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/about" component={AboutPage} />

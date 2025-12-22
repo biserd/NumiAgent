@@ -1,13 +1,14 @@
 import { 
   users, userCoins, watchlists, notifications, sources, imageAssets, similarMatches,
-  coinTypes, entities, ingestionRuns, rightsRecords, ingestionLogs,
+  coinTypes, entities, ingestionRuns, rightsRecords, ingestionLogs, embeddingJobs,
   type User, type UpsertUser, type UserCoin, type InsertUserCoin,
   type Watchlist, type InsertWatchlist, type Notification, type InsertNotification,
   type Source, type InsertSource, type ImageAsset, type InsertImageAsset,
   type SimilarMatch, type InsertSimilarMatch, type CoinType, type InsertCoinType,
   type Entity, type InsertEntity, type IngestionRun, type InsertIngestionRun,
   type RightsRecord, type InsertRightsRecord,
-  type IngestionLog, type InsertIngestionLog
+  type IngestionLog, type InsertIngestionLog,
+  type EmbeddingJob
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, between, sql } from "drizzle-orm";
@@ -86,6 +87,12 @@ export interface IStorage {
   
   // Watchlist Alerts
   getAllEnabledWatchlists(): Promise<Watchlist[]>;
+  
+  // Rights Compliance
+  getRightsIssues(filters?: { sourceId?: string; licenseType?: string }): Promise<{
+    issues: Array<RightsRecord & { source?: Source; issueType: string }>;
+    summary: { total: number; unknownLicense: number; missingAttribution: number };
+  }>;
   
   // Seeding
   seedMuseumData(): Promise<void>;
@@ -648,6 +655,131 @@ export class DatabaseStorage implements IStorage {
   // Watchlist Alerts
   async getAllEnabledWatchlists(): Promise<Watchlist[]> {
     return db.select().from(watchlists).where(eq(watchlists.isEnabled, true));
+  }
+
+  // Rights Compliance
+  async getRightsIssues(filters?: { sourceId?: string; licenseType?: string }): Promise<{
+    issues: Array<RightsRecord & { source?: Source; issueType: string }>;
+    summary: { total: number; unknownLicense: number; missingAttribution: number };
+  }> {
+    // Build conditions for rights records with issues
+    const conditions = [];
+    
+    if (filters?.sourceId) {
+      conditions.push(eq(rightsRecords.sourceId, filters.sourceId));
+    }
+    if (filters?.licenseType) {
+      conditions.push(eq(rightsRecords.licenseImages, filters.licenseType));
+    }
+    
+    // Get all rights records
+    let query = db.select().from(rightsRecords);
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+    const allRecords = await query.orderBy(desc(rightsRecords.resolvedAt));
+    
+    // Get all sources for enrichment
+    const allSources = await db.select().from(sources);
+    const sourceMap = new Map(allSources.map(s => [s.id, s]));
+    
+    // Filter for issues: unknown license or missing attribution
+    const issues: Array<RightsRecord & { source?: Source; issueType: string }> = [];
+    let unknownLicense = 0;
+    let missingAttribution = 0;
+    
+    for (const record of allRecords) {
+      const hasUnknownLicense = record.licenseImages === 'UNKNOWN' || record.licenseMetadata === 'UNKNOWN';
+      const hasMissingAttribution = !record.attributionText && !record.attributionTemplate;
+      
+      if (hasUnknownLicense) {
+        unknownLicense++;
+      }
+      if (hasMissingAttribution) {
+        missingAttribution++;
+      }
+      
+      if (hasUnknownLicense || hasMissingAttribution) {
+        let issueType = '';
+        if (hasUnknownLicense && hasMissingAttribution) {
+          issueType = 'UNKNOWN_LICENSE_AND_MISSING_ATTRIBUTION';
+        } else if (hasUnknownLicense) {
+          issueType = 'UNKNOWN_LICENSE';
+        } else {
+          issueType = 'MISSING_ATTRIBUTION';
+        }
+        
+        issues.push({
+          ...record,
+          source: sourceMap.get(record.sourceId),
+          issueType,
+        });
+      }
+    }
+    
+    return {
+      issues,
+      summary: {
+        total: allRecords.length,
+        unknownLicense,
+        missingAttribution,
+      },
+    };
+  }
+
+  // Embedding Jobs
+  async getEmbeddingJobs(filters: { status?: string; limit?: number; offset?: number }): Promise<EmbeddingJob[]> {
+    const conditions = [];
+    if (filters.status) conditions.push(eq(embeddingJobs.status, filters.status));
+    
+    let query = db.select().from(embeddingJobs);
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+    
+    return query
+      .orderBy(desc(embeddingJobs.createdAt))
+      .limit(filters.limit || 50)
+      .offset(filters.offset || 0);
+  }
+
+  async retryEmbeddingJob(id: string): Promise<EmbeddingJob | undefined> {
+    const [job] = await db.select().from(embeddingJobs).where(eq(embeddingJobs.id, id));
+    if (!job) return undefined;
+    
+    // Only allow retrying failed or skipped jobs
+    if (job.status !== 'FAILED' && job.status !== 'SKIPPED') {
+      return undefined;
+    }
+    
+    const [updated] = await db
+      .update(embeddingJobs)
+      .set({
+        status: 'PENDING',
+        attempts: 0,
+        errorMessage: null,
+        startedAt: null,
+        completedAt: null,
+      })
+      .where(eq(embeddingJobs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async cancelEmbeddingJob(id: string): Promise<EmbeddingJob | undefined> {
+    const [job] = await db.select().from(embeddingJobs).where(eq(embeddingJobs.id, id));
+    if (!job || job.status !== 'PENDING') return undefined;
+    
+    const [updated] = await db
+      .update(embeddingJobs)
+      .set({
+        status: 'SKIPPED',
+        errorMessage: 'Cancelled by admin',
+        completedAt: new Date(),
+      })
+      .where(eq(embeddingJobs.id, id))
+      .returning();
+    return updated;
   }
 }
 

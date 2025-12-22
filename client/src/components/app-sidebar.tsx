@@ -9,7 +9,10 @@ import {
   LayoutDashboard,
   Eye,
   Shield,
-  Database
+  Database,
+  Activity,
+  ListTodo,
+  FileCheck
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,8 +44,11 @@ const collectionItems = [
 ];
 
 const adminItems = [
+  { title: "Admin Dashboard", url: "/admin", icon: Activity },
+  { title: "Jobs Queue", url: "/admin/jobs", icon: ListTodo },
+  { title: "Ingestion Runs", url: "/admin/ingestion", icon: Database },
   { title: "Sources", url: "/admin/sources", icon: Shield },
-  { title: "Ingestion", url: "/admin/ingestion", icon: Database },
+  { title: "Rights Compliance", url: "/admin/rights", icon: FileCheck },
 ];
 
 const settingsItems = [

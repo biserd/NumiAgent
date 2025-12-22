@@ -1,0 +1,212 @@
+You’ll want an admin area that answers one question instantly:
+
+**“Is the system healthy right now, and if not, where is it failing?”**
+
+Here’s the admin feature set I’d build (minimum → strong), tailored to your pipelines (ingestion, rights gating, embeddings, matching, alerts).
+
+---
+
+## 1) Admin home dashboard (the “NOC screen”)
+
+**Show at a glance (last 24h + last hour):**
+
+* ✅/⚠️/❌ overall status
+* Jobs: `queued / running / failed / succeeded` counts
+* Ingestion: last run per source (status, duration, new records)
+* Embeddings: images embedded/hour, backlog size
+* Alerts: notifications sent, failures (email provider errors)
+* Error rate (% failed jobs) + top 5 error types
+* Processing latency p50/p95 for:
+
+  * analyze coin
+  * ingest source
+  * embed image
+  * watchlist matching
+
+**Action buttons:**
+
+* “Pause all ingestion”
+* “Resume ingestion”
+* “Retry failed jobs”
+* “Run health checks”
+
+---
+
+## 2) Job queue monitor (critical)
+
+A page to inspect your `jobs` table like a real queue UI.
+
+**Filters:** status, job kind, source, time range, user, model_version
+**Per job detail:**
+
+* payload (sanitized)
+* attempts + last error + stack trace
+* timing (queued_at, locked_at, finished_at)
+* linked entities (run_id, coin_id, image_id)
+  **Actions:**
+* retry job
+* cancel job
+* dead-letter job (mark permanently failed + reason)
+* “re-run with debug logging”
+
+---
+
+## 3) Ingestion runs & source health
+
+### 3.1 Source registry admin
+
+For each source:
+
+* base URL, access method (API/IIIF/dump/crawl/manual)
+* rate limits
+* default allowed actions
+* **rights policy** (what licenses are acceptable)
+* status: enabled/disabled
+* last success / last failure
+* checksum/etag if supported
+
+**Actions:**
+
+* test connection
+* run incremental / run full
+* disable source
+* adjust rate limits
+
+### 3.2 Ingestion run detail
+
+For each run:
+
+* start/end time, duration
+* records discovered / parsed / stored
+* skipped due to rights
+* images stored vs link-only counts
+* embeddings computed count
+* error samples (with record URLs)
+  **Actions:**
+* rerun run (same parameters)
+* rerun only failed records
+* export run report (CSV/JSON)
+
+---
+
+## 4) Rights & Attribution compliance console (Day-1 important)
+
+This is your “don’t get sued” screen.
+
+**Views:**
+
+* Records with `license=UNKNOWN`
+* Records where `commercial_ok=false` but flagged as used in paid flows
+* Records where `compute_embeddings_ok=false` but embeddings exist (should never happen)
+* Records missing `attribution_text` when required
+
+**Actions:**
+
+* quarantine records (remove from search results)
+* recompute rights for a source/run
+* takedown: disable record + purge cached assets + audit log
+
+**Audit log required** for every admin change.
+
+---
+
+## 5) Embeddings & vector index health
+
+**Metrics:**
+
+* embedding backlog (images waiting)
+* embedding throughput
+* average embedding time + failures
+* model version distribution (how many vectors per version)
+* index health: vector table size, ivfflat build status, query latency
+
+**Actions:**
+
+* re-embed subset (by source / model version / time window)
+* rebuild index (scheduled)
+* throttle embeddings (protect DB)
+
+---
+
+## 6) Entity resolution & data quality tools
+
+You’ll need a “truth maintenance” UI because data is messy.
+
+**Features:**
+
+* Duplicate entity detection (e.g., “Augustus” variants)
+* Merge entities (with rollback)
+* Alias editor (add synonyms, languages)
+* Canonical mapping review queue (low confidence minted_at/issued_by)
+* Coverage/quality report per source:
+
+  * % missing weight/diam
+  * % missing dates
+  * parse success rate
+
+---
+
+## 7) Notifications & alert delivery monitor
+
+**Show:**
+
+* sent / failed / bounced
+* provider error codes
+* user opt-outs / suppression list
+* delivery latency
+
+**Actions:**
+
+* resend last notification
+* disable alerts globally (incident switch)
+* test email to admin
+
+---
+
+## 8) User support tools (admin-only)
+
+* User search (email, id)
+* View user’s last 20 actions/events (audit-style)
+* “Login as / impersonate” (optional; log everything)
+* Export user data / delete user data (privacy)
+* Rate-limit abusive users
+
+---
+
+## 9) System config / feature flags
+
+You’ll want toggles without redeploy:
+
+* enable/disable a source
+* enable embeddings for a source (only if rights allow)
+* enable new model version
+* turn on/off similarity re-rank
+* pause scheduled jobs
+
+---
+
+## 10) Automated admin alerts (so you don’t babysit)
+
+Trigger email/Slack/notification to you when:
+
+* ingestion run fails 2x in a row for any source
+* job failure rate > X% in 15 minutes
+* queue backlog exceeds threshold
+* embeddings latency spikes
+* rights anomalies detected (e.g., unknown license spikes)
+
+---
+
+### If you want the “minimum viable admin” for MVP
+
+Build these 5 screens first:
+
+1. Dashboard
+2. Jobs queue
+3. Ingestion runs
+4. Source registry + rights policy
+5. Rights/compliance anomalies
+
+Everything else can follow once you have real volume.
+
+If you tell me whether your developer is using Python (FastAPI) or Node, I’ll also give you a simple **event/log schema** (structured JSON logs + DB tables) so these admin screens are easy to implement.

@@ -19,6 +19,7 @@ import WatchlistsPage from "@/pages/watchlists";
 import NotificationsPage from "@/pages/notifications";
 import SettingsPage from "@/pages/settings";
 import AdminSourcesPage from "@/pages/admin/sources";
+import AdminIngestionPage from "@/pages/admin/ingestion";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import AboutPage from "@/pages/about";
@@ -39,6 +40,7 @@ function AuthenticatedRoutes() {
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/admin/sources" component={AdminSourcesPage} />
+      <Route path="/admin/ingestion" component={AdminIngestionPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/about" component={AboutPage} />

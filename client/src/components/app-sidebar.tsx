@@ -8,7 +8,8 @@ import {
   Settings,
   LayoutDashboard,
   Eye,
-  Shield
+  Shield,
+  Database
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,6 +42,7 @@ const collectionItems = [
 
 const adminItems = [
   { title: "Sources", url: "/admin/sources", icon: Shield },
+  { title: "Ingestion", url: "/admin/ingestion", icon: Database },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

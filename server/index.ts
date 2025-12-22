@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { startAlertScheduler } from "./alerts";
 
 const app = express();
 const httpServer = createServer(app);
@@ -93,6 +94,9 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      
+      // Start watchlist alert scheduler (checks every 60 minutes)
+      startAlertScheduler(60);
     },
   );
 })();

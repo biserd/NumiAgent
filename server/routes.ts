@@ -287,6 +287,62 @@ export async function registerRoutes(
     }
   });
 
+  // ============ INGESTION RUNS ============
+
+  // Get all ingestion runs
+  app.get("/api/admin/ingestion-runs", requireAuth, async (req, res) => {
+    try {
+      const { sourceId, status } = req.query;
+      const runs = await storage.getIngestionRuns({
+        sourceId: sourceId as string,
+        status: status as string,
+      });
+      res.json(runs);
+    } catch (error) {
+      console.error("Error fetching ingestion runs:", error);
+      res.status(500).json({ error: "Failed to fetch ingestion runs" });
+    }
+  });
+
+  // Get ingestion stats
+  app.get("/api/admin/ingestion-stats", requireAuth, async (req, res) => {
+    try {
+      const stats = await storage.getIngestionStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching ingestion stats:", error);
+      res.status(500).json({ error: "Failed to fetch ingestion stats" });
+    }
+  });
+
+  // Create a new ingestion run
+  app.post("/api/admin/ingestion-runs", requireAuth, async (req, res) => {
+    try {
+      const run = await storage.createIngestionRun({
+        sourceId: req.body.sourceId,
+        status: 'PENDING',
+      });
+      res.status(201).json(run);
+    } catch (error) {
+      console.error("Error creating ingestion run:", error);
+      res.status(500).json({ error: "Failed to create ingestion run" });
+    }
+  });
+
+  // Update an ingestion run
+  app.patch("/api/admin/ingestion-runs/:id", requireAuth, async (req, res) => {
+    try {
+      const updated = await storage.updateIngestionRun(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "Ingestion run not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating ingestion run:", error);
+      res.status(500).json({ error: "Failed to update ingestion run" });
+    }
+  });
+
   // ============ IMAGE ASSETS ============
 
   const objectStorageService = new ObjectStorageService();

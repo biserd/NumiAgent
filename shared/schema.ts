@@ -212,3 +212,28 @@ export const similarMatches = pgTable("similar_matches", {
 export const insertSimilarMatchSchema = createInsertSchema(similarMatches).omit({ id: true, createdAt: true });
 export type InsertSimilarMatch = z.infer<typeof insertSimilarMatchSchema>;
 export type SimilarMatch = typeof similarMatches.$inferSelect;
+
+// Ingestion runs table - Track ingestion jobs
+export const INGESTION_STATUS = ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'] as const;
+export type IngestionStatus = typeof INGESTION_STATUS[number];
+
+export const ingestionRuns = pgTable("ingestion_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceId: text("source_id").notNull().references(() => sources.id),
+  status: text("status").notNull().default('PENDING'),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  recordsProcessed: integer("records_processed").notNull().default(0),
+  recordsIngested: integer("records_ingested").notNull().default(0),
+  recordsFailed: integer("records_failed").notNull().default(0),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("ingestion_runs_source_idx").on(table.sourceId),
+  index("ingestion_runs_status_idx").on(table.status),
+]);
+
+export const insertIngestionRunSchema = createInsertSchema(ingestionRuns).omit({ id: true, createdAt: true });
+export type InsertIngestionRun = z.infer<typeof insertIngestionRunSchema>;
+export type IngestionRun = typeof ingestionRuns.$inferSelect;

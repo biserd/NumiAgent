@@ -1,11 +1,11 @@
 import { 
   users, userCoins, watchlists, notifications, sources, imageAssets, similarMatches,
-  coinTypes, entities,
+  coinTypes, entities, ingestionRuns,
   type User, type UpsertUser, type UserCoin, type InsertUserCoin,
   type Watchlist, type InsertWatchlist, type Notification, type InsertNotification,
   type Source, type InsertSource, type ImageAsset, type InsertImageAsset,
   type SimilarMatch, type InsertSimilarMatch, type CoinType, type InsertCoinType,
-  type Entity, type InsertEntity
+  type Entity, type InsertEntity, type IngestionRun, type InsertIngestionRun
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, between, sql } from "drizzle-orm";
@@ -64,6 +64,16 @@ export interface IStorage {
   getMatchesByCoin(coinId: string): Promise<SimilarMatch[]>;
   createSimilarMatch(match: InsertSimilarMatch): Promise<SimilarMatch>;
   findMatchingCoinTypes(coin: UserCoin): Promise<CoinTypeMatch[]>;
+  
+  // Ingestion Runs
+  getIngestionRuns(filters?: { sourceId?: string; status?: string }): Promise<IngestionRun[]>;
+  getIngestionRunById(id: string): Promise<IngestionRun | undefined>;
+  createIngestionRun(run: InsertIngestionRun): Promise<IngestionRun>;
+  updateIngestionRun(id: string, run: Partial<InsertIngestionRun>): Promise<IngestionRun | undefined>;
+  getIngestionStats(): Promise<{ totalRuns: number; completedRuns: number; failedRuns: number; totalIngested: number }>;
+  
+  // Watchlist Alerts
+  getAllEnabledWatchlists(): Promise<Watchlist[]>;
   
   // Seeding
   seedMuseumData(): Promise<void>;
@@ -534,6 +544,52 @@ export class DatabaseStorage implements IStorage {
     }
 
     console.log("Museum data seeded successfully");
+  }
+
+  // Ingestion Runs
+  async getIngestionRuns(filters?: { sourceId?: string; status?: string }): Promise<IngestionRun[]> {
+    const conditions = [];
+    if (filters?.sourceId) conditions.push(eq(ingestionRuns.sourceId, filters.sourceId));
+    if (filters?.status) conditions.push(eq(ingestionRuns.status, filters.status));
+    
+    if (conditions.length > 0) {
+      return db.select().from(ingestionRuns).where(and(...conditions)).orderBy(desc(ingestionRuns.createdAt));
+    }
+    return db.select().from(ingestionRuns).orderBy(desc(ingestionRuns.createdAt));
+  }
+
+  async getIngestionRunById(id: string): Promise<IngestionRun | undefined> {
+    const [run] = await db.select().from(ingestionRuns).where(eq(ingestionRuns.id, id));
+    return run || undefined;
+  }
+
+  async createIngestionRun(run: InsertIngestionRun): Promise<IngestionRun> {
+    const [created] = await db.insert(ingestionRuns).values(run).returning();
+    return created;
+  }
+
+  async updateIngestionRun(id: string, run: Partial<InsertIngestionRun>): Promise<IngestionRun | undefined> {
+    const [updated] = await db
+      .update(ingestionRuns)
+      .set(run)
+      .where(eq(ingestionRuns.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getIngestionStats(): Promise<{ totalRuns: number; completedRuns: number; failedRuns: number; totalIngested: number }> {
+    const allRuns = await db.select().from(ingestionRuns);
+    return {
+      totalRuns: allRuns.length,
+      completedRuns: allRuns.filter(r => r.status === 'COMPLETED').length,
+      failedRuns: allRuns.filter(r => r.status === 'FAILED').length,
+      totalIngested: allRuns.reduce((sum, r) => sum + (r.recordsIngested || 0), 0),
+    };
+  }
+
+  // Watchlist Alerts
+  async getAllEnabledWatchlists(): Promise<Watchlist[]> {
+    return db.select().from(watchlists).where(eq(watchlists.isEnabled, true));
   }
 }
 

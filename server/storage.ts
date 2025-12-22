@@ -1,12 +1,13 @@
 import { 
   users, userCoins, watchlists, notifications, sources, imageAssets, similarMatches,
-  coinTypes, entities, ingestionRuns, rightsRecords,
+  coinTypes, entities, ingestionRuns, rightsRecords, ingestionLogs,
   type User, type UpsertUser, type UserCoin, type InsertUserCoin,
   type Watchlist, type InsertWatchlist, type Notification, type InsertNotification,
   type Source, type InsertSource, type ImageAsset, type InsertImageAsset,
   type SimilarMatch, type InsertSimilarMatch, type CoinType, type InsertCoinType,
   type Entity, type InsertEntity, type IngestionRun, type InsertIngestionRun,
-  type RightsRecord, type InsertRightsRecord
+  type RightsRecord, type InsertRightsRecord,
+  type IngestionLog, type InsertIngestionLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, between, sql } from "drizzle-orm";
@@ -76,6 +77,11 @@ export interface IStorage {
   createIngestionRun(run: InsertIngestionRun): Promise<IngestionRun>;
   updateIngestionRun(id: string, run: Partial<InsertIngestionRun>): Promise<IngestionRun | undefined>;
   getIngestionStats(): Promise<{ totalRuns: number; completedRuns: number; failedRuns: number; totalIngested: number }>;
+  
+  // Ingestion Logs
+  getIngestionLogsByRun(runId: string, filters?: { level?: string; limit?: number }): Promise<IngestionLog[]>;
+  createIngestionLog(log: InsertIngestionLog): Promise<IngestionLog>;
+  getLatestCursor(runId: string): Promise<string | null>;
   
   // Watchlist Alerts
   getAllEnabledWatchlists(): Promise<Watchlist[]>;
@@ -604,6 +610,33 @@ export class DatabaseStorage implements IStorage {
       failedRuns: allRuns.filter(r => r.status === 'FAILED').length,
       totalIngested: allRuns.reduce((sum, r) => sum + (r.recordsIngested || 0), 0),
     };
+  }
+  
+  // Ingestion Logs
+  async getIngestionLogsByRun(runId: string, filters?: { level?: string; limit?: number }): Promise<IngestionLog[]> {
+    const conditions = [eq(ingestionLogs.runId, runId)];
+    if (filters?.level) conditions.push(eq(ingestionLogs.level, filters.level));
+    
+    let query = db.select().from(ingestionLogs).where(and(...conditions)).orderBy(desc(ingestionLogs.createdAt));
+    
+    if (filters?.limit) {
+      return query.limit(filters.limit);
+    }
+    return query;
+  }
+  
+  async createIngestionLog(log: InsertIngestionLog): Promise<IngestionLog> {
+    const [created] = await db.insert(ingestionLogs).values(log).returning();
+    return created;
+  }
+  
+  async getLatestCursor(runId: string): Promise<string | null> {
+    const [log] = await db.select({ cursor: ingestionLogs.cursor })
+      .from(ingestionLogs)
+      .where(and(eq(ingestionLogs.runId, runId), sql`${ingestionLogs.cursor} IS NOT NULL`))
+      .orderBy(desc(ingestionLogs.createdAt))
+      .limit(1);
+    return log?.cursor || null;
   }
 
   // Watchlist Alerts

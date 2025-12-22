@@ -384,6 +384,29 @@ export const insertIngestionRunSchema = createInsertSchema(ingestionRuns).omit({
 export type InsertIngestionRun = z.infer<typeof insertIngestionRunSchema>;
 export type IngestionRun = typeof ingestionRuns.$inferSelect;
 
+// Ingestion logs table - Detailed logging for each run
+export const LOG_LEVELS = ['DEBUG', 'INFO', 'WARN', 'ERROR'] as const;
+export type LogLevel = typeof LOG_LEVELS[number];
+
+export const ingestionLogs = pgTable("ingestion_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id").notNull().references(() => ingestionRuns.id, { onDelete: 'cascade' }),
+  level: text("level").notNull().default('INFO'),
+  message: text("message").notNull(),
+  recordId: text("record_id"),
+  cursor: text("cursor"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("ingestion_logs_run_idx").on(table.runId),
+  index("ingestion_logs_level_idx").on(table.level),
+  index("ingestion_logs_created_idx").on(table.createdAt),
+]);
+
+export const insertIngestionLogSchema = createInsertSchema(ingestionLogs).omit({ id: true, createdAt: true });
+export type InsertIngestionLog = z.infer<typeof insertIngestionLogSchema>;
+export type IngestionLog = typeof ingestionLogs.$inferSelect;
+
 // ==================== PROVENANCE TRACKING ====================
 
 // Provenance event types

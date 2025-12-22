@@ -1,6 +1,7 @@
 import { db } from "../db";
-import { coinTypes } from "@shared/schema";
-import { and, or, ilike, gte, lte } from "drizzle-orm";
+import { coinTypes, imageEmbeddings } from "@shared/schema";
+import { and, or, ilike, gte, lte, eq, sql, inArray } from "drizzle-orm";
+import { EmbeddingService } from "./embedding-service";
 
 export interface SimilaritySearchParams {
   ruler?: string;
@@ -325,4 +326,206 @@ export async function searchCoinsByText(
     console.error("Text search error:", error);
     throw new Error(`Failed to search coins: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+export interface HybridSearchParams extends SimilaritySearchParams {
+  imageUrl?: string;
+  imageEmbedding?: number[];
+  vectorWeight?: number;
+}
+
+export interface HybridSearchResult extends SimilarCoinResult {
+  metadataScore: number;
+  vectorScore: number;
+  hasEmbedding: boolean;
+}
+
+/**
+ * Hybrid search combining metadata matching with vector similarity re-ranking.
+ * Pipeline:
+ * 1. Candidate set from canonical metadata matching
+ * 2. Vector re-rank using image embeddings (if available)
+ * 3. Output with combined scores and explanation
+ */
+export async function findSimilarCoinsHybrid(
+  params: HybridSearchParams
+): Promise<HybridSearchResult[]> {
+  const {
+    imageUrl,
+    imageEmbedding,
+    vectorWeight = 0.4,
+    limit = 20,
+    ...metadataParams
+  } = params;
+
+  let queryEmbedding: number[] | null = null;
+  
+  if (imageEmbedding && imageEmbedding.length > 0) {
+    queryEmbedding = imageEmbedding;
+  } else if (imageUrl) {
+    try {
+      const imageData = await EmbeddingService.downloadImage(imageUrl);
+      if (imageData) {
+        queryEmbedding = await EmbeddingService.computeImageEmbedding(imageData);
+      }
+    } catch (error) {
+      console.warn('Failed to compute query embedding:', error);
+    }
+  }
+
+  const metadataResults = await findSimilarCoins({
+    ...metadataParams,
+    limit: limit * 2,
+  });
+
+  if (!queryEmbedding || metadataResults.length === 0) {
+    return metadataResults.map(r => ({
+      ...r,
+      metadataScore: r.matchScore,
+      vectorScore: 0,
+      hasEmbedding: false,
+    })).slice(0, limit);
+  }
+
+  const coinTypeIds = metadataResults.map(r => r.id);
+  
+  const embeddings = await db.select({
+    coinTypeId: imageEmbeddings.coinTypeId,
+    embedding: imageEmbeddings.embedding,
+  })
+    .from(imageEmbeddings)
+    .where(inArray(imageEmbeddings.coinTypeId, coinTypeIds));
+
+  const embeddingMap = new Map<string, number[]>();
+  for (const emb of embeddings) {
+    if (emb.coinTypeId) {
+      try {
+        embeddingMap.set(emb.coinTypeId, JSON.parse(emb.embedding));
+      } catch (e) {
+        console.warn(`Invalid embedding for coin ${emb.coinTypeId}`);
+      }
+    }
+  }
+
+  const reranked: HybridSearchResult[] = metadataResults.map(coin => {
+    const storedEmbedding = embeddingMap.get(coin.id);
+    
+    if (!storedEmbedding || !queryEmbedding) {
+      return {
+        ...coin,
+        metadataScore: coin.matchScore,
+        vectorScore: 0,
+        hasEmbedding: false,
+      };
+    }
+
+    const vectorSimilarity = cosineSimilarity(queryEmbedding, storedEmbedding);
+    
+    const metadataWeight = 1 - vectorWeight;
+    const combinedScore = (coin.matchScore * metadataWeight) + (vectorSimilarity * vectorWeight);
+    
+    return {
+      ...coin,
+      matchScore: combinedScore,
+      metadataScore: coin.matchScore,
+      vectorScore: vectorSimilarity,
+      hasEmbedding: true,
+      matchReasons: [
+        ...coin.matchReasons,
+        `Visual similarity: ${(vectorSimilarity * 100).toFixed(1)}%`,
+      ],
+    };
+  });
+
+  return reranked
+    .sort((a, b) => b.matchScore - a.matchScore)
+    .slice(0, limit);
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+  
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  
+  const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+  if (magnitude === 0) return 0;
+  
+  return dotProduct / magnitude;
+}
+
+/**
+ * Find visually similar coins using only vector search.
+ * Used when user uploads an image without metadata.
+ */
+export async function findSimilarCoinsByImage(
+  imageUrl: string,
+  limit: number = 20
+): Promise<HybridSearchResult[]> {
+  const imageData = await EmbeddingService.downloadImage(imageUrl);
+  if (!imageData) {
+    throw new Error('Failed to download image');
+  }
+  
+  const queryEmbedding = await EmbeddingService.computeImageEmbedding(imageData);
+  if (!queryEmbedding) {
+    throw new Error('Failed to compute image embedding');
+  }
+  
+  const similarEmbeddings = await EmbeddingService.findSimilarByEmbedding(queryEmbedding, {
+    limit,
+    minSimilarity: 0.3,
+  });
+  
+  const coinTypeIds = similarEmbeddings
+    .filter(e => e.coinTypeId)
+    .map(e => e.coinTypeId!);
+  
+  if (coinTypeIds.length === 0) {
+    return [];
+  }
+  
+  const coins = await db.select({
+    id: coinTypes.id,
+    label: coinTypes.label,
+    sourceId: coinTypes.sourceId,
+    sourceRecordId: coinTypes.sourceRecordId,
+    sourceUrl: coinTypes.sourceUrl,
+    imageUrl: coinTypes.imageUrl,
+    dateFrom: coinTypes.dateFrom,
+    dateTo: coinTypes.dateTo,
+    obvLegend: coinTypes.obvLegend,
+    revLegend: coinTypes.revLegend,
+    referenceText: coinTypes.referenceText,
+    authority: coinTypes.authority,
+    issuer: coinTypes.issuer,
+    mint: coinTypes.mint,
+    denomination: coinTypes.denomination,
+    metal: coinTypes.metal,
+  })
+    .from(coinTypes)
+    .where(inArray(coinTypes.id, coinTypeIds));
+  
+  const coinMap = new Map(coins.map(c => [c.id, c]));
+  
+  return similarEmbeddings
+    .filter(e => e.coinTypeId && coinMap.has(e.coinTypeId))
+    .map(e => {
+      const coin = coinMap.get(e.coinTypeId!)!;
+      return {
+        ...coin,
+        matchScore: e.similarity,
+        matchReasons: [`Visual similarity: ${(e.similarity * 100).toFixed(1)}%`],
+        metadataScore: 0,
+        vectorScore: e.similarity,
+        hasEmbedding: true,
+      };
+    });
 }

@@ -79,7 +79,10 @@ Preferred communication style: Simple, everyday language.
 
 ### AI Services
 - **Gemini (via Replit AI Integrations)**: OCR and image analysis
-- **Privacy-first similarity search**: Metadata-based matching, no external AI for embeddings
+- **In-house CLIP Embeddings**: Visual similarity using @xenova/transformers (CPU-based, no external AI APIs)
+  - Model: Xenova/clip-vit-base-patch32 (512-dim vectors)
+  - Rights-gated: Only computes embeddings when license permits (CC0/PDM/CC-BY allowed)
+- **pgvector**: PostgreSQL extension for vector similarity search
 
 ### UI Framework
 - **Radix UI**: Accessible component primitives (dialog, dropdown, tabs, etc.)
@@ -102,5 +105,8 @@ Preferred communication style: Simple, everyday language.
 - `/api/watchlists/*`: Watchlist and alert management
 - `/api/ocr/analyze`: OCR analysis of coin images using Gemini
 - `/api/search/similar`: Metadata-based similarity search
+- `/api/search/hybrid`: Combined metadata + vector similarity search
+- `/api/search/visual`: Image-only visual similarity search
 - `/api/search/coins`: Text search across coin database
 - `/api/admin/*`: Admin-only routes for data ingestion and management
+- `/api/admin/embeddings/*`: Embedding worker management (start/stop/stats)

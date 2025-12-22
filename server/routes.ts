@@ -648,6 +648,139 @@ export async function registerRoutes(
     }
   });
 
+  // Hybrid search (metadata + vector)
+  app.post("/api/search/hybrid", requireAuth, async (req, res) => {
+    try {
+      const { findSimilarCoinsHybrid } = await import("./services/similarity");
+      
+      const { 
+        ruler, denomination, mint, metal, obvLegend, revLegend, 
+        dateFrom, dateTo, referenceText, imageUrl, vectorWeight, limit 
+      } = req.body;
+      
+      const results = await findSimilarCoinsHybrid({
+        ruler,
+        denomination,
+        mint,
+        metal,
+        obvLegend,
+        revLegend,
+        dateFrom: dateFrom !== undefined ? parseInt(dateFrom) : undefined,
+        dateTo: dateTo !== undefined ? parseInt(dateTo) : undefined,
+        referenceText,
+        imageUrl,
+        vectorWeight: vectorWeight || 0.4,
+        limit: limit || 20,
+      });
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error in hybrid search:", error);
+      res.status(500).json({ error: "Failed to search coins" });
+    }
+  });
+
+  // Visual similarity search (image only)
+  app.post("/api/search/visual", requireAuth, async (req, res) => {
+    try {
+      const { findSimilarCoinsByImage } = await import("./services/similarity");
+      
+      const { imageUrl, limit } = req.body;
+      
+      if (!imageUrl) {
+        return res.status(400).json({ error: "imageUrl is required" });
+      }
+
+      const results = await findSimilarCoinsByImage(imageUrl, limit || 20);
+      res.json(results);
+    } catch (error) {
+      console.error("Error in visual search:", error);
+      res.status(500).json({ error: "Failed to search similar coins by image" });
+    }
+  });
+
+  // ============ EMBEDDINGS MANAGEMENT ============
+
+  // Get embedding job stats
+  app.get("/api/admin/embeddings/stats", requireAdmin, async (req, res) => {
+    try {
+      const { EmbeddingWorker } = await import("./services/embedding-worker");
+      const stats = await EmbeddingWorker.getJobStats();
+      res.json({
+        ...stats,
+        workerRunning: EmbeddingWorker.isRunning(),
+      });
+    } catch (error) {
+      console.error("Error getting embedding stats:", error);
+      res.status(500).json({ error: "Failed to get embedding stats" });
+    }
+  });
+
+  // Start embedding worker
+  app.post("/api/admin/embeddings/worker/start", requireAdmin, async (req, res) => {
+    try {
+      const { EmbeddingWorker } = await import("./services/embedding-worker");
+      EmbeddingWorker.startWorker();
+      res.json({ message: "Embedding worker started" });
+    } catch (error) {
+      console.error("Error starting embedding worker:", error);
+      res.status(500).json({ error: "Failed to start embedding worker" });
+    }
+  });
+
+  // Stop embedding worker
+  app.post("/api/admin/embeddings/worker/stop", requireAdmin, async (req, res) => {
+    try {
+      const { EmbeddingWorker } = await import("./services/embedding-worker");
+      EmbeddingWorker.stopWorker();
+      res.json({ message: "Embedding worker stopped" });
+    } catch (error) {
+      console.error("Error stopping embedding worker:", error);
+      res.status(500).json({ error: "Failed to stop embedding worker" });
+    }
+  });
+
+  // Create embedding jobs for coin types
+  app.post("/api/admin/embeddings/queue", requireAdmin, async (req, res) => {
+    try {
+      const { EmbeddingWorker } = await import("./services/embedding-worker");
+      const { coinTypeIds } = req.body;
+      
+      if (!coinTypeIds || !Array.isArray(coinTypeIds)) {
+        return res.status(400).json({ error: "coinTypeIds array required" });
+      }
+
+      const jobIds: string[] = [];
+      for (const coinTypeId of coinTypeIds) {
+        const ids = await EmbeddingWorker.createEmbeddingJobsForCoinType(coinTypeId);
+        jobIds.push(...ids);
+      }
+
+      res.json({ 
+        message: `Created ${jobIds.length} embedding jobs`,
+        jobIds,
+      });
+    } catch (error) {
+      console.error("Error creating embedding jobs:", error);
+      res.status(500).json({ error: "Failed to create embedding jobs" });
+    }
+  });
+
+  // Process embedding batch manually
+  app.post("/api/admin/embeddings/process", requireAdmin, async (req, res) => {
+    try {
+      const { EmbeddingWorker } = await import("./services/embedding-worker");
+      const processed = await EmbeddingWorker.processNextBatch();
+      res.json({ 
+        message: `Processed ${processed} embedding jobs`,
+        processed,
+      });
+    } catch (error) {
+      console.error("Error processing embeddings:", error);
+      res.status(500).json({ error: "Failed to process embeddings" });
+    }
+  });
+
   // ============ SEED DATA ============
 
   // Seed museum data (admin only, for development)

@@ -6,6 +6,9 @@ import { z } from "zod";
 // Re-export auth models
 export * from "./models/auth";
 
+// Re-export chat models
+export * from "./models/chat";
+
 // License codes enum values
 export const LICENSE_CODES = ['CC0', 'PDM', 'CC_BY', 'CC_BY_SA', 'CC_BY_NC', 'CC_BY_NC_SA', 'ODBL', 'ALL_RIGHTS_RESERVED', 'UNKNOWN'] as const;
 export type LicenseCode = typeof LICENSE_CODES[number];

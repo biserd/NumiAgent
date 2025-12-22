@@ -1,11 +1,12 @@
 import { 
   users, userCoins, watchlists, notifications, sources, imageAssets, similarMatches,
-  coinTypes, entities, ingestionRuns,
+  coinTypes, entities, ingestionRuns, rightsRecords,
   type User, type UpsertUser, type UserCoin, type InsertUserCoin,
   type Watchlist, type InsertWatchlist, type Notification, type InsertNotification,
   type Source, type InsertSource, type ImageAsset, type InsertImageAsset,
   type SimilarMatch, type InsertSimilarMatch, type CoinType, type InsertCoinType,
-  type Entity, type InsertEntity, type IngestionRun, type InsertIngestionRun
+  type Entity, type InsertEntity, type IngestionRun, type InsertIngestionRun,
+  type RightsRecord, type InsertRightsRecord
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, between, sql } from "drizzle-orm";
@@ -54,7 +55,11 @@ export interface IStorage {
   // Coin Types
   searchCoinTypes(filters: { ruler?: string; denomination?: string; dateFrom?: number; dateTo?: number; limit?: number }): Promise<CoinType[]>;
   getCoinTypeById(id: string): Promise<CoinType | undefined>;
+  getCoinTypeBySourceRecord(sourceId: string, sourceRecordId: string): Promise<CoinType | undefined>;
   createCoinType(coinType: InsertCoinType): Promise<CoinType>;
+  
+  // Rights Records
+  createRightsRecord(rights: InsertRightsRecord): Promise<RightsRecord>;
   
   // Entities
   searchEntities(filters: { type?: string; search?: string }): Promise<Entity[]>;
@@ -238,8 +243,22 @@ export class DatabaseStorage implements IStorage {
     return coinType || undefined;
   }
 
+  async getCoinTypeBySourceRecord(sourceId: string, sourceRecordId: string): Promise<CoinType | undefined> {
+    const [coinType] = await db
+      .select()
+      .from(coinTypes)
+      .where(and(eq(coinTypes.sourceId, sourceId), eq(coinTypes.sourceRecordId, sourceRecordId)));
+    return coinType || undefined;
+  }
+
   async createCoinType(coinType: InsertCoinType): Promise<CoinType> {
     const [created] = await db.insert(coinTypes).values(coinType).returning();
+    return created;
+  }
+
+  // Rights Records
+  async createRightsRecord(rights: InsertRightsRecord): Promise<RightsRecord> {
+    const [created] = await db.insert(rightsRecords).values(rights).returning();
     return created;
   }
 

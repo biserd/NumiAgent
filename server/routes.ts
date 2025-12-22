@@ -315,13 +315,35 @@ export async function registerRoutes(
     }
   });
 
-  // Create a new ingestion run
+  // Create and run an ingestion job
   app.post("/api/admin/ingestion-runs", requireAuth, async (req, res) => {
     try {
+      const { sourceId, limit = 50 } = req.body;
+      
+      if (!sourceId) {
+        return res.status(400).json({ error: "sourceId is required" });
+      }
+      
       const run = await storage.createIngestionRun({
-        sourceId: req.body.sourceId,
+        sourceId,
         status: 'PENDING',
       });
+      
+      // Run ingestion asynchronously
+      (async () => {
+        try {
+          const { runIngestion } = await import("./ingestion");
+          await runIngestion(sourceId, limit);
+        } catch (error) {
+          console.error("Ingestion error:", error);
+          await storage.updateIngestionRun(run.id, {
+            status: 'FAILED',
+            errorMessage: error instanceof Error ? error.message : String(error),
+            completedAt: new Date(),
+          });
+        }
+      })();
+      
       res.status(201).json(run);
     } catch (error) {
       console.error("Error creating ingestion run:", error);

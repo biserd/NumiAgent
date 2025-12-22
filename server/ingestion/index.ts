@@ -24,17 +24,17 @@ const adapters: Record<string, IngestionAdapter> = {
 };
 
 export async function runIngestion(
+  runId: string,
   sourceId: string,
   limit: number = 100
 ): Promise<IngestionResult> {
   const startTime = Date.now();
   const errors: string[] = [];
   
-  const run = await storage.createIngestionRun({
-    sourceId,
+  // Update existing run to RUNNING status
+  await storage.updateIngestionRun(runId, {
     status: "RUNNING",
-    recordsProcessed: 0,
-    recordsIngested: 0,
+    startedAt: new Date(),
   });
   
   const adapter = adapters[sourceId];
@@ -42,14 +42,14 @@ export async function runIngestion(
     const error = `No adapter found for source: ${sourceId}`;
     errors.push(error);
     
-    await storage.updateIngestionRun(run.id, {
+    await storage.updateIngestionRun(runId, {
       status: "FAILED",
       errorMessage: error,
       completedAt: new Date(),
     });
     
     return {
-      runId: run.id,
+      runId,
       sourceId,
       recordsProcessed: 0,
       recordsIngested: 0,
@@ -88,7 +88,7 @@ export async function runIngestion(
         recordsIngested++;
         
         if (recordsProcessed % 10 === 0) {
-          await storage.updateIngestionRun(run.id, {
+          await storage.updateIngestionRun(runId, {
             recordsProcessed,
             recordsIngested,
           });
@@ -99,7 +99,7 @@ export async function runIngestion(
       }
     }
     
-    await storage.updateIngestionRun(run.id, {
+    await storage.updateIngestionRun(runId, {
       status: "COMPLETED",
       recordsProcessed,
       recordsIngested,
@@ -109,7 +109,7 @@ export async function runIngestion(
     const errorMsg = err instanceof Error ? err.message : String(err);
     errors.push(`Fatal error: ${errorMsg}`);
     
-    await storage.updateIngestionRun(run.id, {
+    await storage.updateIngestionRun(runId, {
       status: "FAILED",
       recordsProcessed,
       recordsIngested,
@@ -119,7 +119,7 @@ export async function runIngestion(
   }
   
   return {
-    runId: run.id,
+    runId,
     sourceId,
     recordsProcessed,
     recordsIngested,

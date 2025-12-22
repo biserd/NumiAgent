@@ -333,7 +333,7 @@ export async function registerRoutes(
       (async () => {
         try {
           const { runIngestion } = await import("./ingestion");
-          await runIngestion(sourceId, limit);
+          await runIngestion(run.id, sourceId, limit);
         } catch (error) {
           console.error("Ingestion error:", error);
           await storage.updateIngestionRun(run.id, {

@@ -4,6 +4,8 @@
 import { storage } from "../storage";
 import { MetAdapter } from "./met-adapter";
 import { IKMKAdapter } from "./ikmk-adapter";
+import { ANSAdapter } from "./ans-adapter";
+import { BMAdapter } from "./bm-adapter";
 import type { InsertCoinType, InsertRightsRecord, IngestionRun } from "@shared/schema";
 
 export interface IngestionResult {
@@ -16,11 +18,13 @@ export interface IngestionResult {
   durationMs: number;
 }
 
-type IngestionAdapter = typeof MetAdapter | typeof IKMKAdapter;
+type IngestionAdapter = typeof MetAdapter | typeof IKMKAdapter | typeof ANSAdapter | typeof BMAdapter;
 
 const adapters: Record<string, IngestionAdapter> = {
   "met-museum": MetAdapter,
   "ikmk-berlin": IKMKAdapter,
+  "ans-mantis": ANSAdapter,
+  "british-museum": BMAdapter,
 };
 
 export async function runIngestion(
@@ -64,7 +68,24 @@ export async function runIngestion(
   let recordsSkipped = 0;
   
   try {
-    for await (const { coinType, rights } of adapter.ingest(limit)) {
+    // Different adapters have different signatures, call appropriately
+    let ingestionGenerator: AsyncGenerator<{ coinType: InsertCoinType; rights: InsertRightsRecord }>;
+    
+    if (sourceId === 'ans-mantis') {
+      // ANS adapter takes (query, limit)
+      const defaultQuery = "department_facet:Greek OR department_facet:Roman";
+      ingestionGenerator = ANSAdapter.ingest(defaultQuery, limit);
+    } else if (sourceId === 'british-museum') {
+      ingestionGenerator = BMAdapter.ingest(limit);
+    } else if (sourceId === 'met-museum') {
+      ingestionGenerator = MetAdapter.ingest(limit);
+    } else if (sourceId === 'ikmk-berlin') {
+      ingestionGenerator = IKMKAdapter.ingest(limit);
+    } else {
+      throw new Error(`Unknown source: ${sourceId}`);
+    }
+    
+    for await (const { coinType, rights } of ingestionGenerator) {
       recordsProcessed++;
       
       try {
@@ -133,4 +154,4 @@ export async function getAvailableAdapters(): Promise<string[]> {
   return Object.keys(adapters);
 }
 
-export { MetAdapter, IKMKAdapter };
+export { MetAdapter, IKMKAdapter, ANSAdapter, BMAdapter };

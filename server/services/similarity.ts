@@ -27,6 +27,11 @@ export interface SimilarCoinResult {
   obvLegend: string | null;
   revLegend: string | null;
   referenceText: string | null;
+  authority: string | null;
+  issuer: string | null;
+  mint: string | null;
+  denomination: string | null;
+  metal: string | null;
   matchScore: number;
   matchReasons: string[];
 }
@@ -55,13 +60,47 @@ export async function findSimilarCoins(
   const conditions: any[] = [];
   const matchingFactors: Map<string, { condition: any; weight: number; reason: string }> = new Map();
 
-  // Ruler matching (high weight)
+  // Ruler matching (high weight) - check both label and authority/issuer fields
   if (ruler) {
-    const rulerCondition = ilike(coinTypes.label, `%${ruler}%`);
+    const rulerCondition = or(
+      ilike(coinTypes.label, `%${ruler}%`),
+      ilike(coinTypes.authority, `%${ruler}%`),
+      ilike(coinTypes.issuer, `%${ruler}%`)
+    );
     matchingFactors.set('ruler', {
       condition: rulerCondition,
       weight: 0.3,
       reason: `Ruler matches: ${ruler}`,
+    });
+  }
+  
+  // Denomination matching
+  if (denomination) {
+    const denomCondition = ilike(coinTypes.denomination, `%${denomination}%`);
+    matchingFactors.set('denomination', {
+      condition: denomCondition,
+      weight: 0.15,
+      reason: `Denomination matches: ${denomination}`,
+    });
+  }
+  
+  // Mint matching
+  if (mint) {
+    const mintCondition = ilike(coinTypes.mint, `%${mint}%`);
+    matchingFactors.set('mint', {
+      condition: mintCondition,
+      weight: 0.15,
+      reason: `Mint matches: ${mint}`,
+    });
+  }
+  
+  // Metal matching
+  if (metal) {
+    const metalCondition = ilike(coinTypes.metal, `%${metal}%`);
+    matchingFactors.set('metal', {
+      condition: metalCondition,
+      weight: 0.1,
+      reason: `Metal matches: ${metal}`,
     });
   }
 
@@ -135,6 +174,11 @@ export async function findSimilarCoins(
         obvLegend: coinTypes.obvLegend,
         revLegend: coinTypes.revLegend,
         referenceText: coinTypes.referenceText,
+        authority: coinTypes.authority,
+        issuer: coinTypes.issuer,
+        mint: coinTypes.mint,
+        denomination: coinTypes.denomination,
+        metal: coinTypes.metal,
       })
       .from(coinTypes)
       .where(or(...allConditions))
@@ -146,9 +190,31 @@ export async function findSimilarCoins(
       const reasons: string[] = [];
 
       // Check each factor
-      if (ruler && coin.label?.toLowerCase().includes(ruler.toLowerCase())) {
-        score += matchingFactors.get('ruler')!.weight;
-        reasons.push(matchingFactors.get('ruler')!.reason);
+      if (ruler) {
+        const rulerLower = ruler.toLowerCase();
+        if (
+          coin.label?.toLowerCase().includes(rulerLower) ||
+          coin.authority?.toLowerCase().includes(rulerLower) ||
+          coin.issuer?.toLowerCase().includes(rulerLower)
+        ) {
+          score += matchingFactors.get('ruler')!.weight;
+          reasons.push(matchingFactors.get('ruler')!.reason);
+        }
+      }
+      
+      if (denomination && coin.denomination?.toLowerCase().includes(denomination.toLowerCase())) {
+        score += matchingFactors.get('denomination')!.weight;
+        reasons.push(matchingFactors.get('denomination')!.reason);
+      }
+      
+      if (mint && coin.mint?.toLowerCase().includes(mint.toLowerCase())) {
+        score += matchingFactors.get('mint')!.weight;
+        reasons.push(matchingFactors.get('mint')!.reason);
+      }
+      
+      if (metal && coin.metal?.toLowerCase().includes(metal.toLowerCase())) {
+        score += matchingFactors.get('metal')!.weight;
+        reasons.push(matchingFactors.get('metal')!.reason);
       }
 
       if (obvLegend && coin.obvLegend) {
@@ -230,6 +296,11 @@ export async function searchCoinsByText(
         obvLegend: coinTypes.obvLegend,
         revLegend: coinTypes.revLegend,
         referenceText: coinTypes.referenceText,
+        authority: coinTypes.authority,
+        issuer: coinTypes.issuer,
+        mint: coinTypes.mint,
+        denomination: coinTypes.denomination,
+        metal: coinTypes.metal,
       })
       .from(coinTypes)
       .where(
@@ -237,7 +308,10 @@ export async function searchCoinsByText(
           ilike(coinTypes.label, searchTerm),
           ilike(coinTypes.obvLegend, searchTerm),
           ilike(coinTypes.revLegend, searchTerm),
-          ilike(coinTypes.referenceText, searchTerm)
+          ilike(coinTypes.referenceText, searchTerm),
+          ilike(coinTypes.authority, searchTerm),
+          ilike(coinTypes.mint, searchTerm),
+          ilike(coinTypes.denomination, searchTerm)
         )
       )
       .limit(limit);

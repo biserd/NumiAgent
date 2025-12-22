@@ -61,6 +61,13 @@ export const rightsRecords = pgTable("rights_records", {
   rightsStatementUrl: text("rights_statement_url"),
   rightsRaw: jsonb("rights_raw"),
   resolvedAt: timestamp("resolved_at").notNull().defaultNow(),
+  
+  // Enhanced rights tracking
+  usageExpiresAt: timestamp("usage_expires_at"),
+  derivativeOk: boolean("derivative_ok").notNull().default(false),
+  embargoUntil: timestamp("embargo_until"),
+  attributionTemplate: text("attribution_template"),
+  auditTrail: jsonb("audit_trail").default([]),
 }, (table) => [
   index("rights_records_source_idx").on(table.sourceId),
   index("rights_records_url_idx").on(table.sourceUrl),
@@ -148,6 +155,10 @@ export const insertEntitySchema = createInsertSchema(entities).omit({ id: true, 
 export type InsertEntity = z.infer<typeof insertEntitySchema>;
 export type Entity = typeof entities.$inferSelect;
 
+// Condition grades for numismatic classification
+export const CONDITION_GRADES = ['POOR', 'FAIR', 'GOOD', 'VG', 'FINE', 'VF', 'EF', 'AU', 'UNC', 'FDC', 'UNKNOWN'] as const;
+export type ConditionGrade = typeof CONDITION_GRADES[number];
+
 // Coin types table
 export const coinTypes = pgTable("coin_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -164,11 +175,142 @@ export const coinTypes = pgTable("coin_types", {
   imageUrl: text("image_url"),
   isSample: boolean("is_sample").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  
+  // Physical properties
+  weightG: numeric("weight_g", { precision: 10, scale: 3 }),
+  diameterMm: numeric("diameter_mm", { precision: 10, scale: 2 }),
+  dieAxis: integer("die_axis"),
+  condition: text("condition"),
+  purity: text("purity"),
+  
+  // Type descriptors
+  obvType: text("obv_type"),
+  revType: text("rev_type"),
+  controlMarks: text("control_marks"),
+  
+  // Authority/issuer (denormalized for quick access, canonical in entities)
+  authority: text("authority"),
+  issuer: text("issuer"),
+  mint: text("mint"),
+  denomination: text("denomination"),
+  metal: text("metal"),
+  region: text("region"),
 });
 
 export const insertCoinTypeSchema = createInsertSchema(coinTypes).omit({ id: true, createdAt: true });
 export type InsertCoinType = z.infer<typeof insertCoinTypeSchema>;
 export type CoinType = typeof coinTypes.$inferSelect;
+
+// Reference catalog types (RIC, RPC, RRC, SNG, BMC, DOC, etc.)
+export const CATALOG_TYPES = ['RIC', 'RPC', 'RRC', 'SNG', 'BMC', 'DOC', 'SEAR', 'HGC', 'MEC', 'CRAWFORD', 'OTHER'] as const;
+export type CatalogType = typeof CATALOG_TYPES[number];
+
+// Catalog references table - Standard numismatic references
+export const catalogReferences = pgTable("catalog_references", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coinTypeId: varchar("coin_type_id").references(() => coinTypes.id, { onDelete: 'cascade' }),
+  userCoinId: varchar("user_coin_id").references(() => userCoins.id, { onDelete: 'cascade' }),
+  catalogType: text("catalog_type").notNull(),
+  catalogNumber: text("catalog_number").notNull(),
+  volume: text("volume"),
+  page: text("page"),
+  nomismaUri: text("nomisma_uri"),
+  note: text("note"),
+  isPrimary: boolean("is_primary").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("catalog_ref_coin_type_idx").on(table.coinTypeId),
+  index("catalog_ref_user_coin_idx").on(table.userCoinId),
+  index("catalog_ref_number_idx").on(table.catalogType, table.catalogNumber),
+]);
+
+export const insertCatalogReferenceSchema = createInsertSchema(catalogReferences).omit({ id: true, createdAt: true });
+export type InsertCatalogReference = z.infer<typeof insertCatalogReferenceSchema>;
+export type CatalogReference = typeof catalogReferences.$inferSelect;
+
+// Rulers table - Authority/issuer hierarchy
+export const rulers = pgTable("rulers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  reignStart: integer("reign_start"),
+  reignEnd: integer("reign_end"),
+  dynastyId: varchar("dynasty_id"),
+  title: text("title"),
+  nomismaUri: text("nomisma_uri"),
+  wikidataQid: text("wikidata_qid"),
+  alternateNames: text("alternate_names").array(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("rulers_name_idx").on(table.name),
+  index("rulers_dynasty_idx").on(table.dynastyId),
+]);
+
+export const insertRulerSchema = createInsertSchema(rulers).omit({ id: true, createdAt: true });
+export type InsertRuler = z.infer<typeof insertRulerSchema>;
+export type Ruler = typeof rulers.$inferSelect;
+
+// Dynasties table - Grouping of rulers by dynasty/period
+export const dynasties = pgTable("dynasties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  periodStart: integer("period_start"),
+  periodEnd: integer("period_end"),
+  parentDynastyId: varchar("parent_dynasty_id"),
+  region: text("region"),
+  nomismaUri: text("nomisma_uri"),
+  wikidataQid: text("wikidata_qid"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("dynasties_name_idx").on(table.name),
+]);
+
+export const insertDynastySchema = createInsertSchema(dynasties).omit({ id: true, createdAt: true });
+export type InsertDynasty = z.infer<typeof insertDynastySchema>;
+export type Dynasty = typeof dynasties.$inferSelect;
+
+// Mints table - Standardized mint locations
+export const mints = pgTable("mints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  modernName: text("modern_name"),
+  latitude: numeric("latitude", { precision: 10, scale: 7 }),
+  longitude: numeric("longitude", { precision: 10, scale: 7 }),
+  region: text("region"),
+  country: text("country"),
+  nomismaUri: text("nomisma_uri"),
+  pleiadesUri: text("pleiades_uri"),
+  geonamesId: text("geonames_id"),
+  alternateNames: text("alternate_names").array(),
+  activeFrom: integer("active_from"),
+  activeTo: integer("active_to"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("mints_name_idx").on(table.name),
+  index("mints_region_idx").on(table.region),
+]);
+
+export const insertMintSchema = createInsertSchema(mints).omit({ id: true, createdAt: true });
+export type InsertMint = z.infer<typeof insertMintSchema>;
+export type Mint = typeof mints.$inferSelect;
+
+// Denominations table - Standardized denominations
+export const denominations = pgTable("denominations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  period: text("period"),
+  metal: text("metal"),
+  typicalWeightG: numeric("typical_weight_g", { precision: 10, scale: 3 }),
+  typicalDiameterMm: numeric("typical_diameter_mm", { precision: 10, scale: 2 }),
+  nomismaUri: text("nomisma_uri"),
+  alternateNames: text("alternate_names").array(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("denominations_name_idx").on(table.name),
+]);
+
+export const insertDenominationSchema = createInsertSchema(denominations).omit({ id: true, createdAt: true });
+export type InsertDenomination = z.infer<typeof insertDenominationSchema>;
+export type Denomination = typeof denominations.$inferSelect;
 
 // Watchlists table
 export const watchlists = pgTable("watchlists", {
@@ -241,3 +383,155 @@ export const ingestionRuns = pgTable("ingestion_runs", {
 export const insertIngestionRunSchema = createInsertSchema(ingestionRuns).omit({ id: true, createdAt: true });
 export type InsertIngestionRun = z.infer<typeof insertIngestionRunSchema>;
 export type IngestionRun = typeof ingestionRuns.$inferSelect;
+
+// ==================== PROVENANCE TRACKING ====================
+
+// Provenance event types
+export const PROVENANCE_EVENT_TYPES = ['DISCOVERY', 'AUCTION', 'PRIVATE_SALE', 'DONATION', 'INHERITANCE', 'HOARD_FIND', 'EXCAVATION', 'MUSEUM_ACQUISITION', 'DEACCESSION', 'OTHER'] as const;
+export type ProvenanceEventType = typeof PROVENANCE_EVENT_TYPES[number];
+
+// Hoards table - Archaeological finds/treasure troves
+export const hoards = pgTable("hoards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  discoveryDate: text("discovery_date"),
+  discoveryYear: integer("discovery_year"),
+  location: text("location"),
+  modernLocation: text("modern_location"),
+  latitude: numeric("latitude", { precision: 10, scale: 7 }),
+  longitude: numeric("longitude", { precision: 10, scale: 7 }),
+  coinCount: integer("coin_count"),
+  terminusPostQuem: integer("terminus_post_quem"),
+  terminusAnteQuem: integer("terminus_ante_quem"),
+  description: text("description"),
+  bibliography: text("bibliography").array(),
+  nomismaUri: text("nomisma_uri"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("hoards_name_idx").on(table.name),
+  index("hoards_year_idx").on(table.discoveryYear),
+]);
+
+export const insertHoardSchema = createInsertSchema(hoards).omit({ id: true, createdAt: true });
+export type InsertHoard = z.infer<typeof insertHoardSchema>;
+export type Hoard = typeof hoards.$inferSelect;
+
+// Auction houses table
+export const auctionHouses = pgTable("auction_houses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  abbreviation: text("abbreviation"),
+  city: text("city"),
+  country: text("country"),
+  website: text("website"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("auction_houses_name_idx").on(table.name),
+]);
+
+export const insertAuctionHouseSchema = createInsertSchema(auctionHouses).omit({ id: true, createdAt: true });
+export type InsertAuctionHouse = z.infer<typeof insertAuctionHouseSchema>;
+export type AuctionHouse = typeof auctionHouses.$inferSelect;
+
+// Auction lots table - Individual auction records
+export const auctionLots = pgTable("auction_lots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  auctionHouseId: varchar("auction_house_id").references(() => auctionHouses.id),
+  saleTitle: text("sale_title"),
+  saleDate: text("sale_date"),
+  lotNumber: text("lot_number"),
+  estimateLow: numeric("estimate_low", { precision: 15, scale: 2 }),
+  estimateHigh: numeric("estimate_high", { precision: 15, scale: 2 }),
+  hammerPrice: numeric("hammer_price", { precision: 15, scale: 2 }),
+  currency: text("currency"),
+  catalogDescription: text("catalog_description"),
+  catalogImageUrl: text("catalog_image_url"),
+  sourceUrl: text("source_url"),
+  coinTypeId: varchar("coin_type_id").references(() => coinTypes.id),
+  userCoinId: varchar("user_coin_id").references(() => userCoins.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("auction_lots_house_idx").on(table.auctionHouseId),
+  index("auction_lots_date_idx").on(table.saleDate),
+  index("auction_lots_coin_type_idx").on(table.coinTypeId),
+]);
+
+export const insertAuctionLotSchema = createInsertSchema(auctionLots).omit({ id: true, createdAt: true });
+export type InsertAuctionLot = z.infer<typeof insertAuctionLotSchema>;
+export type AuctionLot = typeof auctionLots.$inferSelect;
+
+// Provenance events table - Chain of ownership/custody
+export const provenanceEvents = pgTable("provenance_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coinTypeId: varchar("coin_type_id").references(() => coinTypes.id, { onDelete: 'cascade' }),
+  userCoinId: varchar("user_coin_id").references(() => userCoins.id, { onDelete: 'cascade' }),
+  eventType: text("event_type").notNull(),
+  eventDate: text("event_date"),
+  eventYear: integer("event_year"),
+  ownerName: text("owner_name"),
+  ownerType: text("owner_type"),
+  location: text("location"),
+  hoardId: varchar("hoard_id").references(() => hoards.id),
+  auctionLotId: varchar("auction_lot_id").references(() => auctionLots.id),
+  description: text("description"),
+  evidenceLevel: text("evidence_level"),
+  sourceUrl: text("source_url"),
+  notes: text("notes"),
+  sequenceOrder: integer("sequence_order"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("provenance_events_coin_type_idx").on(table.coinTypeId),
+  index("provenance_events_user_coin_idx").on(table.userCoinId),
+  index("provenance_events_type_idx").on(table.eventType),
+]);
+
+export const insertProvenanceEventSchema = createInsertSchema(provenanceEvents).omit({ id: true, createdAt: true });
+export type InsertProvenanceEvent = z.infer<typeof insertProvenanceEventSchema>;
+export type ProvenanceEvent = typeof provenanceEvents.$inferSelect;
+
+// Conservation records table - Restoration/cleaning history
+export const conservationRecords = pgTable("conservation_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coinTypeId: varchar("coin_type_id").references(() => coinTypes.id, { onDelete: 'cascade' }),
+  userCoinId: varchar("user_coin_id").references(() => userCoins.id, { onDelete: 'cascade' }),
+  recordDate: text("record_date"),
+  conservator: text("conservator"),
+  institution: text("institution"),
+  treatmentType: text("treatment_type"),
+  description: text("description"),
+  conditionBefore: text("condition_before"),
+  conditionAfter: text("condition_after"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("conservation_records_coin_type_idx").on(table.coinTypeId),
+  index("conservation_records_user_coin_idx").on(table.userCoinId),
+]);
+
+export const insertConservationRecordSchema = createInsertSchema(conservationRecords).omit({ id: true, createdAt: true });
+export type InsertConservationRecord = z.infer<typeof insertConservationRecordSchema>;
+export type ConservationRecord = typeof conservationRecords.$inferSelect;
+
+// Authenticity notes table - Authentication records
+export const authenticityNotes = pgTable("authenticity_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coinTypeId: varchar("coin_type_id").references(() => coinTypes.id, { onDelete: 'cascade' }),
+  userCoinId: varchar("user_coin_id").references(() => userCoins.id, { onDelete: 'cascade' }),
+  assessmentDate: text("assessment_date"),
+  assessor: text("assessor"),
+  institution: text("institution"),
+  verdict: text("verdict"),
+  confidence: text("confidence"),
+  methodology: text("methodology"),
+  findings: text("findings"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("authenticity_notes_coin_type_idx").on(table.coinTypeId),
+  index("authenticity_notes_user_coin_idx").on(table.userCoinId),
+]);
+
+export const insertAuthenticityNoteSchema = createInsertSchema(authenticityNotes).omit({ id: true, createdAt: true });
+export type InsertAuthenticityNote = z.infer<typeof insertAuthenticityNoteSchema>;
+export type AuthenticityNote = typeof authenticityNotes.$inferSelect;

@@ -365,6 +365,34 @@ export async function registerRoutes(
     }
   });
 
+  // ============ NORMALIZATION PIPELINE ============
+
+  // Run normalization on coin types
+  app.post("/api/admin/normalize", requireAdmin, async (req, res) => {
+    try {
+      const { limit = 1000 } = req.body;
+      
+      const { runNormalizationPipeline } = await import("./services/normalization");
+      
+      // Run normalization asynchronously
+      runNormalizationPipeline(limit)
+        .then((result) => {
+          console.log("Normalization completed:", result);
+        })
+        .catch((error) => {
+          console.error("Normalization error:", error);
+        });
+      
+      res.status(202).json({ 
+        message: "Normalization pipeline started",
+        limit,
+      });
+    } catch (error) {
+      console.error("Error starting normalization:", error);
+      res.status(500).json({ error: "Failed to start normalization" });
+    }
+  });
+
   // ============ IMAGE ASSETS ============
 
   const objectStorageService = new ObjectStorageService();

@@ -364,6 +364,32 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to update ingestion run" });
     }
   });
+  
+  // Get ingestion logs for a run
+  app.get("/api/admin/ingestion-runs/:id/logs", requireAdmin, async (req, res) => {
+    try {
+      const { level, limit } = req.query;
+      const logs = await storage.getIngestionLogsByRun(req.params.id, {
+        level: level as string,
+        limit: limit ? parseInt(limit as string, 10) : 200,
+      });
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching ingestion logs:", error);
+      res.status(500).json({ error: "Failed to fetch ingestion logs" });
+    }
+  });
+  
+  // Get latest cursor for resuming a run
+  app.get("/api/admin/ingestion-runs/:id/cursor", requireAdmin, async (req, res) => {
+    try {
+      const cursor = await storage.getLatestCursor(req.params.id);
+      res.json({ cursor });
+    } catch (error) {
+      console.error("Error fetching cursor:", error);
+      res.status(500).json({ error: "Failed to fetch cursor" });
+    }
+  });
 
   // ============ NORMALIZATION PIPELINE ============
 

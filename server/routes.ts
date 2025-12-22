@@ -108,24 +108,6 @@ export async function registerRoutes(
     }
   });
 
-  // Get similar matches for a coin
-  app.get("/api/coins/:id/matches", requireAuth, async (req, res) => {
-    try {
-      const coin = await storage.getCoinById(req.params.id);
-      if (!coin) {
-        return res.status(404).json({ error: "Coin not found" });
-      }
-      if (coin.userId !== (req.user as any).id) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-      const matches = await storage.getMatchesByCoin(req.params.id);
-      res.json(matches);
-    } catch (error) {
-      console.error("Error fetching matches:", error);
-      res.status(500).json({ error: "Failed to fetch matches" });
-    }
-  });
-
   // ============ WATCHLISTS ============
 
   // Get all watchlists for the current user
@@ -534,8 +516,88 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Forbidden" });
       }
 
-      // Find matching coin types based on metadata
-      const matches = await storage.findMatchingCoinTypes(coin);
+      // Queue embedding jobs for user-uploaded images (async, non-blocking)
+      const { createEmbeddingJob } = await import("./services/embedding-worker");
+      const embeddingJobs: string[] = [];
+      
+      if (coin.obvImageId) {
+        const obvImage = await storage.getImageAssetById(coin.obvImageId);
+        if (obvImage?.storageUrl) {
+          try {
+            const jobId = await createEmbeddingJob({
+              userCoinId: coin.id,
+              imageUrl: obvImage.storageUrl,
+              imageType: 'obverse',
+              priority: 10, // Higher priority for user uploads
+            });
+            embeddingJobs.push(jobId);
+          } catch (e) {
+            console.warn("Failed to queue obverse embedding:", e);
+          }
+        }
+      }
+      
+      if (coin.revImageId) {
+        const revImage = await storage.getImageAssetById(coin.revImageId);
+        if (revImage?.storageUrl) {
+          try {
+            const jobId = await createEmbeddingJob({
+              userCoinId: coin.id,
+              imageUrl: revImage.storageUrl,
+              imageType: 'reverse',
+              priority: 10,
+            });
+            embeddingJobs.push(jobId);
+          } catch (e) {
+            console.warn("Failed to queue reverse embedding:", e);
+          }
+        }
+      }
+
+      // Find matching coin types using hybrid search when possible
+      const { findSimilarCoinsHybrid, findSimilarCoins } = await import("./services/similarity");
+      
+      let matches;
+      const obvImage = coin.obvImageId ? await storage.getImageAssetById(coin.obvImageId) : null;
+      
+      if (obvImage?.storageUrl) {
+        // Use hybrid search with image
+        const hybridResults = await findSimilarCoinsHybrid({
+          imageUrl: obvImage.storageUrl,
+          ruler: coin.ruler || undefined,
+          denomination: coin.denomination || undefined,
+          mint: coin.mint || undefined,
+          metal: coin.metal || undefined,
+          obvLegend: coin.obvLegend || undefined,
+          revLegend: coin.revLegend || undefined,
+          dateFrom: coin.dateFrom || undefined,
+          dateTo: coin.dateTo || undefined,
+          limit: 20,
+        });
+        
+        matches = hybridResults.map(r => ({
+          coinType: {
+            id: r.id,
+            label: r.label,
+            sourceId: r.sourceId,
+            sourceRecordId: r.sourceRecordId,
+            sourceUrl: r.sourceUrl,
+            imageUrl: r.imageUrl,
+            dateFrom: r.dateFrom,
+            dateTo: r.dateTo,
+            obvLegend: r.obvLegend,
+            revLegend: r.revLegend,
+            mint: r.mint,
+            denomination: r.denomination,
+            metal: r.metal,
+          },
+          confidence: r.matchScore,
+          reasons: r.matchReasons,
+        }));
+      } else {
+        // Fall back to metadata-only search
+        matches = await storage.findMatchingCoinTypes(coin);
+      }
       
       // Create similar match entries
       const similarMatches = [];
@@ -546,13 +608,21 @@ export async function registerRoutes(
           confidence: match.confidence.toString(),
           reasons: match.reasons,
         });
+        
+        // Get source info for attribution
+        const source = await storage.getSourceById(match.coinType.sourceId);
+        
         similarMatches.push({
           ...similarMatch,
           coinType: match.coinType,
+          source,
         });
       }
 
-      res.json(similarMatches);
+      res.json({
+        matches: similarMatches,
+        embeddingJobsQueued: embeddingJobs.length,
+      });
     } catch (error) {
       console.error("Error analyzing coin:", error);
       res.status(500).json({ error: "Failed to analyze coin" });
@@ -574,16 +644,32 @@ export async function registerRoutes(
 
       const matches = await storage.getMatchesByCoin(coin.id);
       
-      // Enrich matches with coin type data and source info
+      // Enrich matches with coin type data, source info, and rights
       const enrichedMatches = await Promise.all(
         matches.map(async (match) => {
           if (match.coinTypeId) {
             const coinType = await storage.getCoinTypeById(match.coinTypeId);
             let source = undefined;
+            let rights = undefined;
+            
             if (coinType?.sourceId) {
               source = await storage.getSourceById(coinType.sourceId);
             }
-            return { ...match, coinType, source };
+            if (coinType?.rightsId) {
+              rights = await storage.getRightsRecordById(coinType.rightsId);
+            }
+            
+            return { 
+              ...match, 
+              coinType, 
+              source,
+              rights: rights ? {
+                licenseImages: rights.licenseImages,
+                attributionText: rights.attributionText,
+                sourceUrl: rights.sourceUrl,
+                rightsStatementUrl: rights.rightsStatementUrl,
+              } : undefined,
+            };
           }
           return match;
         })

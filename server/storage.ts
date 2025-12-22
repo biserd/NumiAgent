@@ -61,6 +61,7 @@ export interface IStorage {
   
   // Rights Records
   createRightsRecord(rights: InsertRightsRecord): Promise<RightsRecord>;
+  getRightsRecordById(id: string): Promise<RightsRecord | undefined>;
   
   // Entities
   searchEntities(filters: { type?: string; search?: string }): Promise<Entity[]>;
@@ -266,6 +267,11 @@ export class DatabaseStorage implements IStorage {
   async createRightsRecord(rights: InsertRightsRecord): Promise<RightsRecord> {
     const [created] = await db.insert(rightsRecords).values(rights).returning();
     return created;
+  }
+
+  async getRightsRecordById(id: string): Promise<RightsRecord | undefined> {
+    const [record] = await db.select().from(rightsRecords).where(eq(rightsRecords.id, id));
+    return record || undefined;
   }
 
   // Entities

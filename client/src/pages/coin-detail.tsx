@@ -48,6 +48,7 @@ import {
   Loader2
 } from "lucide-react";
 import type { UserCoin, SimilarMatch } from "@shared/schema";
+import { LicenseBadge } from "@/components/Attribution";
 
 export default function CoinDetailPage() {
   const params = useParams<{ id: string }>();
@@ -540,6 +541,7 @@ interface MatchWithCoinType extends SimilarMatch {
     label: string;
     sourceId: string;
     sourceUrl?: string | null;
+    imageUrl?: string | null;
     dateFrom?: number | null;
     dateTo?: number | null;
     obvLegend?: string | null;
@@ -550,22 +552,44 @@ interface MatchWithCoinType extends SimilarMatch {
     id: string;
     name: string;
     homepageUrl?: string | null;
+    attributionTemplate?: string | null;
+  };
+  rights?: {
+    licenseImages?: string | null;
+    attributionText?: string | null;
+    sourceUrl?: string | null;
+    rightsStatementUrl?: string | null;
   };
 }
 
 function MatchCard({ match }: { match: MatchWithCoinType }) {
   const confidence = Number(match.confidence) * 100;
   const reasons = (match.reasons as string[]) || [];
-  const sourceUrl = match.coinType?.sourceUrl || match.source?.homepageUrl;
+  const sourceUrl = match.coinType?.sourceUrl || match.rights?.sourceUrl || match.source?.homepageUrl;
   const sourceName = match.source?.name || match.coinType?.sourceId || "Museum Collection";
+  const hasImage = match.coinType?.imageUrl;
   
   return (
     <Card className="overflow-hidden hover-elevate">
-      <div className="aspect-video bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-chart-2/30 to-chart-2/10 border-4 border-chart-2/20" />
-        <Badge className="absolute top-2 right-2" variant="secondary">
-          {confidence.toFixed(0)}% match
-        </Badge>
+      <div className="aspect-video bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center relative overflow-hidden">
+        {hasImage ? (
+          <img 
+            src={match.coinType?.imageUrl!} 
+            alt={match.coinType?.label || "Coin image"}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-chart-2/30 to-chart-2/10 border-4 border-chart-2/20" />
+        )}
+        <div className="absolute top-2 right-2 flex gap-1">
+          <Badge variant="secondary">
+            {confidence.toFixed(0)}% match
+          </Badge>
+        </div>
+        <div className="absolute bottom-2 left-2">
+          <LicenseBadge license={match.rights?.licenseImages} />
+        </div>
       </div>
       <CardContent className="p-4 space-y-2">
         <h4 className="font-medium text-sm line-clamp-2">
@@ -595,18 +619,25 @@ function MatchCard({ match }: { match: MatchWithCoinType }) {
             </ul>
           </div>
         )}
-        <div className="pt-2 border-t flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground truncate">{sourceName}</span>
-          {sourceUrl && (
-            <a 
-              href={sourceUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-xs text-primary flex items-center gap-1 shrink-0"
-              data-testid={`link-source-${match.id}`}
-            >
-              View Source <ExternalLink className="h-3 w-3" />
-            </a>
+        <div className="pt-2 border-t space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground truncate">{sourceName}</span>
+            {sourceUrl && (
+              <a 
+                href={sourceUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-primary flex items-center gap-1 shrink-0"
+                data-testid={`link-source-${match.id}`}
+              >
+                View Source <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+          {match.rights?.attributionText && (
+            <p className="text-xs text-muted-foreground italic">
+              {match.rights.attributionText}
+            </p>
           )}
         </div>
       </CardContent>

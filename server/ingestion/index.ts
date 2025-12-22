@@ -10,6 +10,7 @@ import { SmithsonianAdapter } from "./smithsonian-adapter";
 import { WaltersAdapter } from "./walters-adapter";
 import { ArticAdapter } from "./artic-adapter";
 import { NGAAdapter } from "./nga-adapter";
+import { canIngestRecord } from "../services/rights-utils";
 import type { InsertCoinType, InsertRightsRecord, IngestionRun, LogLevel } from "@shared/schema";
 
 class IngestionLogger {
@@ -167,11 +168,29 @@ export async function runIngestion(
     
     await logger.info(`Fetching records from ${sourceId} API...`);
     
+    let recordsRightsBlocked = 0;
+    
     for await (const { coinType, rights } of ingestionGenerator) {
       recordsProcessed++;
       const recordId = coinType.sourceRecordId || `record-${recordsProcessed}`;
       
       try {
+        // Pre-ingestion rights validation - block disallowed licenses
+        const rightsCheck = canIngestRecord({
+          licenseImages: rights.licenseImages,
+          licenseMetadata: rights.licenseMetadata,
+        });
+        
+        if (!rightsCheck.allowed) {
+          recordsRightsBlocked++;
+          await logger.warn(`Rights blocked: ${recordId} - ${rightsCheck.reason}`, { 
+            recordId, 
+            cursor: recordId,
+            data: { license: rightsCheck.license, reason: rightsCheck.reason }
+          });
+          continue;
+        }
+        
         const existingCoinType = await storage.getCoinTypeBySourceRecord(
           coinType.sourceId,
           coinType.sourceRecordId || ""
@@ -194,9 +213,9 @@ export async function runIngestion(
         
         // Log progress every 10 records
         if (recordsProcessed % 10 === 0) {
-          await logger.info(`Progress: ${recordsProcessed} processed, ${recordsIngested} ingested, ${recordsSkipped} skipped`, {
+          await logger.info(`Progress: ${recordsProcessed} processed, ${recordsIngested} ingested, ${recordsSkipped} skipped, ${recordsRightsBlocked} blocked`, {
             cursor: recordId,
-            data: { recordsProcessed, recordsIngested, recordsSkipped }
+            data: { recordsProcessed, recordsIngested, recordsSkipped, recordsRightsBlocked }
           });
           
           await storage.updateIngestionRun(runId, {
@@ -216,7 +235,7 @@ export async function runIngestion(
     }
     
     await logger.info(`Ingestion completed successfully`, {
-      data: { recordsProcessed, recordsIngested, recordsSkipped, durationMs: Date.now() - startTime }
+      data: { recordsProcessed, recordsIngested, recordsSkipped, recordsRightsBlocked, durationMs: Date.now() - startTime }
     });
     
     await storage.updateIngestionRun(runId, {

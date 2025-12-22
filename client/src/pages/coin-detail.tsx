@@ -1,10 +1,22 @@
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +44,8 @@ import {
   MapPin,
   Crown,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import type { UserCoin, SimilarMatch } from "@shared/schema";
 
@@ -41,10 +54,38 @@ export default function CoinDetailPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    ruler: "",
+    denomination: "",
+    mint: "",
+    metal: "",
+    weightG: "",
+    diameterMm: "",
+    reference: "",
+  });
 
   const { data: coin, isLoading } = useQuery<UserCoin>({
     queryKey: ["/api/coins", params.id],
   });
+
+  useEffect(() => {
+    if (coin && isEditOpen) {
+      setEditForm({
+        title: coin.title || "",
+        description: coin.description || "",
+        ruler: coin.ruler || "",
+        denomination: coin.denomination || "",
+        mint: coin.mint || "",
+        metal: coin.metal || "",
+        weightG: coin.weightG || "",
+        diameterMm: coin.diameterMm || "",
+        reference: coin.reference || "",
+      });
+    }
+  }, [coin, isEditOpen]);
 
   const { data: matches, isLoading: matchesLoading } = useQuery<SimilarMatch[]>({
     queryKey: ["/api/coins", params.id, "matches"],
@@ -76,6 +117,63 @@ export default function CoinDetailPage() {
       });
     },
   });
+
+  const editMutation = useMutation({
+    mutationFn: async (data: typeof editForm) => {
+      const parseNumeric = (val: string): string | null => {
+        const trimmed = val.trim();
+        if (!trimmed) return null;
+        const num = parseFloat(trimmed);
+        return isNaN(num) ? null : trimmed;
+      };
+
+      const res = await apiRequest("PATCH", `/api/coins/${params.id}`, {
+        title: data.title.trim(),
+        description: data.description.trim() || null,
+        ruler: data.ruler.trim() || null,
+        denomination: data.denomination.trim() || null,
+        mint: data.mint.trim() || null,
+        metal: data.metal.trim() || null,
+        weightG: parseNumeric(data.weightG),
+        diameterMm: parseNumeric(data.diameterMm),
+        reference: data.reference.trim() || null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coins", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/coins"] });
+      toast({
+        title: "Coin updated",
+        description: "Your changes have been saved.",
+      });
+      setIsEditOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update coin",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openEditDialog = () => {
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm.title.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please enter a title for your coin.",
+        variant: "destructive",
+      });
+      return;
+    }
+    editMutation.mutate(editForm);
+  };
 
   if (isLoading) {
     return (
@@ -134,7 +232,7 @@ export default function CoinDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2" data-testid="button-edit">
+            <Button variant="outline" size="sm" className="gap-2" onClick={openEditDialog} data-testid="button-edit">
               <Pencil className="h-4 w-4" />
               Edit
             </Button>
@@ -285,6 +383,133 @@ export default function CoinDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Coin</DialogTitle>
+            <DialogDescription>
+              Update the details of your coin.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Title *</Label>
+                <Input
+                  id="edit-title"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="e.g., Roman Denarius of Augustus"
+                  data-testid="input-edit-title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Additional notes..."
+                  rows={2}
+                  data-testid="input-edit-description"
+                />
+              </div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-ruler">Ruler</Label>
+                  <Input
+                    id="edit-ruler"
+                    value={editForm.ruler}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, ruler: e.target.value }))}
+                    placeholder="e.g., Augustus"
+                    data-testid="input-edit-ruler"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-denomination">Denomination</Label>
+                  <Input
+                    id="edit-denomination"
+                    value={editForm.denomination}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, denomination: e.target.value }))}
+                    placeholder="e.g., Denarius"
+                    data-testid="input-edit-denomination"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-mint">Mint</Label>
+                  <Input
+                    id="edit-mint"
+                    value={editForm.mint}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, mint: e.target.value }))}
+                    placeholder="e.g., Rome"
+                    data-testid="input-edit-mint"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-metal">Metal</Label>
+                  <Input
+                    id="edit-metal"
+                    value={editForm.metal}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, metal: e.target.value }))}
+                    placeholder="e.g., Silver"
+                    data-testid="input-edit-metal"
+                  />
+                </div>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-weight">Weight (g)</Label>
+                  <Input
+                    id="edit-weight"
+                    value={editForm.weightG}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, weightG: e.target.value }))}
+                    placeholder="e.g., 3.85"
+                    data-testid="input-edit-weight"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-diameter">Diameter (mm)</Label>
+                  <Input
+                    id="edit-diameter"
+                    value={editForm.diameterMm}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, diameterMm: e.target.value }))}
+                    placeholder="e.g., 18.5"
+                    data-testid="input-edit-diameter"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-reference">Reference</Label>
+                  <Input
+                    id="edit-reference"
+                    value={editForm.reference}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, reference: e.target.value }))}
+                    placeholder="e.g., RIC I 1a"
+                    data-testid="input-edit-reference"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editMutation.isPending} data-testid="button-save-edit">
+                {editMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

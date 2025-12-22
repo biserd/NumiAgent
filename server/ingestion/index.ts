@@ -10,7 +10,39 @@ import { SmithsonianAdapter } from "./smithsonian-adapter";
 import { WaltersAdapter } from "./walters-adapter";
 import { ArticAdapter } from "./artic-adapter";
 import { NGAAdapter } from "./nga-adapter";
-import type { InsertCoinType, InsertRightsRecord, IngestionRun } from "@shared/schema";
+import type { InsertCoinType, InsertRightsRecord, IngestionRun, LogLevel } from "@shared/schema";
+
+class IngestionLogger {
+  constructor(private runId: string) {}
+  
+  async log(level: LogLevel, message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+    console.log(`[${level}] ${message}`, metadata?.data || '');
+    await storage.createIngestionLog({
+      runId: this.runId,
+      level,
+      message,
+      recordId: metadata?.recordId || null,
+      cursor: metadata?.cursor || null,
+      metadata: metadata?.data ? { data: metadata.data } : {},
+    });
+  }
+  
+  debug(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+    return this.log('DEBUG', message, metadata);
+  }
+  
+  info(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+    return this.log('INFO', message, metadata);
+  }
+  
+  warn(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+    return this.log('WARN', message, metadata);
+  }
+  
+  error(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+    return this.log('ERROR', message, metadata);
+  }
+}
 
 export interface IngestionResult {
   runId: string;
@@ -46,10 +78,14 @@ const adapters: Record<string, IngestionAdapter> = {
 export async function runIngestion(
   runId: string,
   sourceId: string,
-  limit: number = 100
+  limit: number = 100,
+  resumeFromCursor?: string
 ): Promise<IngestionResult> {
   const startTime = Date.now();
   const errors: string[] = [];
+  const logger = new IngestionLogger(runId);
+  
+  await logger.info(`Starting ingestion for source: ${sourceId}`, { data: { limit, resumeFromCursor } });
   
   // Update existing run to RUNNING status
   await storage.updateIngestionRun(runId, {
@@ -59,8 +95,9 @@ export async function runIngestion(
   
   const adapter = adapters[sourceId];
   if (!adapter) {
-    const error = `No adapter found for source: ${sourceId}`;
+    const error = `No adapter found for source: ${sourceId}. Available adapters: ${Object.keys(adapters).join(', ')}`;
     errors.push(error);
+    await logger.error(error);
     
     await storage.updateIngestionRun(runId, {
       status: "FAILED",
@@ -84,6 +121,8 @@ export async function runIngestion(
   let recordsSkipped = 0;
   
   try {
+    await logger.info(`Initializing adapter for ${sourceId}`);
+    
     // Different adapters have different signatures, call appropriately
     let ingestionGenerator: AsyncGenerator<{ coinType: InsertCoinType; rights: InsertRightsRecord }>;
     
@@ -126,8 +165,11 @@ export async function runIngestion(
       }
     }
     
+    await logger.info(`Fetching records from ${sourceId} API...`);
+    
     for await (const { coinType, rights } of ingestionGenerator) {
       recordsProcessed++;
+      const recordId = coinType.sourceRecordId || `record-${recordsProcessed}`;
       
       try {
         const existingCoinType = await storage.getCoinTypeBySourceRecord(
@@ -137,6 +179,7 @@ export async function runIngestion(
         
         if (existingCoinType) {
           recordsSkipped++;
+          await logger.debug(`Skipped duplicate: ${recordId}`, { recordId, cursor: recordId });
           continue;
         }
         
@@ -149,7 +192,13 @@ export async function runIngestion(
         
         recordsIngested++;
         
+        // Log progress every 10 records
         if (recordsProcessed % 10 === 0) {
+          await logger.info(`Progress: ${recordsProcessed} processed, ${recordsIngested} ingested, ${recordsSkipped} skipped`, {
+            cursor: recordId,
+            data: { recordsProcessed, recordsIngested, recordsSkipped }
+          });
+          
           await storage.updateIngestionRun(runId, {
             recordsProcessed,
             recordsIngested,
@@ -157,9 +206,18 @@ export async function runIngestion(
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        errors.push(`Record ${coinType.sourceRecordId}: ${errorMsg}`);
+        errors.push(`Record ${recordId}: ${errorMsg}`);
+        await logger.error(`Failed to process record: ${recordId}`, { 
+          recordId, 
+          cursor: recordId,
+          data: { error: errorMsg } 
+        });
       }
     }
+    
+    await logger.info(`Ingestion completed successfully`, {
+      data: { recordsProcessed, recordsIngested, recordsSkipped, durationMs: Date.now() - startTime }
+    });
     
     await storage.updateIngestionRun(runId, {
       status: "COMPLETED",
@@ -170,6 +228,16 @@ export async function runIngestion(
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     errors.push(`Fatal error: ${errorMsg}`);
+    
+    await logger.error(`Ingestion failed with fatal error: ${errorMsg}`, {
+      data: { 
+        error: errorMsg, 
+        recordsProcessed, 
+        recordsIngested,
+        reason: 'FATAL_ERROR',
+        canResume: true 
+      }
+    });
     
     await storage.updateIngestionRun(runId, {
       status: "FAILED",

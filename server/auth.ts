@@ -26,6 +26,7 @@ declare global {
       lastName: string | null;
       profileImageUrl: string | null;
       isVerified: boolean | null;
+      isAdmin: boolean | null;
       lastLoginAt: Date | null;
       createdAt: Date | null;
       updatedAt: Date | null;
@@ -165,6 +166,16 @@ export const attachUser: RequestHandler = async (req, res, next) => {
 export const requireAuth: RequestHandler = (req, res, next) => {
   if (!req.session.userId || !req.user) {
     return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+};
+
+export const requireAdmin: RequestHandler = (req, res, next) => {
+  if (!req.session.userId || !req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: "Admin access required" });
   }
   next();
 };

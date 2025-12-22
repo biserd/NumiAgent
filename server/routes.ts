@@ -5,7 +5,7 @@ import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insert
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { setupAuth, registerAuthRoutes, requireAuth } from "./auth";
+import { setupAuth, registerAuthRoutes, requireAuth, requireAdmin } from "./auth";
 
 // Validation helper
 function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): T {
@@ -240,7 +240,7 @@ export async function registerRoutes(
   // ============ ADMIN: SOURCES ============
 
   // Get all sources
-  app.get("/api/admin/sources", requireAuth, async (req, res) => {
+  app.get("/api/admin/sources", requireAdmin, async (req, res) => {
     try {
       const sources = await storage.getSources();
       res.json(sources);
@@ -251,7 +251,7 @@ export async function registerRoutes(
   });
 
   // Create a new source
-  app.post("/api/admin/sources", requireAuth, async (req, res) => {
+  app.post("/api/admin/sources", requireAdmin, async (req, res) => {
     try {
       const validated = validateBody(insertSourceSchema, {
         id: req.body.id,
@@ -274,7 +274,7 @@ export async function registerRoutes(
   });
 
   // Update a source
-  app.patch("/api/admin/sources/:id", requireAuth, async (req, res) => {
+  app.patch("/api/admin/sources/:id", requireAdmin, async (req, res) => {
     try {
       const updated = await storage.updateSource(req.params.id, req.body);
       if (!updated) {
@@ -290,7 +290,7 @@ export async function registerRoutes(
   // ============ INGESTION RUNS ============
 
   // Get all ingestion runs
-  app.get("/api/admin/ingestion-runs", requireAuth, async (req, res) => {
+  app.get("/api/admin/ingestion-runs", requireAdmin, async (req, res) => {
     try {
       const { sourceId, status } = req.query;
       const runs = await storage.getIngestionRuns({
@@ -305,7 +305,7 @@ export async function registerRoutes(
   });
 
   // Get ingestion stats
-  app.get("/api/admin/ingestion-stats", requireAuth, async (req, res) => {
+  app.get("/api/admin/ingestion-stats", requireAdmin, async (req, res) => {
     try {
       const stats = await storage.getIngestionStats();
       res.json(stats);
@@ -316,7 +316,7 @@ export async function registerRoutes(
   });
 
   // Create and run an ingestion job
-  app.post("/api/admin/ingestion-runs", requireAuth, async (req, res) => {
+  app.post("/api/admin/ingestion-runs", requireAdmin, async (req, res) => {
     try {
       const { sourceId, limit = 50 } = req.body;
       
@@ -352,7 +352,7 @@ export async function registerRoutes(
   });
 
   // Update an ingestion run
-  app.patch("/api/admin/ingestion-runs/:id", requireAuth, async (req, res) => {
+  app.patch("/api/admin/ingestion-runs/:id", requireAdmin, async (req, res) => {
     try {
       const updated = await storage.updateIngestionRun(req.params.id, req.body);
       if (!updated) {
@@ -545,7 +545,7 @@ export async function registerRoutes(
   // ============ SEED DATA ============
 
   // Seed museum data (admin only, for development)
-  app.post("/api/admin/seed", requireAuth, async (req, res) => {
+  app.post("/api/admin/seed", requireAdmin, async (req, res) => {
     try {
       await storage.seedMuseumData();
       res.json({ message: "Museum data seeded successfully" });

@@ -43,6 +43,9 @@ const collectionItems = [
 const adminItems = [
   { title: "Sources", url: "/admin/sources", icon: Shield },
   { title: "Ingestion", url: "/admin/ingestion", icon: Database },
+];
+
+const settingsItems = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
@@ -118,13 +121,39 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {user?.isAdmin && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Admin</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={location === item.url}
+                        data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <Link href={item.url}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Admin</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminItems.map((item) => (
+              {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 

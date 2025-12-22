@@ -535,3 +535,64 @@ export const authenticityNotes = pgTable("authenticity_notes", {
 export const insertAuthenticityNoteSchema = createInsertSchema(authenticityNotes).omit({ id: true, createdAt: true });
 export type InsertAuthenticityNote = z.infer<typeof insertAuthenticityNoteSchema>;
 export type AuthenticityNote = typeof authenticityNotes.$inferSelect;
+
+// ==================== IMAGE EMBEDDINGS ====================
+
+// Model version tracking for embeddings
+export const EMBEDDING_MODELS = ['clip-vit-base-patch32', 'clip-vit-large-patch14'] as const;
+export type EmbeddingModel = typeof EMBEDDING_MODELS[number];
+
+// Image embeddings table - Vector storage for visual similarity
+export const imageEmbeddings = pgTable("image_embeddings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coinTypeId: varchar("coin_type_id").references(() => coinTypes.id, { onDelete: 'cascade' }),
+  userCoinId: varchar("user_coin_id").references(() => userCoins.id, { onDelete: 'cascade' }),
+  imageAssetId: varchar("image_asset_id").references(() => imageAssets.id, { onDelete: 'cascade' }),
+  imageType: text("image_type").notNull(), // 'obverse', 'reverse', 'combined'
+  modelVersion: text("model_version").notNull().default('clip-vit-base-patch32'),
+  embeddingDim: integer("embedding_dim").notNull().default(512),
+  // Store embedding as float array - will be cast to vector in queries
+  embedding: text("embedding").notNull(), // JSON stringified float array
+  sourceImageUrl: text("source_image_url"),
+  computedAt: timestamp("computed_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("embeddings_coin_type_idx").on(table.coinTypeId),
+  index("embeddings_user_coin_idx").on(table.userCoinId),
+  index("embeddings_image_asset_idx").on(table.imageAssetId),
+  index("embeddings_model_idx").on(table.modelVersion),
+]);
+
+export const insertImageEmbeddingSchema = createInsertSchema(imageEmbeddings).omit({ id: true, computedAt: true, createdAt: true });
+export type InsertImageEmbedding = z.infer<typeof insertImageEmbeddingSchema>;
+export type ImageEmbedding = typeof imageEmbeddings.$inferSelect;
+
+// Embedding jobs queue table - Track async embedding computation
+export const EMBEDDING_JOB_STATUS = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'SKIPPED'] as const;
+export type EmbeddingJobStatus = typeof EMBEDDING_JOB_STATUS[number];
+
+export const embeddingJobs = pgTable("embedding_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  coinTypeId: varchar("coin_type_id").references(() => coinTypes.id, { onDelete: 'cascade' }),
+  userCoinId: varchar("user_coin_id").references(() => userCoins.id, { onDelete: 'cascade' }),
+  imageUrl: text("image_url").notNull(),
+  imageType: text("image_type").notNull(),
+  status: text("status").notNull().default('PENDING'),
+  priority: integer("priority").notNull().default(0),
+  attempts: integer("attempts").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull().default(3),
+  errorMessage: text("error_message"),
+  resultEmbeddingId: varchar("result_embedding_id").references(() => imageEmbeddings.id),
+  scheduledAt: timestamp("scheduled_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("embedding_jobs_status_idx").on(table.status),
+  index("embedding_jobs_priority_idx").on(table.priority),
+  index("embedding_jobs_coin_type_idx").on(table.coinTypeId),
+]);
+
+export const insertEmbeddingJobSchema = createInsertSchema(embeddingJobs).omit({ id: true, createdAt: true });
+export type InsertEmbeddingJob = z.infer<typeof insertEmbeddingJobSchema>;
+export type EmbeddingJob = typeof embeddingJobs.$inferSelect;

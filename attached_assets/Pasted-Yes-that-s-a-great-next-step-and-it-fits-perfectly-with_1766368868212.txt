@@ -1,0 +1,119 @@
+Yes — that’s a great next step, and it fits perfectly with your **Rights-first** posture.
+
+### What “in-house embeddings” should mean in your system
+
+* **No external AI calls** for embeddings (no OpenAI/Replicate, etc.).
+* You run an open-source embedding model in your own worker (same Replit deployment or a worker VM you control).
+* You only compute/store embeddings when **rights allow** (and you record evidence).
+
+---
+
+## 1) Rights gating rules for embeddings (put this in the PRD)
+
+Treat “embedding computation” as a **derivative-use action** and gate it explicitly:
+
+**Allowed actions per record (booleans stored in `rights_records`):**
+
+* `rehost_ok` (store image bytes)
+* `embed_ok` (display inline in UI)
+* `compute_embeddings_ok` (download pixels + compute vector + store vector)
+* `commercial_ok` (usable in paid product)
+
+**Decision policy (simple and safe):**
+
+1. **User uploads** → `compute_embeddings_ok = true` (they own the photo; you’re not redistributing someone else’s work).
+2. **External source record**
+
+   * If license is **CC0/PDM** → `rehost_ok=true`, `compute_embeddings_ok=true`, `commercial_ok=true`
+   * If license is **CC-BY** → `compute_embeddings_ok=true` (with attribution), `commercial_ok=true`
+   * If license is **CC-BY-NC / CC-BY-NC-SA** → `commercial_ok=false` (don’t use in paid corpus).
+   * If it’s a dataset like **OCRE**: type data is open (ODbL), but **images are institution-copyrighted**, so default `compute_embeddings_ok=false` for images. ([Replit Blog][1])
+3. If **rights are unknown** → `compute_embeddings_ok=false` (link-out only).
+
+That one rule will keep you clean.
+
+---
+
+## 2) How you combine metadata matching + embeddings (best of both worlds)
+
+Keep your existing metadata similarity as a **fast, explainable filter**, then use embeddings for ranking:
+
+**Pipeline**
+
+1. Candidate set from canonical metadata:
+
+   * ruler/denom/mint/metal + weight/diam tolerances + legend tokens
+2. Vector re-rank:
+
+   * obv embedding similarity + rev embedding similarity
+3. Output:
+
+   * “Top candidates” + “why” (metadata matched + visual similarity score)
+
+This is also how you get to **Phase 2 duplicates** and **Phase 4 die matching** later.
+
+---
+
+## 3) Practical note about Replit compute (so your dev plans correctly)
+
+Replit deployments let you choose **CPU/RAM machine sizes**; the docs don’t describe GPU deployments as a standard option. ([Replit Docs][2])
+So assume **CPU embeddings** initially:
+
+* Use a lightweight CLIP-like model (smaller encoder) or quantized/ONNX for speed.
+* Run embedding jobs async in a worker queue.
+
+If performance becomes the bottleneck, you can still remain “in-house” by running a **GPU worker you control** (separate infra) while keeping the same rights gating and “no external AI API” rule.
+
+---
+
+## 4) Which sources can feed the *image* embedding haystack (no-permission posture)
+
+**Compute/store embeddings confidently (CC0/PDM):**
+
+* IKMK Berlin (PDM/record-gated)
+* Smithsonian Open Access (CC0)
+* The Met Open Access subset (CC0)
+* Walters Art Museum Open Data (CC0)
+* Art Institute of Chicago Open Access subset (CC0)
+  (Plus Wikimedia Commons **only when per-file license is CC0/PD/CC-BY**.)
+
+**Metadata-only + link-out (no image embeddings by default):**
+
+* OCRE images (institution-owned; type metadata is fine) ([Replit Blog][1])
+* Nomisma (concept graph; not your image bank)
+
+**Link-out only / avoid for paid corpus (NC or restrictive):**
+
+* British Museum / Harvard images (typically non-commercial)
+* Auction portals/archives that forbid automated access (partnership later)
+
+---
+
+## 5) Developer requirements to add now (minimal but important)
+
+1. Add to DB:
+
+   * `rights_records.compute_embeddings_ok`
+   * `embeddings.model_version`
+2. Worker job:
+
+   * `EMBED_IMAGE(image_id)` that:
+
+     * checks `compute_embeddings_ok`
+     * downloads pixel bytes only if allowed (or uses stored bytes for rehosted/user uploads)
+     * computes `vec_obv`, `vec_rev`
+     * writes to `embeddings`
+3. API:
+
+   * `/coins/{id}/analyze` should:
+
+     * run metadata-candidate retrieval
+     * if embeddings exist: re-rank by vector similarity
+     * if not: return metadata-only ranking (still works)
+
+---
+
+If you tell me what language your dev is using (Python vs Node), I’ll give you an exact embedding stack recommendation (library + model name + batching strategy) that’s realistic on CPU and fits Replit.
+
+[1]: https://blog.replit.com/llm-training?utm_source=chatgpt.com "How to train your own Large Language Models"
+[2]: https://docs.replit.com/cloud-services/deployments/reserved-vm-deployments?utm_source=chatgpt.com "Reserved VM Deployments"

@@ -15,7 +15,7 @@ import type { InsertCoinType, InsertRightsRecord, IngestionRun, LogLevel } from 
 class IngestionLogger {
   constructor(private runId: string) {}
   
-  async log(level: LogLevel, message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+  async log(level: LogLevel, message: string, metadata?: { recordId?: string; cursor?: string; data?: Record<string, unknown> }) {
     console.log(`[${level}] ${message}`, metadata?.data || '');
     await storage.createIngestionLog({
       runId: this.runId,
@@ -23,23 +23,23 @@ class IngestionLogger {
       message,
       recordId: metadata?.recordId || null,
       cursor: metadata?.cursor || null,
-      metadata: metadata?.data ? { data: metadata.data } : {},
+      metadata: metadata?.data || null,
     });
   }
   
-  debug(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+  debug(message: string, metadata?: { recordId?: string; cursor?: string; data?: Record<string, unknown> }) {
     return this.log('DEBUG', message, metadata);
   }
   
-  info(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+  info(message: string, metadata?: { recordId?: string; cursor?: string; data?: Record<string, unknown> }) {
     return this.log('INFO', message, metadata);
   }
   
-  warn(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+  warn(message: string, metadata?: { recordId?: string; cursor?: string; data?: Record<string, unknown> }) {
     return this.log('WARN', message, metadata);
   }
   
-  error(message: string, metadata?: { recordId?: string; cursor?: string; data?: unknown }) {
+  error(message: string, metadata?: { recordId?: string; cursor?: string; data?: Record<string, unknown> }) {
     return this.log('ERROR', message, metadata);
   }
 }

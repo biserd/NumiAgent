@@ -150,6 +150,7 @@ export const coinTypes = pgTable("coin_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sourceId: text("source_id").notNull().references(() => sources.id),
   sourceRecordId: text("source_record_id"),
+  sourceUrl: text("source_url"),
   label: text("label").notNull(),
   dateFrom: integer("date_from"),
   dateTo: integer("date_to"),

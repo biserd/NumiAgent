@@ -498,12 +498,16 @@ export async function registerRoutes(
 
       const matches = await storage.getMatchesByCoin(coin.id);
       
-      // Enrich matches with coin type data
+      // Enrich matches with coin type data and source info
       const enrichedMatches = await Promise.all(
         matches.map(async (match) => {
           if (match.coinTypeId) {
             const coinType = await storage.getCoinTypeById(match.coinTypeId);
-            return { ...match, coinType };
+            let source = undefined;
+            if (coinType?.sourceId) {
+              source = await storage.getSourceById(coinType.sourceId);
+            }
+            return { ...match, coinType, source };
           }
           return match;
         })

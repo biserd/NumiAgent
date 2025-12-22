@@ -539,17 +539,25 @@ interface MatchWithCoinType extends SimilarMatch {
     id: string;
     label: string;
     sourceId: string;
+    sourceUrl?: string | null;
     dateFrom?: number | null;
     dateTo?: number | null;
     obvLegend?: string | null;
     revLegend?: string | null;
     referenceText?: string | null;
   };
+  source?: {
+    id: string;
+    name: string;
+    homepageUrl?: string | null;
+  };
 }
 
 function MatchCard({ match }: { match: MatchWithCoinType }) {
   const confidence = Number(match.confidence) * 100;
   const reasons = (match.reasons as string[]) || [];
+  const sourceUrl = match.coinType?.sourceUrl || match.source?.homepageUrl;
+  const sourceName = match.source?.name || match.coinType?.sourceId || "Museum Collection";
   
   return (
     <Card className="overflow-hidden hover-elevate">
@@ -587,6 +595,20 @@ function MatchCard({ match }: { match: MatchWithCoinType }) {
             </ul>
           </div>
         )}
+        <div className="pt-2 border-t flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground truncate">{sourceName}</span>
+          {sourceUrl && (
+            <a 
+              href={sourceUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs text-primary flex items-center gap-1 shrink-0"
+              data-testid={`link-source-${match.id}`}
+            >
+              View Source <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

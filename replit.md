@@ -26,7 +26,8 @@ Preferred communication style: Simple, everyday language.
 - **Language**: TypeScript (ESM modules)
 - **API Pattern**: RESTful JSON API under `/api/*` prefix
 - **Session Management**: PostgreSQL-backed sessions via connect-pg-simple
-- **Authentication**: Replit Auth integration with OpenID Connect (OIDC)
+- **Authentication**: Custom username/password with bcrypt hashing
+- **AI Services**: Gemini integration for OCR/image analysis (via Replit AI Integrations)
 
 ### Database Layer
 - **Database**: PostgreSQL
@@ -45,10 +46,10 @@ Preferred communication style: Simple, everyday language.
 - **SimilarMatches**: Visual similarity search results
 
 ### Authentication Flow
-- Replit Auth provides OIDC-based authentication
+- Custom username/password authentication with bcrypt hashing
 - Session stored in PostgreSQL `sessions` table
-- Protected routes use `isAuthenticated` middleware
-- User data synced via `upsertUser` on login
+- Protected routes use `requireAuth` middleware
+- Admin routes use `requireAdmin` middleware (requires `isAdmin: true` on user)
 
 ### Project Structure
 ```
@@ -72,9 +73,13 @@ Preferred communication style: Simple, everyday language.
 - **Drizzle ORM**: Type-safe database queries and schema management
 
 ### Authentication
-- **Replit Auth**: OpenID Connect authentication
+- **Custom Auth**: Username/password with bcrypt
 - **express-session**: Session management
 - **connect-pg-simple**: PostgreSQL session store
+
+### AI Services
+- **Gemini (via Replit AI Integrations)**: OCR and image analysis
+- **Privacy-first similarity search**: Metadata-based matching, no external AI for embeddings
 
 ### UI Framework
 - **Radix UI**: Accessible component primitives (dialog, dropdown, tabs, etc.)
@@ -88,5 +93,14 @@ Preferred communication style: Simple, everyday language.
 ### Required Environment Variables
 - `DATABASE_URL`: PostgreSQL connection string
 - `SESSION_SECRET`: Session encryption key
-- `ISSUER_URL`: OIDC issuer (defaults to Replit)
-- `REPL_ID`: Replit environment identifier
+- `AI_INTEGRATIONS_GEMINI_BASE_URL`: Gemini API base URL (auto-configured)
+- `AI_INTEGRATIONS_GEMINI_API_KEY`: Gemini API key (auto-configured)
+
+### API Endpoints
+- `/api/auth/*`: Authentication routes (register, login, logout)
+- `/api/coins/*`: User coin portfolio management
+- `/api/watchlists/*`: Watchlist and alert management
+- `/api/ocr/analyze`: OCR analysis of coin images using Gemini
+- `/api/search/similar`: Metadata-based similarity search
+- `/api/search/coins`: Text search across coin database
+- `/api/admin/*`: Admin-only routes for data ingestion and management

@@ -542,6 +542,84 @@ export async function registerRoutes(
     }
   });
 
+  // ============ OCR & SIMILARITY SEARCH ============
+
+  // Analyze a coin image with OCR
+  app.post("/api/ocr/analyze", requireAuth, async (req, res) => {
+    try {
+      const { analyzeCoinImage, analyzeCoinPair } = await import("./services/ocr");
+      
+      const { obverseImage, reverseImage, singleImage, mimeType } = req.body;
+      
+      if (!obverseImage && !reverseImage && !singleImage) {
+        return res.status(400).json({ error: "At least one image is required" });
+      }
+
+      let result;
+      if (obverseImage && reverseImage) {
+        result = await analyzeCoinPair(obverseImage, reverseImage, mimeType || 'image/jpeg');
+      } else if (singleImage) {
+        result = await analyzeCoinImage(singleImage, mimeType || 'image/jpeg', 'both');
+      } else if (obverseImage) {
+        result = await analyzeCoinImage(obverseImage, mimeType || 'image/jpeg', 'obverse');
+      } else {
+        result = await analyzeCoinImage(reverseImage, mimeType || 'image/jpeg', 'reverse');
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error analyzing coin image:", error);
+      res.status(500).json({ error: "Failed to analyze coin image" });
+    }
+  });
+
+  // Search for similar coins
+  app.post("/api/search/similar", requireAuth, async (req, res) => {
+    try {
+      const { findSimilarCoins } = await import("./services/similarity");
+      
+      const { ruler, denomination, mint, metal, obvLegend, revLegend, dateFrom, dateTo, referenceText, limit } = req.body;
+      
+      const results = await findSimilarCoins({
+        ruler,
+        denomination,
+        mint,
+        metal,
+        obvLegend,
+        revLegend,
+        dateFrom: dateFrom !== undefined ? parseInt(dateFrom) : undefined,
+        dateTo: dateTo !== undefined ? parseInt(dateTo) : undefined,
+        referenceText,
+        limit: limit || 20,
+      });
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching similar coins:", error);
+      res.status(500).json({ error: "Failed to search similar coins" });
+    }
+  });
+
+  // Text search for coins
+  app.get("/api/search/coins", requireAuth, async (req, res) => {
+    try {
+      const { searchCoinsByText } = await import("./services/similarity");
+      
+      const query = req.query.q as string;
+      const limit = parseInt(req.query.limit as string) || 20;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+
+      const results = await searchCoinsByText(query, limit);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching coins:", error);
+      res.status(500).json({ error: "Failed to search coins" });
+    }
+  });
+
   // ============ SEED DATA ============
 
   // Seed museum data (admin only, for development)

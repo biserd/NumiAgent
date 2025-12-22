@@ -6,6 +6,10 @@ import { MetAdapter } from "./met-adapter";
 import { IKMKAdapter } from "./ikmk-adapter";
 import { ANSAdapter } from "./ans-adapter";
 import { BMAdapter } from "./bm-adapter";
+import { SmithsonianAdapter } from "./smithsonian-adapter";
+import { WaltersAdapter } from "./walters-adapter";
+import { ArticAdapter } from "./artic-adapter";
+import { NGAAdapter } from "./nga-adapter";
 import type { InsertCoinType, InsertRightsRecord, IngestionRun } from "@shared/schema";
 
 export interface IngestionResult {
@@ -18,13 +22,25 @@ export interface IngestionResult {
   durationMs: number;
 }
 
-type IngestionAdapter = typeof MetAdapter | typeof IKMKAdapter | typeof ANSAdapter | typeof BMAdapter;
+type IngestionAdapter = 
+  | typeof MetAdapter 
+  | typeof IKMKAdapter 
+  | typeof ANSAdapter 
+  | typeof BMAdapter
+  | typeof SmithsonianAdapter
+  | typeof WaltersAdapter
+  | typeof ArticAdapter
+  | typeof NGAAdapter;
 
 const adapters: Record<string, IngestionAdapter> = {
   "met-museum": MetAdapter,
   "ikmk-berlin": IKMKAdapter,
   "ans-mantis": ANSAdapter,
   "british-museum": BMAdapter,
+  "smithsonian": SmithsonianAdapter,
+  "walters-museum": WaltersAdapter,
+  "artic-chicago": ArticAdapter,
+  "nga-washington": NGAAdapter,
 };
 
 export async function runIngestion(
@@ -71,18 +87,43 @@ export async function runIngestion(
     // Different adapters have different signatures, call appropriately
     let ingestionGenerator: AsyncGenerator<{ coinType: InsertCoinType; rights: InsertRightsRecord }>;
     
-    if (sourceId === 'ans-mantis') {
-      // ANS adapter takes (query, limit)
-      const defaultQuery = "department_facet:Greek OR department_facet:Roman";
-      ingestionGenerator = ANSAdapter.ingest(defaultQuery, limit);
-    } else if (sourceId === 'british-museum') {
-      ingestionGenerator = BMAdapter.ingest(limit);
-    } else if (sourceId === 'met-museum') {
-      ingestionGenerator = MetAdapter.ingest(limit);
-    } else if (sourceId === 'ikmk-berlin') {
-      ingestionGenerator = IKMKAdapter.ingest(limit);
-    } else {
-      throw new Error(`Unknown source: ${sourceId}`);
+    switch (sourceId) {
+      case 'ans-mantis': {
+        const defaultQuery = "department_facet:Greek OR department_facet:Roman";
+        ingestionGenerator = ANSAdapter.ingest(defaultQuery, limit);
+        break;
+      }
+      case 'british-museum': {
+        ingestionGenerator = BMAdapter.ingest(limit);
+        break;
+      }
+      case 'met-museum': {
+        ingestionGenerator = MetAdapter.ingest(limit);
+        break;
+      }
+      case 'ikmk-berlin': {
+        ingestionGenerator = IKMKAdapter.ingest(limit);
+        break;
+      }
+      case 'smithsonian': {
+        ingestionGenerator = SmithsonianAdapter.ingest(limit);
+        break;
+      }
+      case 'walters-museum': {
+        ingestionGenerator = WaltersAdapter.ingest(limit);
+        break;
+      }
+      case 'artic-chicago': {
+        ingestionGenerator = ArticAdapter.ingest(limit);
+        break;
+      }
+      case 'nga-washington': {
+        ingestionGenerator = NGAAdapter.ingest(limit);
+        break;
+      }
+      default: {
+        throw new Error(`Unknown source: ${sourceId}`);
+      }
     }
     
     for await (const { coinType, rights } of ingestionGenerator) {
@@ -154,4 +195,13 @@ export async function getAvailableAdapters(): Promise<string[]> {
   return Object.keys(adapters);
 }
 
-export { MetAdapter, IKMKAdapter, ANSAdapter, BMAdapter };
+export { 
+  MetAdapter, 
+  IKMKAdapter, 
+  ANSAdapter, 
+  BMAdapter,
+  SmithsonianAdapter,
+  WaltersAdapter,
+  ArticAdapter,
+  NGAAdapter,
+};

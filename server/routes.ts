@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insertImageAssetSchema, insertSimilarMatchSchema } from "@shared/schema";
+import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insertImageAssetSchema, insertSimilarMatchSchema, EDGE_TYPES } from "@shared/schema";
+import { getCoinTypesForMint, getCoinTypesForRuler, getCoinTypesForDenomination, getMintCoordinates, getPhysicalCoinsForType } from "./services/nomisma-sparql";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
@@ -1194,6 +1195,80 @@ export async function registerRoutes(
     }
   });
 
+  // ============ NOMISMA SPARQL QUERIES ============
+
+  // Fetch coin types from Nomisma for an entity (live SPARQL query)
+  app.get("/api/entities/:id/coin-types", requireAuth, async (req, res) => {
+    try {
+      const entity = await storage.getEntityById(req.params.id);
+      if (!entity) {
+        return res.status(404).json({ error: "Entity not found" });
+      }
+
+      if (!entity.nomismaUri) {
+        return res.status(400).json({ error: "Entity has no Nomisma URI" });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      let coinTypes;
+
+      switch (entity.type) {
+        case 'MINT':
+          coinTypes = await getCoinTypesForMint(entity.nomismaUri, limit);
+          break;
+        case 'PERSON':
+          coinTypes = await getCoinTypesForRuler(entity.nomismaUri, limit);
+          break;
+        case 'DENOMINATION':
+          coinTypes = await getCoinTypesForDenomination(entity.nomismaUri, limit);
+          break;
+        default:
+          return res.status(400).json({ error: `Cannot fetch coin types for entity type: ${entity.type}` });
+      }
+
+      res.json({
+        entity: {
+          id: entity.id,
+          label: entity.label,
+          type: entity.type,
+          nomismaUri: entity.nomismaUri,
+        },
+        coinTypes,
+        count: coinTypes.length,
+      });
+    } catch (error) {
+      console.error("Error fetching coin types from Nomisma:", error);
+      res.status(500).json({ error: "Failed to fetch coin types from Nomisma SPARQL" });
+    }
+  });
+
+  // Get geographic coordinates for a mint from Nomisma
+  app.get("/api/entities/:id/coordinates", requireAuth, async (req, res) => {
+    try {
+      const entity = await storage.getEntityById(req.params.id);
+      if (!entity) {
+        return res.status(404).json({ error: "Entity not found" });
+      }
+
+      if (entity.type !== 'MINT') {
+        return res.status(400).json({ error: "Coordinates only available for MINT entities" });
+      }
+
+      if (!entity.nomismaUri) {
+        return res.status(400).json({ error: "Entity has no Nomisma URI" });
+      }
+
+      const coords = await getMintCoordinates(entity.nomismaUri);
+      res.json({
+        entity: { id: entity.id, label: entity.label },
+        coordinates: coords,
+      });
+    } catch (error) {
+      console.error("Error fetching coordinates:", error);
+      res.status(500).json({ error: "Failed to fetch coordinates" });
+    }
+  });
+
   // Create entity edge (admin only)
   app.post("/api/admin/entities/edges", requireAdmin, async (req, res) => {
     try {
@@ -1205,9 +1280,8 @@ export async function registerRoutes(
       }
       
       // Validate edge type
-      const validEdgeTypes = ['ISSUED_BY', 'MINTED_AT', 'HAS_DENOMINATION', 'HAS_METAL', 'CITES_REFERENCE', 'CANDIDATE_TYPE', 'PRIMARY_TYPE', 'APPEARED_IN', 'MATCHES_LOT', 'DIE_OBV', 'DIE_REV', 'DIE_LINK'];
-      if (!validEdgeTypes.includes(edgeType)) {
-        return res.status(400).json({ error: `Invalid edgeType. Must be one of: ${validEdgeTypes.join(', ')}` });
+      if (!EDGE_TYPES.includes(edgeType)) {
+        return res.status(400).json({ error: `Invalid edgeType. Must be one of: ${EDGE_TYPES.join(', ')}` });
       }
       
       // Validate entities exist

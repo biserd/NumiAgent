@@ -21,9 +21,32 @@ import {
   Landmark,
   Coins,
   MapPin,
-  CircleDot
+  CircleDot,
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import type { Entity, EntityEdge } from "@shared/schema";
+
+interface NomismaCoinType {
+  uri: string;
+  label?: string;
+  denomination?: string;
+  denominationLabel?: string;
+  mint?: string;
+  mintLabel?: string;
+  authority?: string;
+  authorityLabel?: string;
+  material?: string;
+  materialLabel?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+interface CoinTypesResponse {
+  entity: { id: string; label: string; type: string; nomismaUri: string };
+  coinTypes: NomismaCoinType[];
+  count: number;
+}
 
 interface EntityWithEdges extends Entity {
   outgoingEdges?: Array<EntityEdge & { target: Entity }>;
@@ -199,6 +222,21 @@ export default function AdminGraphPage() {
       return res.json();
     },
     enabled: !!selectedEntity,
+  });
+
+  const canFetchCoinTypes = selectedEntity && 
+    selectedEntity.nomismaUri && 
+    ['MINT', 'PERSON', 'DENOMINATION'].includes(selectedEntity.type);
+
+  const { data: coinTypesData, isLoading: coinTypesLoading, refetch: refetchCoinTypes } = useQuery<CoinTypesResponse>({
+    queryKey: ["/api/entities", selectedEntity?.id, "coin-types"],
+    queryFn: async () => {
+      if (!selectedEntity) throw new Error("No entity selected");
+      const res = await fetch(`/api/entities/${selectedEntity.id}/coin-types?limit=20`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch coin types");
+      return res.json();
+    },
+    enabled: false,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -383,6 +421,101 @@ export default function AdminGraphPage() {
                           </Badge>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {canFetchCoinTypes && (
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium">Coin Types from Nomisma</h4>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => refetchCoinTypes()}
+                          disabled={coinTypesLoading}
+                          data-testid="button-fetch-coin-types"
+                        >
+                          {coinTypesLoading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Fetch from Nomisma
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      
+                      {coinTypesData?.coinTypes && coinTypesData.coinTypes.length > 0 ? (
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                          {coinTypesData.coinTypes.map((ct, idx) => (
+                            <div 
+                              key={ct.uri || idx}
+                              className="p-3 border rounded-md text-sm"
+                            >
+                              <div className="font-medium">
+                                {ct.label || ct.uri?.split('/').pop() || 'Unknown Type'}
+                              </div>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {ct.authorityLabel && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Crown className="w-3 h-3 mr-1" />
+                                    {ct.authorityLabel}
+                                  </Badge>
+                                )}
+                                {ct.denominationLabel && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Coins className="w-3 h-3 mr-1" />
+                                    {ct.denominationLabel}
+                                  </Badge>
+                                )}
+                                {ct.mintLabel && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Landmark className="w-3 h-3 mr-1" />
+                                    {ct.mintLabel}
+                                  </Badge>
+                                )}
+                                {ct.materialLabel && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {ct.materialLabel}
+                                  </Badge>
+                                )}
+                              </div>
+                              {(ct.startDate || ct.endDate) && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Date: {ct.startDate || '?'} to {ct.endDate || '?'}
+                                </p>
+                              )}
+                              {ct.uri && (
+                                <a 
+                                  href={ct.uri} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-primary hover:underline mt-1 inline-flex items-center gap-1"
+                                >
+                                  View on source <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                          {coinTypesData.count >= 20 && (
+                            <p className="text-xs text-muted-foreground text-center py-2">
+                              Showing first 20 of {coinTypesData.count}+ results
+                            </p>
+                          )}
+                        </div>
+                      ) : coinTypesData?.coinTypes?.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No coin types found for this entity
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Click the button above to query Nomisma for coin types
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

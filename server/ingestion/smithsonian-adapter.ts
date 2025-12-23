@@ -266,8 +266,15 @@ function buildLabel(record: SmithsonianRecord): string {
   if (isGenericTitle) {
     const labelParts: string[] = [];
     
+    // Helper to safely get string value from potentially object field
+    const getString = (val: any): string | null => {
+      if (typeof val === 'string') return val;
+      if (val && typeof val === 'object' && typeof val.content === 'string') return val.content;
+      return null;
+    };
+    
     // Try to get denomination or object type
-    const objectType = structured?.object_type?.[0];
+    const objectType = getString(structured?.object_type?.[0]);
     if (objectType && !genericTitles.includes(objectType.toLowerCase())) {
       labelParts.push(objectType);
     } else {
@@ -275,25 +282,25 @@ function buildLabel(record: SmithsonianRecord): string {
     }
     
     // Add culture/civilization
-    const culture = structured?.culture?.[0];
+    const culture = getString(structured?.culture?.[0]);
     if (culture) {
       labelParts.push(`(${culture})`);
     }
     
     // Add place/mint
-    const place = structured?.place?.[0] || freetext?.place?.[0]?.content;
+    const place = getString(structured?.place?.[0]) || freetext?.place?.[0]?.content;
     if (place && !labelParts.some(p => p.includes(place))) {
       labelParts.push(`- ${place}`);
     }
     
     // Add name/ruler if available
-    const name = structured?.name?.[0] || freetext?.name?.[0]?.content;
+    const name = getString(structured?.name?.[0]) || freetext?.name?.[0]?.content;
     if (name && !labelParts.some(p => p.includes(name))) {
       labelParts.push(`- ${name}`);
     }
     
     // Add date if available
-    const date = structured?.date?.[0] || freetext?.date?.[0]?.content;
+    const date = getString(structured?.date?.[0]) || freetext?.date?.[0]?.content;
     if (date) {
       labelParts.push(`[${date}]`);
     }
@@ -304,13 +311,18 @@ function buildLabel(record: SmithsonianRecord): string {
   // For non-generic titles, append ruler/name if not already in title
   const parts = [title];
   const names = structured?.name || [];
-  if (names.length > 0 && !title.toLowerCase().includes(names[0].toLowerCase())) {
-    parts.push(`- ${names[0]}`);
+  if (names.length > 0) {
+    // Handle both string and object formats
+    const firstName = typeof names[0] === 'string' ? names[0] : (names[0] as any)?.content;
+    if (firstName && typeof firstName === 'string' && !title.toLowerCase().includes(firstName.toLowerCase())) {
+      parts.push(`- ${firstName}`);
+    }
   }
   
   // Add culture if not in title
-  const culture = structured?.culture?.[0];
-  if (culture && !title.toLowerCase().includes(culture.toLowerCase())) {
+  const cultureVal = structured?.culture?.[0];
+  const culture = typeof cultureVal === 'string' ? cultureVal : (cultureVal as any)?.content;
+  if (culture && typeof culture === 'string' && !title.toLowerCase().includes(culture.toLowerCase())) {
     parts.push(`(${culture})`);
   }
   

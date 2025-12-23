@@ -131,3 +131,15 @@ Preferred communication style: Simple, everyday language.
 - `/api/admin/embeddings/*`: Embedding worker management (start/stop/stats)
 - `/api/admin/entities/edges`: Create entity edges (graph relationships)
 - `/api/admin/vector/*`: Vector index health (stats/sync/reindex)
+- `/api/admin/nomisma/*`: Nomisma.org integration (stats/entities/edges ingestion)
+
+### Nomisma.org Integration
+- **Source**: Nomisma.org Linked Open Data for numismatic entities
+- **License**: CC-BY (commercial use allowed with attribution)
+- **SPARQL Endpoints**:
+  - `https://nomisma.org/query`: Entities (rulers, mints, denominations, materials)
+  - `https://numismatics.org/ocre/query`: OCRE (Roman Imperial coin types)
+  - `https://numismatics.org/crro/query`: CRRO (Roman Republican coin types)
+- **Entity Types**: rulers, mints, denominations, materials with Wikidata QIDs and Pleiades URIs
+- **Edge Types**: MINTED_AT, HAS_DENOMINATION, HAS_METAL relationships from ontology
+- **Validation**: Skips blank nodes and invalid URIs during ingestion

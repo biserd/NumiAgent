@@ -134,15 +134,87 @@ export async function getSmithsonianRecord(id: string): Promise<SmithsonianRecor
 }
 
 function isCoin(record: SmithsonianRecord): boolean {
-  const coinKeywords = ["coin", "medal", "medallion", "token", "numismatic", "denarius", "sestertius", "aureus", "drachm"];
+  const title = (record.title || "").toLowerCase();
+  const objectTypes = (record.content?.indexedStructured?.object_type || []).map(t => t.toLowerCase());
   
-  const searchableText = [
-    record.title,
-    record.content?.indexedStructured?.object_type?.join(" "),
-    record.content?.indexedStructured?.topic?.join(" "),
-  ].filter(Boolean).join(" ").toLowerCase();
+  // Exclude books, catalogs, documents, and other non-physical coin items
+  const excludeKeywords = [
+    "catalog", "catalogue", "book", "bibliography", "journal", "magazine",
+    "manuscript", "document", "paper", "pamphlet", "periodical", "publication",
+    "guide", "handbook", "dictionary", "encyclopedia", "atlas", "thesis",
+    "dissertation", "report", "newsletter", "proceedings", "text", "volume",
+    "edition", "reprint", "facsimile", "photocopy", "microfilm", "slide",
+    "photograph of", "image of", "picture of", "drawing of", "painting of",
+    "coin box", "coin case", "coin holder", "coin cabinet", "coin tray",
+    "telephone", "machine", "scale", "balance", "die", "mold", "press"
+  ];
   
-  return coinKeywords.some(keyword => searchableText.includes(keyword));
+  // Check if title contains excluded keywords
+  if (excludeKeywords.some(keyword => title.includes(keyword))) {
+    return false;
+  }
+  
+  // Exclude if object type is clearly not a coin
+  const excludeObjectTypes = [
+    "books", "book", "texts", "photographs", "drawings", "paintings",
+    "documents", "manuscripts", "prints", "posters", "cards", "postcards",
+    "equipment", "tools", "containers", "boxes", "furniture"
+  ];
+  
+  if (objectTypes.some(ot => excludeObjectTypes.some(excl => ot.includes(excl)))) {
+    return false;
+  }
+  
+  // Coin-related object types that indicate actual coins
+  const coinObjectTypes = [
+    "coin", "coins", "medal", "medals", "medallion", "medallions",
+    "token", "tokens", "currency", "money", "numismatic"
+  ];
+  
+  // Check if object_type explicitly mentions coins
+  const hasObjectTypeCoin = objectTypes.some(ot => 
+    coinObjectTypes.some(cot => ot.includes(cot))
+  );
+  
+  // If object type explicitly says it's a coin, accept it
+  if (hasObjectTypeCoin) {
+    return true;
+  }
+  
+  // For items without explicit coin object type, check if title contains coin keywords
+  // These are broader patterns that match anywhere in the title
+  const coinKeywordsInTitle = [
+    "coin", "medal", "medallion", "token", "currency",
+    "denarius", "sestertius", "aureus", "drachm", "tetradrachm",
+    "stater", "solidus", "follis", "antoninianus", "dupondius",
+    "obol", "hemidrachm", "didrachm", "tridrachm", "decadrachm",
+    "as ", " as ", "nummus", "siliqua", "tremissis", "semis",
+    "quadrans", "sesterius", "quinarius", "victoriatus"
+  ];
+  
+  // Also check topic field for coin-related terms
+  const topics = (record.content?.indexedStructured?.topic || []).map(t => t.toLowerCase());
+  const hasTopicCoin = topics.some(topic => 
+    coinKeywordsInTitle.some(keyword => topic.includes(keyword))
+  );
+  
+  if (hasTopicCoin) {
+    return true;
+  }
+  
+  // Check if title contains any coin keyword (anywhere in title)
+  if (coinKeywordsInTitle.some(keyword => title.includes(keyword))) {
+    return true;
+  }
+  
+  // Check physical description for coin indicators
+  const physDesc = record.content?.freetext?.physicalDescription?.map(p => p.content.toLowerCase()).join(" ") || "";
+  const physDescCoinKeywords = ["coin", "medal", "struck", "minted", "obverse", "reverse", "denomination"];
+  if (physDescCoinKeywords.some(keyword => physDesc.includes(keyword))) {
+    return true;
+  }
+  
+  return false;
 }
 
 function parseDate(record: SmithsonianRecord): { dateFrom: number | null; dateTo: number | null } {

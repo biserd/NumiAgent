@@ -44,6 +44,22 @@ Preferred communication style: Simple, everyday language.
 - **RightsRecords**: Per-record licensing and usage permissions
 - **ImageAssets**: Stored images with rights metadata
 - **SimilarMatches**: Visual similarity search results
+- **Entities**: Canonical numismatic entities (rulers, mints, denominations, metals, places)
+- **EntityEdges**: Graph relationships between entities (ISSUED_BY, MINTED_AT, HAS_DENOMINATION, etc.)
+- **ImageEmbeddings**: CLIP vector embeddings for visual similarity search (512-dim vectors)
+- **EmbeddingJobs**: Async queue for computing embeddings with rights-gating
+
+### Graph Database Layer
+- Uses PostgreSQL with recursive CTEs for graph traversal (no separate Neo4j required)
+- Entity relationships modeled via `entity_edges` table with typed edge categories
+- Supports lineage queries: ruler → mint → denomination chains
+- Confidence scores and provenance tracking for each relationship
+
+### Vector Search Infrastructure  
+- **pgvector extension**: Enabled for native vector operations in PostgreSQL
+- **ivfflat index**: Optimized for cosine similarity with 100 lists (scales to ~1M vectors)
+- **embedding_vector column**: Native vector(512) type on image_embeddings table
+- **Rights-gated**: Only computes embeddings for CC0/PDM/CC-BY licensed content
 
 ### Authentication Flow
 - Custom username/password authentication with bcrypt hashing
@@ -108,5 +124,10 @@ Preferred communication style: Simple, everyday language.
 - `/api/search/hybrid`: Combined metadata + vector similarity search
 - `/api/search/visual`: Image-only visual similarity search
 - `/api/search/coins`: Text search across coin database
+- `/api/entities/:id`: Get entity by ID
+- `/api/entities/:id/edges/*`: Graph edge queries (outgoing/incoming)
+- `/api/entities/:id/related`: Graph traversal with recursive CTE
 - `/api/admin/*`: Admin-only routes for data ingestion and management
 - `/api/admin/embeddings/*`: Embedding worker management (start/stop/stats)
+- `/api/admin/entities/edges`: Create entity edges (graph relationships)
+- `/api/admin/vector/*`: Vector index health (stats/sync/reindex)

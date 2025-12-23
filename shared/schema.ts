@@ -155,6 +155,47 @@ export const insertEntitySchema = createInsertSchema(entities).omit({ id: true, 
 export type InsertEntity = z.infer<typeof insertEntitySchema>;
 export type Entity = typeof entities.$inferSelect;
 
+// Entity edges table - Graph relationships between entities
+export const entityEdges = pgTable("entity_edges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  srcId: varchar("src_id").notNull().references(() => entities.id, { onDelete: 'cascade' }),
+  dstId: varchar("dst_id").notNull().references(() => entities.id, { onDelete: 'cascade' }),
+  edgeType: text("edge_type").notNull(), // ISSUED_BY, MINTED_AT, HAS_DENOMINATION, etc.
+  confidence: numeric("confidence", { precision: 5, scale: 4 }).default('1.0'), // 0.0 to 1.0
+  provenance: text("provenance"), // Source of the relationship (e.g., "nomisma.org", "manual", "inferred")
+  sourceId: text("source_id").references(() => sources.id), // Which data source established this edge
+  metadata: jsonb("metadata").default({}), // Additional edge properties
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("entity_edges_src_idx").on(table.srcId),
+  index("entity_edges_dst_idx").on(table.dstId),
+  index("entity_edges_type_idx").on(table.edgeType),
+  index("entity_edges_src_type_idx").on(table.srcId, table.edgeType),
+]);
+
+export const insertEntityEdgeSchema = createInsertSchema(entityEdges).omit({ id: true, createdAt: true });
+export type InsertEntityEdge = z.infer<typeof insertEntityEdgeSchema>;
+export type EntityEdge = typeof entityEdges.$inferSelect;
+
+// Entity relations for graph traversals
+export const entitiesRelations = relations(entities, ({ many }) => ({
+  outgoingEdges: many(entityEdges, { relationName: 'sourceEntity' }),
+  incomingEdges: many(entityEdges, { relationName: 'targetEntity' }),
+}));
+
+export const entityEdgesRelations = relations(entityEdges, ({ one }) => ({
+  source: one(entities, {
+    fields: [entityEdges.srcId],
+    references: [entities.id],
+    relationName: 'sourceEntity',
+  }),
+  target: one(entities, {
+    fields: [entityEdges.dstId],
+    references: [entities.id],
+    relationName: 'targetEntity',
+  }),
+}));
+
 // Condition grades for numismatic classification
 export const CONDITION_GRADES = ['POOR', 'FAIR', 'GOOD', 'VG', 'FINE', 'VF', 'EF', 'AU', 'UNC', 'FDC', 'UNKNOWN'] as const;
 export type ConditionGrade = typeof CONDITION_GRADES[number];

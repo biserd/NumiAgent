@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insertImageAssetSchema, insertSimilarMatchSchema } from "@shared/schema";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -961,6 +963,185 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error cancelling embedding job:", error);
       res.status(500).json({ error: "Failed to cancel job" });
+    }
+  });
+
+  // ============ GRAPH API ============
+  // Note: Graph endpoints require authentication to prevent enumeration attacks
+  // Entity data itself is public numismatic reference data
+
+  // Get entity by ID
+  app.get("/api/entities/:id", requireAuth, async (req, res) => {
+    try {
+      const entity = await storage.getEntityById(req.params.id);
+      if (!entity) {
+        return res.status(404).json({ error: "Entity not found" });
+      }
+      res.json(entity);
+    } catch (error) {
+      console.error("Error fetching entity:", error);
+      res.status(500).json({ error: "Failed to fetch entity" });
+    }
+  });
+
+  // Get outgoing edges from an entity
+  app.get("/api/entities/:id/edges/outgoing", requireAuth, async (req, res) => {
+    try {
+      const { edgeType } = req.query;
+      const edges = await storage.getOutgoingEdges(
+        req.params.id, 
+        edgeType as string | undefined
+      );
+      res.json(edges);
+    } catch (error) {
+      console.error("Error fetching outgoing edges:", error);
+      res.status(500).json({ error: "Failed to fetch edges" });
+    }
+  });
+
+  // Get incoming edges to an entity
+  app.get("/api/entities/:id/edges/incoming", requireAuth, async (req, res) => {
+    try {
+      const { edgeType } = req.query;
+      const edges = await storage.getIncomingEdges(
+        req.params.id, 
+        edgeType as string | undefined
+      );
+      res.json(edges);
+    } catch (error) {
+      console.error("Error fetching incoming edges:", error);
+      res.status(500).json({ error: "Failed to fetch edges" });
+    }
+  });
+
+  // Get related entities (graph traversal)
+  app.get("/api/entities/:id/related", requireAuth, async (req, res) => {
+    try {
+      const { edgeTypes, maxDepth } = req.query;
+      const options: { edgeTypes?: string[]; maxDepth?: number } = {};
+      
+      if (edgeTypes) {
+        options.edgeTypes = (edgeTypes as string).split(',');
+      }
+      if (maxDepth) {
+        options.maxDepth = parseInt(maxDepth as string);
+      }
+      
+      const related = await storage.getRelatedEntities(req.params.id, options);
+      res.json(related);
+    } catch (error) {
+      console.error("Error fetching related entities:", error);
+      res.status(500).json({ error: "Failed to fetch related entities" });
+    }
+  });
+
+  // Create entity edge (admin only)
+  app.post("/api/admin/entities/edges", requireAdmin, async (req, res) => {
+    try {
+      const { srcId, dstId, edgeType, confidence, provenance, sourceId, metadata } = req.body;
+      
+      // Validate required fields
+      if (!srcId || !dstId || !edgeType) {
+        return res.status(400).json({ error: "srcId, dstId, and edgeType are required" });
+      }
+      
+      // Validate edge type
+      const validEdgeTypes = ['ISSUED_BY', 'MINTED_AT', 'HAS_DENOMINATION', 'HAS_METAL', 'CITES_REFERENCE', 'CANDIDATE_TYPE', 'PRIMARY_TYPE', 'APPEARED_IN', 'MATCHES_LOT', 'DIE_OBV', 'DIE_REV', 'DIE_LINK'];
+      if (!validEdgeTypes.includes(edgeType)) {
+        return res.status(400).json({ error: `Invalid edgeType. Must be one of: ${validEdgeTypes.join(', ')}` });
+      }
+      
+      // Validate entities exist
+      const srcEntity = await storage.getEntityById(srcId);
+      const dstEntity = await storage.getEntityById(dstId);
+      if (!srcEntity) {
+        return res.status(400).json({ error: "Source entity not found" });
+      }
+      if (!dstEntity) {
+        return res.status(400).json({ error: "Destination entity not found" });
+      }
+      
+      const edge = await storage.createEntityEdge({
+        srcId,
+        dstId,
+        edgeType,
+        confidence: confidence || '1.0',
+        provenance,
+        sourceId,
+        metadata: metadata || {},
+      });
+      res.status(201).json(edge);
+    } catch (error) {
+      console.error("Error creating entity edge:", error);
+      res.status(500).json({ error: "Failed to create edge" });
+    }
+  });
+
+  // ============ VECTOR INDEX HEALTH (ADMIN) ============
+
+  // Get vector index statistics
+  app.get("/api/admin/vector/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await db.execute(sql`
+        SELECT 
+          (SELECT count(*) FROM image_embeddings) as total_embeddings,
+          (SELECT count(*) FROM image_embeddings WHERE embedding_vector IS NOT NULL) as indexed_embeddings,
+          (SELECT count(*) FROM image_embeddings WHERE embedding_vector IS NULL) as pending_index,
+          (SELECT pg_size_pretty(pg_relation_size('image_embeddings'))) as table_size,
+          (SELECT pg_size_pretty(pg_relation_size('image_embeddings_vector_idx'))) as index_size
+      `);
+      
+      const row = stats.rows[0] as any;
+      res.json({
+        totalEmbeddings: parseInt(row.total_embeddings || '0'),
+        indexedEmbeddings: parseInt(row.indexed_embeddings || '0'),
+        pendingIndex: parseInt(row.pending_index || '0'),
+        tableSize: row.table_size,
+        indexSize: row.index_size,
+      });
+    } catch (error) {
+      console.error("Error fetching vector stats:", error);
+      res.status(500).json({ error: "Failed to fetch vector stats" });
+    }
+  });
+
+  // Sync embeddings to vector column (populate embedding_vector from embedding JSON)
+  app.post("/api/admin/vector/sync", requireAdmin, async (req, res) => {
+    try {
+      // Parse JSON array string to proper vector format using array_to_string
+      // The embedding column stores JSON like '[0.1, 0.2, ...]' which needs conversion
+      const result = await db.execute(sql`
+        UPDATE image_embeddings 
+        SET embedding_vector = (
+          SELECT array_agg(elem::float)::vector(512)
+          FROM jsonb_array_elements_text(embedding::jsonb) AS elem
+        )
+        WHERE embedding_vector IS NULL 
+          AND embedding IS NOT NULL
+          AND embedding != ''
+          AND embedding != '[]'
+          AND jsonb_array_length(embedding::jsonb) = 512
+        RETURNING id
+      `);
+      
+      res.json({ 
+        message: "Vector sync complete",
+        synced: result.rowCount || 0,
+      });
+    } catch (error) {
+      console.error("Error syncing vectors:", error);
+      res.status(500).json({ error: "Failed to sync vectors" });
+    }
+  });
+
+  // Reindex vector column (rebuild ivfflat index)
+  app.post("/api/admin/vector/reindex", requireAdmin, async (req, res) => {
+    try {
+      await db.execute(sql`REINDEX INDEX CONCURRENTLY image_embeddings_vector_idx`);
+      res.json({ message: "Vector index rebuild initiated" });
+    } catch (error) {
+      console.error("Error reindexing vectors:", error);
+      res.status(500).json({ error: "Failed to reindex vectors" });
     }
   });
 

@@ -1,14 +1,15 @@
 import { 
   users, userCoins, watchlists, notifications, sources, imageAssets, similarMatches,
-  coinTypes, entities, ingestionRuns, rightsRecords, ingestionLogs, embeddingJobs,
+  coinTypes, entities, entityEdges, ingestionRuns, rightsRecords, ingestionLogs, embeddingJobs,
   type User, type UpsertUser, type UserCoin, type InsertUserCoin,
   type Watchlist, type InsertWatchlist, type Notification, type InsertNotification,
   type Source, type InsertSource, type ImageAsset, type InsertImageAsset,
   type SimilarMatch, type InsertSimilarMatch, type CoinType, type InsertCoinType,
-  type Entity, type InsertEntity, type IngestionRun, type InsertIngestionRun,
+  type Entity, type InsertEntity, type EntityEdge, type InsertEntityEdge,
+  type IngestionRun, type InsertIngestionRun,
   type RightsRecord, type InsertRightsRecord,
   type IngestionLog, type InsertIngestionLog,
-  type EmbeddingJob
+  type EmbeddingJob, EDGE_TYPES
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, between, sql } from "drizzle-orm";
@@ -67,6 +68,14 @@ export interface IStorage {
   // Entities
   searchEntities(filters: { type?: string; search?: string }): Promise<Entity[]>;
   createEntity(entity: InsertEntity): Promise<Entity>;
+  getEntityById(id: string): Promise<Entity | undefined>;
+  
+  // Entity Edges (Graph)
+  createEntityEdge(edge: InsertEntityEdge): Promise<EntityEdge>;
+  getEntityEdgeById(id: string): Promise<EntityEdge | undefined>;
+  getOutgoingEdges(entityId: string, edgeType?: string): Promise<Array<EntityEdge & { target: Entity }>>;
+  getIncomingEdges(entityId: string, edgeType?: string): Promise<Array<EntityEdge & { source: Entity }>>;
+  getRelatedEntities(entityId: string, options?: { edgeTypes?: string[]; maxDepth?: number }): Promise<Array<{ entity: Entity; path: string[]; depth: number }>>;
   
   // Similar Matches
   getMatchesByCoin(coinId: string): Promise<SimilarMatch[]>;
@@ -780,6 +789,130 @@ export class DatabaseStorage implements IStorage {
       .where(eq(embeddingJobs.id, id))
       .returning();
     return updated;
+  }
+
+  // Entity Edges (Graph)
+  async createEntityEdge(edge: InsertEntityEdge): Promise<EntityEdge> {
+    const [created] = await db.insert(entityEdges).values(edge).returning();
+    return created;
+  }
+
+  async getEntityEdgeById(id: string): Promise<EntityEdge | undefined> {
+    const [edge] = await db.select().from(entityEdges).where(eq(entityEdges.id, id));
+    return edge || undefined;
+  }
+
+  async getEntityById(id: string): Promise<Entity | undefined> {
+    const [entity] = await db.select().from(entities).where(eq(entities.id, id));
+    return entity || undefined;
+  }
+
+  async getOutgoingEdges(entityId: string, edgeType?: string): Promise<Array<EntityEdge & { target: Entity }>> {
+    const conditions = [eq(entityEdges.srcId, entityId)];
+    if (edgeType) {
+      conditions.push(eq(entityEdges.edgeType, edgeType));
+    }
+    
+    const edges = await db.select({
+      id: entityEdges.id,
+      srcId: entityEdges.srcId,
+      dstId: entityEdges.dstId,
+      edgeType: entityEdges.edgeType,
+      confidence: entityEdges.confidence,
+      provenance: entityEdges.provenance,
+      sourceId: entityEdges.sourceId,
+      metadata: entityEdges.metadata,
+      createdAt: entityEdges.createdAt,
+      target: entities,
+    })
+      .from(entityEdges)
+      .innerJoin(entities, eq(entityEdges.dstId, entities.id))
+      .where(and(...conditions));
+    
+    return edges;
+  }
+
+  async getIncomingEdges(entityId: string, edgeType?: string): Promise<Array<EntityEdge & { source: Entity }>> {
+    const conditions = [eq(entityEdges.dstId, entityId)];
+    if (edgeType) {
+      conditions.push(eq(entityEdges.edgeType, edgeType));
+    }
+    
+    const edges = await db.select({
+      id: entityEdges.id,
+      srcId: entityEdges.srcId,
+      dstId: entityEdges.dstId,
+      edgeType: entityEdges.edgeType,
+      confidence: entityEdges.confidence,
+      provenance: entityEdges.provenance,
+      sourceId: entityEdges.sourceId,
+      metadata: entityEdges.metadata,
+      createdAt: entityEdges.createdAt,
+      source: entities,
+    })
+      .from(entityEdges)
+      .innerJoin(entities, eq(entityEdges.srcId, entities.id))
+      .where(and(...conditions));
+    
+    return edges;
+  }
+
+  async getRelatedEntities(
+    entityId: string, 
+    options?: { edgeTypes?: string[]; maxDepth?: number }
+  ): Promise<Array<{ entity: Entity; path: string[]; depth: number }>> {
+    const maxDepth = options?.maxDepth || 2;
+    const edgeTypes = options?.edgeTypes || EDGE_TYPES;
+    
+    // Use recursive CTE for graph traversal
+    const result = await db.execute(sql`
+      WITH RECURSIVE graph_traversal AS (
+        -- Base case: start from the source entity
+        SELECT 
+          e.id, e.type, e.label, e.wikidata_qid, e.nomisma_uri, 
+          e.pleiades_uri, e.geonames_id, e.is_sample, e.created_at,
+          ARRAY[${entityId}]::varchar[] as path,
+          1 as depth
+        FROM entities e
+        INNER JOIN entity_edges edge ON edge.dst_id = e.id
+        WHERE edge.src_id = ${entityId}
+          AND edge.edge_type = ANY(${edgeTypes})
+        
+        UNION
+        
+        -- Recursive case: follow edges
+        SELECT 
+          e.id, e.type, e.label, e.wikidata_qid, e.nomisma_uri,
+          e.pleiades_uri, e.geonames_id, e.is_sample, e.created_at,
+          gt.path || e.id as path,
+          gt.depth + 1 as depth
+        FROM entities e
+        INNER JOIN entity_edges edge ON edge.dst_id = e.id
+        INNER JOIN graph_traversal gt ON edge.src_id = gt.id
+        WHERE gt.depth < ${maxDepth}
+          AND edge.edge_type = ANY(${edgeTypes})
+          AND NOT (e.id = ANY(gt.path))  -- Prevent cycles
+      )
+      SELECT DISTINCT ON (id) * FROM graph_traversal
+      ORDER BY id, depth
+      LIMIT 100
+    `);
+    
+    return (result.rows as any[]).map(row => ({
+      entity: {
+        id: row.id,
+        type: row.type,
+        label: row.label,
+        wikidataQid: row.wikidata_qid,
+        nomismaUri: row.nomisma_uri,
+        pleiadesUri: row.pleiades_uri,
+        geonamesId: row.geonames_id,
+        isSample: row.is_sample,
+        createdAt: row.created_at,
+      } as Entity,
+      path: row.path as string[],
+      depth: row.depth as number,
+    }));
   }
 }
 

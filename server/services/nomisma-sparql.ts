@@ -46,17 +46,24 @@ async function executeSparql(query: string): Promise<SparqlResult> {
       });
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        console.error(`SPARQL error ${response.status}: ${errorText}`);
+        const errorText = await response.text().catch(() => '(no error text)');
+        console.error(`SPARQL error ${response.status}: ${errorText.substring(0, 500)}`);
         throw new Error(`SPARQL query failed: ${response.status} ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('json')) {
+        const errorText = await response.text().catch(() => '(no response)');
+        console.error(`SPARQL returned non-JSON: ${contentType}. Body: ${errorText.substring(0, 500)}`);
+        throw new Error(`SPARQL returned ${contentType}, expected JSON`);
       }
 
       return response.json() as Promise<SparqlResult>;
     },
     {
-      retries: 3,
-      minTimeout: 1000,
-      maxTimeout: 5000,
+      retries: 2,
+      minTimeout: 2000,
+      maxTimeout: 8000,
     }
   );
 

@@ -10,6 +10,7 @@ import { SmithsonianAdapter } from "./smithsonian-adapter";
 import { WaltersAdapter } from "./walters-adapter";
 import { ArticAdapter } from "./artic-adapter";
 import { NGAAdapter } from "./nga-adapter";
+import { NomismaAdapter } from "./nomisma-adapter";
 import { canIngestRecord } from "../services/rights-utils";
 import type { InsertCoinType, InsertRightsRecord, IngestionRun, LogLevel } from "@shared/schema";
 
@@ -63,7 +64,8 @@ type IngestionAdapter =
   | typeof SmithsonianAdapter
   | typeof WaltersAdapter
   | typeof ArticAdapter
-  | typeof NGAAdapter;
+  | typeof NGAAdapter
+  | typeof NomismaAdapter;
 
 const adapters: Record<string, IngestionAdapter> = {
   "met-museum": MetAdapter,
@@ -74,6 +76,9 @@ const adapters: Record<string, IngestionAdapter> = {
   "walters": WaltersAdapter,
   "aic": ArticAdapter,
   "nga": NGAAdapter,
+  "nomisma": NomismaAdapter,
+  "ocre": NomismaAdapter,
+  "crro": NomismaAdapter,
 };
 
 export async function runIngestion(
@@ -159,6 +164,14 @@ export async function runIngestion(
       }
       case 'nga': {
         ingestionGenerator = NGAAdapter.ingest(limit);
+        break;
+      }
+      case 'ocre': {
+        ingestionGenerator = NomismaAdapter.ingest(limit, 'ocre');
+        break;
+      }
+      case 'crro': {
+        ingestionGenerator = NomismaAdapter.ingest(limit, 'crro');
         break;
       }
       default: {
@@ -291,4 +304,5 @@ export {
   WaltersAdapter,
   ArticAdapter,
   NGAAdapter,
+  NomismaAdapter,
 };

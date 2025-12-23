@@ -374,6 +374,99 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to fetch cursor" });
     }
   });
+  
+  // ============ NOMISMA ENTITY INGESTION ============
+  
+  // Get Nomisma stats
+  app.get("/api/admin/nomisma/stats", requireAdmin, async (req, res) => {
+    try {
+      const { NomismaAdapter } = await import("./ingestion/nomisma-adapter");
+      const stats = await NomismaAdapter.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching Nomisma stats:", error);
+      res.status(500).json({ error: "Failed to fetch Nomisma stats" });
+    }
+  });
+  
+  // Ingest entities from Nomisma
+  app.post("/api/admin/nomisma/entities", requireAdmin, async (req, res) => {
+    try {
+      const { entityType, limit = 100 } = req.body;
+      
+      if (!entityType || !['rulers', 'mints', 'denominations', 'materials'].includes(entityType)) {
+        return res.status(400).json({ 
+          error: "entityType is required and must be one of: rulers, mints, denominations, materials" 
+        });
+      }
+      
+      const { NomismaAdapter } = await import("./ingestion/nomisma-adapter");
+      
+      let ingested = 0;
+      let skipped = 0;
+      
+      for await (const entity of NomismaAdapter.ingestEntities(entityType, limit)) {
+        try {
+          // Check if entity with this nomisma URI already exists
+          const existing = await storage.getEntityByNomismaUri(entity.nomismaUri!);
+          if (existing) {
+            skipped++;
+            continue;
+          }
+          
+          await storage.createEntity(entity);
+          ingested++;
+        } catch (err) {
+          console.error(`Error ingesting entity ${entity.label}:`, err);
+        }
+      }
+      
+      res.json({ entityType, ingested, skipped });
+    } catch (error) {
+      console.error("Error ingesting Nomisma entities:", error);
+      res.status(500).json({ error: "Failed to ingest Nomisma entities" });
+    }
+  });
+  
+  // Ingest edges from Nomisma
+  app.post("/api/admin/nomisma/edges", requireAdmin, async (req, res) => {
+    try {
+      const { limit = 500 } = req.body;
+      
+      const { NomismaAdapter } = await import("./ingestion/nomisma-adapter");
+      
+      let created = 0;
+      let skipped = 0;
+      let errors = 0;
+      
+      for await (const edge of NomismaAdapter.ingestEdges(limit)) {
+        try {
+          // Edges reference entities by nomisma ID - need to look up actual entity IDs
+          const srcEntity = await storage.getEntityByNomismaUri(`http://nomisma.org/id/${edge.srcId}`);
+          const dstEntity = await storage.getEntityByNomismaUri(`http://nomisma.org/id/${edge.dstId}`);
+          
+          if (!srcEntity || !dstEntity) {
+            skipped++;
+            continue;
+          }
+          
+          await storage.createEntityEdge({
+            ...edge,
+            srcId: srcEntity.id,
+            dstId: dstEntity.id,
+          });
+          created++;
+        } catch (err) {
+          errors++;
+        }
+      }
+      
+      res.json({ created, skipped, errors });
+    } catch (error) {
+      console.error("Error ingesting Nomisma edges:", error);
+      res.status(500).json({ error: "Failed to ingest Nomisma edges" });
+    }
+  });
 
   // ============ RIGHTS COMPLIANCE ============
 

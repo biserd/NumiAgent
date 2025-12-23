@@ -23,7 +23,13 @@ import {
   FileText,
   AlertCircle,
   Info,
-  Bug
+  Bug,
+  Globe,
+  Users,
+  MapPin,
+  Coins,
+  CircleDot,
+  Link2
 } from "lucide-react";
 import type { IngestionRun, IngestionLog, Source } from "@shared/schema";
 
@@ -228,6 +234,8 @@ export default function AdminIngestionPage() {
   const [ingestionLimit, setIngestionLimit] = useState<number>(100);
   const [selectedRun, setSelectedRun] = useState<IngestionRun | null>(null);
   const [logViewerOpen, setLogViewerOpen] = useState(false);
+  const [nomismaEntityType, setNomismaEntityType] = useState<string>("rulers");
+  const [nomismaLimit, setNomismaLimit] = useState<number>(100);
 
   const { data: stats, isLoading: statsLoading } = useQuery<IngestionStats>({
     queryKey: ["/api/admin/ingestion-stats"],
@@ -240,6 +248,10 @@ export default function AdminIngestionPage() {
   const { data: runs, isLoading: runsLoading } = useQuery<IngestionRun[]>({
     queryKey: ["/api/admin/ingestion-runs"],
   });
+  
+  const { data: nomismaStats } = useQuery<{ rulers: number; mints: number; denominations: number; materials: number }>({
+    queryKey: ["/api/admin/nomisma/stats"],
+  });
 
   const startIngestionMutation = useMutation({
     mutationFn: async ({ sourceId, limit }: { sourceId: string; limit: number }) => {
@@ -250,6 +262,39 @@ export default function AdminIngestionPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ingestion-runs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ingestion-stats"] });
       toast({ title: "Ingestion job created" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  const ingestNomismaEntitiesMutation = useMutation({
+    mutationFn: async ({ entityType, limit }: { entityType: string; limit: number }) => {
+      const res = await apiRequest("POST", "/api/admin/nomisma/entities", { entityType, limit });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/nomisma/stats"] });
+      toast({ 
+        title: "Entity ingestion completed", 
+        description: `Ingested ${data.ingested} ${data.entityType}, skipped ${data.skipped} duplicates` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  const ingestNomismaEdgesMutation = useMutation({
+    mutationFn: async ({ limit }: { limit: number }) => {
+      const res = await apiRequest("POST", "/api/admin/nomisma/edges", { limit });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Edge ingestion completed", 
+        description: `Created ${data.created} edges, skipped ${data.skipped}, errors: ${data.errors}` 
+      });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -327,6 +372,106 @@ export default function AdminIngestionPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Nomisma.org - Linked Open Data</CardTitle>
+                <CardDescription>Ingest canonical entities and relationships from Nomisma.org</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                <Users className="h-5 w-5 text-blue-500" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Rulers</div>
+                  <div className="font-semibold" data-testid="text-nomisma-rulers">{nomismaStats?.rulers?.toLocaleString() || "..."}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                <MapPin className="h-5 w-5 text-green-500" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Mints</div>
+                  <div className="font-semibold" data-testid="text-nomisma-mints">{nomismaStats?.mints?.toLocaleString() || "..."}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                <Coins className="h-5 w-5 text-amber-500" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Denominations</div>
+                  <div className="font-semibold" data-testid="text-nomisma-denoms">{nomismaStats?.denominations?.toLocaleString() || "..."}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                <CircleDot className="h-5 w-5 text-slate-500" />
+                <div>
+                  <div className="text-sm text-muted-foreground">Materials</div>
+                  <div className="font-semibold" data-testid="text-nomisma-materials">{nomismaStats?.materials?.toLocaleString() || "..."}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={nomismaEntityType} onValueChange={setNomismaEntityType}>
+                <SelectTrigger className="w-[160px]" data-testid="select-nomisma-entity-type">
+                  <SelectValue placeholder="Entity type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rulers">Rulers / Authorities</SelectItem>
+                  <SelectItem value="mints">Mints</SelectItem>
+                  <SelectItem value="denominations">Denominations</SelectItem>
+                  <SelectItem value="materials">Materials / Metals</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-muted-foreground">Limit:</label>
+                <Input
+                  type="number"
+                  value={nomismaLimit}
+                  onChange={(e) => setNomismaLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-[100px]"
+                  min={1}
+                  max={2000}
+                  data-testid="input-nomisma-limit"
+                />
+              </div>
+              
+              <Button 
+                onClick={() => ingestNomismaEntitiesMutation.mutate({ entityType: nomismaEntityType, limit: nomismaLimit })}
+                disabled={ingestNomismaEntitiesMutation.isPending}
+                className="gap-2"
+                data-testid="button-ingest-nomisma-entities"
+              >
+                {ingestNomismaEntitiesMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                Ingest Entities
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => ingestNomismaEdgesMutation.mutate({ limit: 500 })}
+                disabled={ingestNomismaEdgesMutation.isPending}
+                className="gap-2"
+                data-testid="button-ingest-nomisma-edges"
+              >
+                {ingestNomismaEdgesMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link2 className="h-4 w-4" />
+                )}
+                Ingest Edges
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

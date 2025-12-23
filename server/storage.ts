@@ -71,6 +71,7 @@ export interface IStorage {
   searchEntities(filters: { type?: string; search?: string }): Promise<Entity[]>;
   createEntity(entity: InsertEntity): Promise<Entity>;
   getEntityById(id: string): Promise<Entity | undefined>;
+  getEntityByNomismaUri(uri: string): Promise<Entity | undefined>;
   
   // Entity Edges (Graph)
   createEntityEdge(edge: InsertEntityEdge): Promise<EntityEdge>;
@@ -376,6 +377,11 @@ export class DatabaseStorage implements IStorage {
   async createEntity(entity: InsertEntity): Promise<Entity> {
     const [created] = await db.insert(entities).values(entity).returning();
     return created;
+  }
+  
+  async getEntityByNomismaUri(uri: string): Promise<Entity | undefined> {
+    const [entity] = await db.select().from(entities).where(eq(entities.nomismaUri, uri)).limit(1);
+    return entity;
   }
 
   // Similar Matches

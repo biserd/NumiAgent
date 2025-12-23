@@ -255,14 +255,136 @@ function getImageUrl(record: SmithsonianRecord): string | null {
 }
 
 function buildLabel(record: SmithsonianRecord): string {
-  const parts = [record.title];
+  const title = record.title || "";
+  const structured = record.content?.indexedStructured;
+  const freetext = record.content?.freetext;
   
-  const names = record.content?.indexedStructured?.name || [];
-  if (names.length > 0 && !record.title.includes(names[0])) {
+  // If title is very generic (just "coin", "medal", etc.), try to build a richer label
+  const genericTitles = ["coin", "coins", "medal", "medals", "token", "tokens", "currency"];
+  const isGenericTitle = genericTitles.includes(title.toLowerCase().trim());
+  
+  if (isGenericTitle) {
+    const labelParts: string[] = [];
+    
+    // Try to get denomination or object type
+    const objectType = structured?.object_type?.[0];
+    if (objectType && !genericTitles.includes(objectType.toLowerCase())) {
+      labelParts.push(objectType);
+    } else {
+      labelParts.push(title);
+    }
+    
+    // Add culture/civilization
+    const culture = structured?.culture?.[0];
+    if (culture) {
+      labelParts.push(`(${culture})`);
+    }
+    
+    // Add place/mint
+    const place = structured?.place?.[0] || freetext?.place?.[0]?.content;
+    if (place && !labelParts.some(p => p.includes(place))) {
+      labelParts.push(`- ${place}`);
+    }
+    
+    // Add name/ruler if available
+    const name = structured?.name?.[0] || freetext?.name?.[0]?.content;
+    if (name && !labelParts.some(p => p.includes(name))) {
+      labelParts.push(`- ${name}`);
+    }
+    
+    // Add date if available
+    const date = structured?.date?.[0] || freetext?.date?.[0]?.content;
+    if (date) {
+      labelParts.push(`[${date}]`);
+    }
+    
+    return labelParts.join(" ").trim() || title;
+  }
+  
+  // For non-generic titles, append ruler/name if not already in title
+  const parts = [title];
+  const names = structured?.name || [];
+  if (names.length > 0 && !title.toLowerCase().includes(names[0].toLowerCase())) {
     parts.push(`- ${names[0]}`);
   }
   
+  // Add culture if not in title
+  const culture = structured?.culture?.[0];
+  if (culture && !title.toLowerCase().includes(culture.toLowerCase())) {
+    parts.push(`(${culture})`);
+  }
+  
   return parts.join(" ").trim();
+}
+
+function parsePhysicalDescription(record: SmithsonianRecord): {
+  weight: string | null;
+  diameter: string | null;
+  metal: string | null;
+  denomination: string | null;
+} {
+  const physDesc = record.content?.freetext?.physicalDescription?.map(p => p.content).join(" ") || "";
+  const notes = record.content?.freetext?.notes?.map(n => n.content).join(" ") || "";
+  const combined = `${physDesc} ${notes}`.toLowerCase();
+  
+  let weight: string | null = null;
+  let diameter: string | null = null;
+  let metal: string | null = null;
+  let denomination: string | null = null;
+  
+  // Parse weight (grams, g, gr) - return numeric string only
+  const weightMatch = combined.match(/(\d+\.?\d*)\s*(grams?|g\b|gr\b)/i);
+  if (weightMatch) {
+    weight = weightMatch[1];
+  }
+  
+  // Parse diameter (mm, millimeters, cm) - return numeric string in mm
+  const diamMatch = combined.match(/(\d+\.?\d*)\s*(mm|millimeters?|centimeters?|cm)/i);
+  if (diamMatch) {
+    const value = parseFloat(diamMatch[1]);
+    const unit = diamMatch[2].toLowerCase();
+    if (unit.startsWith('c')) {
+      diameter = String(value * 10);
+    } else {
+      diameter = String(value);
+    }
+  }
+  
+  // Parse metal
+  const metals = ["gold", "silver", "bronze", "copper", "brass", "electrum", "billon", "iron", "lead", "tin", "nickel"];
+  for (const m of metals) {
+    if (combined.includes(m)) {
+      metal = m.charAt(0).toUpperCase() + m.slice(1);
+      break;
+    }
+  }
+  
+  // Parse denomination from common patterns
+  const denomPatterns = [
+    /\b(denarius|denarii)\b/i,
+    /\b(sestertius|sestertii|sesterius)\b/i,
+    /\b(aureus|aurei)\b/i,
+    /\b(as|asses)\b/i,
+    /\b(dupondius|dupondii)\b/i,
+    /\b(antoninianus|antoniniani)\b/i,
+    /\b(solidus|solidi)\b/i,
+    /\b(tremissis|tremisses)\b/i,
+    /\b(follis|folles)\b/i,
+    /\b(drachm|drachms|drachma|drachmae)\b/i,
+    /\b(tetradrachm|tetradrachms)\b/i,
+    /\b(stater|staters)\b/i,
+    /\b(obol|obols|obolus)\b/i,
+  ];
+  
+  for (const pattern of denomPatterns) {
+    const match = combined.match(pattern);
+    if (match) {
+      denomination = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+      break;
+    }
+  }
+  
+  return { weight, diameter, metal, denomination };
 }
 
 export function transformSmithsonianRecordToCoinType(record: SmithsonianRecord): InsertCoinType | null {
@@ -272,9 +394,27 @@ export function transformSmithsonianRecordToCoinType(record: SmithsonianRecord):
   
   const { dateFrom, dateTo } = parseDate(record);
   const imageUrl = getImageUrl(record);
+  const { weight, diameter, metal: parsedMetal, denomination: parsedDenom } = parsePhysicalDescription(record);
   
   const structured = record.content?.indexedStructured;
   const freetext = record.content?.freetext;
+  
+  // Get metal from structured data or parsed from description
+  const metal = structured?.material?.[0] || parsedMetal;
+  
+  // Get authority - try name, then culture
+  const authority = structured?.name?.[0] || freetext?.name?.[0]?.content || structured?.culture?.[0];
+  
+  // Get mint/place
+  const mint = structured?.place?.[0] || freetext?.place?.[0]?.content;
+  
+  // Get region from culture if not used as authority
+  const region = structured?.culture?.[0] && structured?.name?.[0] ? structured.culture[0] : undefined;
+  
+  // Build reference text from notes and set name
+  const notes = freetext?.notes?.map(n => n.content).join("; ") || "";
+  const setName = freetext?.setName?.[0]?.content || "";
+  const referenceText = [setName, notes].filter(Boolean).join(" - ") || undefined;
   
   return {
     sourceId: SOURCE_ID,
@@ -284,13 +424,16 @@ export function transformSmithsonianRecordToCoinType(record: SmithsonianRecord):
     dateFrom,
     dateTo,
     imageUrl,
-    authority: structured?.name?.[0] || freetext?.name?.[0]?.content,
-    mint: structured?.place?.[0] || freetext?.place?.[0]?.content,
-    metal: structured?.material?.[0],
-    denomination: undefined,
+    authority,
+    mint,
+    metal,
+    denomination: parsedDenom,
+    region,
+    weightG: weight,
+    diameterMm: diameter,
     obvLegend: undefined,
     revLegend: undefined,
-    referenceText: freetext?.notes?.[0]?.content,
+    referenceText,
   };
 }
 

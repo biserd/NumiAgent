@@ -25,6 +25,7 @@ import AdminJobsPage from "@/pages/admin/jobs";
 import AdminRightsPage from "@/pages/admin/rights";
 import AdminCoinsPage from "@/pages/admin/coins";
 import AdminGraphPage from "@/pages/admin/graph";
+import AdminEnrichmentPage from "@/pages/admin/enrichment";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import AboutPage from "@/pages/about";
@@ -51,6 +52,7 @@ function AuthenticatedRoutes() {
       <Route path="/admin/ingestion" component={AdminIngestionPage} />
       <Route path="/admin/jobs" component={AdminJobsPage} />
       <Route path="/admin/rights" component={AdminRightsPage} />
+      <Route path="/admin/enrichment" component={AdminEnrichmentPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/about" component={AboutPage} />

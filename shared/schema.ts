@@ -206,6 +206,8 @@ export const coinTypes = pgTable("coin_types", {
   sourceId: text("source_id").notNull().references(() => sources.id),
   sourceRecordId: text("source_record_id"),
   sourceUrl: text("source_url"),
+  nomismaUri: text("nomisma_uri"),
+  linkedEntityId: varchar("linked_entity_id").references(() => entities.id),
   label: text("label").notNull(),
   dateFrom: integer("date_from"),
   dateTo: integer("date_to"),

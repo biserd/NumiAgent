@@ -1393,5 +1393,121 @@ export async function registerRoutes(
     }
   });
 
+  // ============ NOMISMA ENRICHMENT (ADMIN) ============
+
+  // Get enrichment stats
+  app.get("/api/admin/enrichment/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await db.execute(sql`
+        SELECT 
+          (SELECT count(*) FROM entities WHERE nomisma_uri IS NOT NULL AND type IN ('MINT', 'PERSON')) as entities_with_nomisma,
+          (SELECT count(*) FROM coin_types WHERE nomisma_uri IS NOT NULL) as enriched_coin_types,
+          (SELECT count(*) FROM coin_types WHERE source_id = 'nomisma-sparql') as nomisma_coin_types
+      `);
+      
+      const row = stats.rows[0] as any;
+      res.json({
+        entitiesWithNomisma: parseInt(row.entities_with_nomisma || '0'),
+        enrichedCoinTypes: parseInt(row.enriched_coin_types || '0'),
+        nomismaCoinTypes: parseInt(row.nomisma_coin_types || '0'),
+      });
+    } catch (error) {
+      console.error("Error fetching enrichment stats:", error);
+      res.status(500).json({ error: "Failed to fetch enrichment stats" });
+    }
+  });
+
+  // Start batch enrichment (runs in background)
+  let enrichmentRunning = false;
+  let enrichmentProgress = { processed: 0, total: 0, coinTypes: 0, errors: 0 };
+
+  app.post("/api/admin/enrichment/start", requireAdmin, async (req, res) => {
+    if (enrichmentRunning) {
+      return res.status(409).json({ error: "Enrichment already running", progress: enrichmentProgress });
+    }
+
+    const limit = Math.min(parseInt(req.body.limit as string) || 50, 500);
+
+    enrichmentRunning = true;
+    enrichmentProgress = { processed: 0, total: 0, coinTypes: 0, errors: 0 };
+
+    res.json({ message: "Enrichment started", limit });
+
+    (async () => {
+      try {
+        const existingUris = new Set(
+          (await db.execute(sql`SELECT nomisma_uri FROM coin_types WHERE nomisma_uri IS NOT NULL`))
+            .rows.map((r: any) => r.nomisma_uri)
+        );
+
+        const nomismaSource = await db.execute(sql`
+          INSERT INTO sources (id, name, homepage_url, access_method, base_url, default_license_metadata, default_license_images, default_actions, is_enabled, is_sample)
+          VALUES ('nomisma-sparql', 'Nomisma.org SPARQL', 'https://nomisma.org', 'sparql', 'https://nomisma.org/sparql', 'CC_BY', 'UNKNOWN', '{}', true, false)
+          ON CONFLICT (id) DO NOTHING
+        `);
+
+        const entitiesToEnrich = await db.execute(sql`
+          SELECT id, type, label, nomisma_uri 
+          FROM entities 
+          WHERE nomisma_uri IS NOT NULL AND type IN ('MINT', 'PERSON')
+          LIMIT ${limit}
+        `);
+
+        enrichmentProgress.total = entitiesToEnrich.rows.length;
+
+        for (const row of entitiesToEnrich.rows as any[]) {
+          try {
+            let fetchedTypes;
+            if (row.type === 'MINT') {
+              fetchedTypes = await getCoinTypesForMint(row.nomisma_uri, 50);
+            } else {
+              fetchedTypes = await getCoinTypesForRuler(row.nomisma_uri, 50);
+            }
+
+            for (const ct of fetchedTypes || []) {
+              if (!ct.uri || existingUris.has(ct.uri)) continue;
+
+              try {
+                await db.execute(sql`
+                  INSERT INTO coin_types (source_id, nomisma_uri, source_url, label, authority, mint, denomination, metal, linked_entity_id)
+                  VALUES (
+                    'nomisma-sparql',
+                    ${ct.uri},
+                    ${ct.uri},
+                    ${ct.label || ct.uri.split('/').pop() || 'Unknown'},
+                    ${ct.authorityLabel || null},
+                    ${ct.mintLabel || (row.type === 'MINT' ? row.label : null)},
+                    ${ct.denominationLabel || null},
+                    ${ct.materialLabel || null},
+                    ${row.id}
+                  )
+                  ON CONFLICT DO NOTHING
+                `);
+                existingUris.add(ct.uri);
+                enrichmentProgress.coinTypes++;
+              } catch (e) {
+                enrichmentProgress.errors++;
+              }
+            }
+
+            enrichmentProgress.processed++;
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } catch (e) {
+            enrichmentProgress.errors++;
+            enrichmentProgress.processed++;
+          }
+        }
+      } catch (error) {
+        console.error("Enrichment error:", error);
+      } finally {
+        enrichmentRunning = false;
+      }
+    })();
+  });
+
+  app.get("/api/admin/enrichment/progress", requireAdmin, async (req, res) => {
+    res.json({ running: enrichmentRunning, ...enrichmentProgress });
+  });
+
   return httpServer;
 }

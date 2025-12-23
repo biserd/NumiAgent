@@ -110,7 +110,11 @@ export async function searchSmithsonianCoins(
 
 export async function getSmithsonianRecord(id: string): Promise<SmithsonianRecord | null> {
   try {
-    const url = `${SI_API_BASE}/content/${id}`;
+    const apiKey = getApiKey();
+    const params = new URLSearchParams({
+      api_key: apiKey,
+    });
+    const url = `${SI_API_BASE}/content/${id}?${params}`;
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
@@ -292,8 +296,8 @@ export async function* ingestSmithsonianCoins(
       break;
     }
     
-    // Rate limiting - be nice to the API
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Rate limiting - Smithsonian allows 30 requests/min, so ~2 seconds between requests
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
   
   console.log(`[INFO] Smithsonian ingestion complete: ${totalProcessed} processed, ${totalYielded} yielded`);

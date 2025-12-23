@@ -1457,12 +1457,15 @@ export async function registerRoutes(
 
         for (const row of entitiesToEnrich.rows as any[]) {
           try {
+            console.log(`Enriching ${row.type}: ${row.label} (${row.nomisma_uri})`);
             let fetchedTypes;
             if (row.type === 'MINT') {
               fetchedTypes = await getCoinTypesForMint(row.nomisma_uri, 50);
             } else {
               fetchedTypes = await getCoinTypesForRuler(row.nomisma_uri, 50);
             }
+
+            console.log(`  Fetched ${(fetchedTypes || []).length} coin types`);
 
             for (const ct of fetchedTypes || []) {
               if (!ct.uri || existingUris.has(ct.uri)) continue;
@@ -1486,6 +1489,7 @@ export async function registerRoutes(
                 existingUris.add(ct.uri);
                 enrichmentProgress.coinTypes++;
               } catch (e) {
+                console.error(`  Error inserting coin type:`, e);
                 enrichmentProgress.errors++;
               }
             }
@@ -1493,6 +1497,7 @@ export async function registerRoutes(
             enrichmentProgress.processed++;
             await new Promise(resolve => setTimeout(resolve, 1500));
           } catch (e) {
+            console.error(`Error enriching entity ${row.label}:`, e);
             enrichmentProgress.errors++;
             enrichmentProgress.processed++;
           }

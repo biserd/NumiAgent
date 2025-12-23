@@ -46,6 +46,8 @@ async function executeSparql(query: string): Promise<SparqlResult> {
       });
 
       if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        console.error(`SPARQL error ${response.status}: ${errorText}`);
         throw new Error(`SPARQL query failed: ${response.status} ${response.statusText}`);
       }
 
@@ -95,23 +97,27 @@ export async function getCoinTypesForMint(mintUri: string, limit: number = 50): 
       OPTIONAL { ?coinType nmo:hasStartDate ?startDate }
       OPTIONAL { ?coinType nmo:hasEndDate ?endDate }
     }
-    LIMIT ${limit}
+    LIMIT ${Math.min(limit, 100)}
   `;
 
-  const result = await executeSparql(query);
-
-  return result.results.bindings.map(binding => ({
-    uri: binding.coinType?.value,
-    label: binding.label?.value,
-    denomination: binding.denomination?.value,
-    denominationLabel: binding.denomLabel?.value,
-    authority: binding.authority?.value,
-    authorityLabel: binding.authLabel?.value,
-    material: binding.material?.value,
-    materialLabel: binding.matLabel?.value,
-    startDate: binding.startDate?.value,
-    endDate: binding.endDate?.value,
-  }));
+  try {
+    const result = await executeSparql(query);
+    return (result.results?.bindings || []).map(binding => ({
+      uri: binding.coinType?.value,
+      label: binding.label?.value,
+      denomination: binding.denomination?.value,
+      denominationLabel: binding.denomLabel?.value,
+      authority: binding.authority?.value,
+      authorityLabel: binding.authLabel?.value,
+      material: binding.material?.value,
+      materialLabel: binding.matLabel?.value,
+      startDate: binding.startDate?.value,
+      endDate: binding.endDate?.value,
+    })).filter(ct => ct.uri);
+  } catch (error) {
+    console.error(`Error fetching coin types for mint ${mintUri}:`, error);
+    return [];
+  }
 }
 
 export async function getCoinTypesForRuler(rulerUri: string, limit: number = 50): Promise<CoinType[]> {
@@ -147,23 +153,27 @@ export async function getCoinTypesForRuler(rulerUri: string, limit: number = 50)
       OPTIONAL { ?coinType nmo:hasStartDate ?startDate }
       OPTIONAL { ?coinType nmo:hasEndDate ?endDate }
     }
-    LIMIT ${limit}
+    LIMIT ${Math.min(limit, 100)}
   `;
 
-  const result = await executeSparql(query);
-
-  return result.results.bindings.map(binding => ({
-    uri: binding.coinType?.value,
-    label: binding.label?.value,
-    denomination: binding.denomination?.value,
-    denominationLabel: binding.denomLabel?.value,
-    mint: binding.mint?.value,
-    mintLabel: binding.mintLabel?.value,
-    material: binding.material?.value,
-    materialLabel: binding.matLabel?.value,
-    startDate: binding.startDate?.value,
-    endDate: binding.endDate?.value,
-  }));
+  try {
+    const result = await executeSparql(query);
+    return (result.results?.bindings || []).map(binding => ({
+      uri: binding.coinType?.value,
+      label: binding.label?.value,
+      denomination: binding.denomination?.value,
+      denominationLabel: binding.denomLabel?.value,
+      mint: binding.mint?.value,
+      mintLabel: binding.mintLabel?.value,
+      material: binding.material?.value,
+      materialLabel: binding.matLabel?.value,
+      startDate: binding.startDate?.value,
+      endDate: binding.endDate?.value,
+    })).filter(ct => ct.uri);
+  } catch (error) {
+    console.error(`Error fetching coin types for ruler ${rulerUri}:`, error);
+    return [];
+  }
 }
 
 export async function getCoinTypesForDenomination(denomUri: string, limit: number = 50): Promise<CoinType[]> {

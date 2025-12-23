@@ -370,10 +370,65 @@ export async function* extractRelationshipsFromLocal(
   console.log(`[nomisma-local] Completed: extracted ${count} relationships from ${processed} files`);
 }
 
+/**
+ * Extract coin types from local RDF files (denominations that can be linked to mints/rulers)
+ */
+export interface LocalCoinType {
+  uri: string;
+  label: string;
+  authority?: string;
+  authorityLabel?: string;
+  mint?: string;
+  mintLabel?: string;
+  denomination?: string;
+  denominationLabel?: string;
+  material?: string;
+  materialLabel?: string;
+}
+
+export async function* extractCoinTypesFromLocal(
+  entityUri?: string
+): AsyncGenerator<LocalCoinType> {
+  const files = getNomismaDataFiles();
+  let count = 0;
+  let processed = 0;
+
+  console.log(`[nomisma-local] Extracting coin types from local RDF files`);
+
+  for (const file of files) {
+    if (processed >= 5000) break; // Reasonable limit per run
+    
+    try {
+      const entity = await parseRdfFile(file);
+      processed++;
+
+      // Extract denominations and other coin type entities as coin types
+      if (entity && (entity.type === 'denomination' || entity.type === 'mint')) {
+        const coinType: LocalCoinType = {
+          uri: entity.uri,
+          label: entity.label || entity.uri.split('/').pop() || 'Unknown',
+        };
+        
+        count++;
+        yield coinType;
+
+        if (count % 500 === 0) {
+          console.log(`[nomisma-local] Extracted ${count} coin types from ${processed} files`);
+        }
+      }
+    } catch (error) {
+      console.error(`[nomisma-local] Error extracting coin type from ${file}:`, error);
+    }
+  }
+
+  console.log(`[nomisma-local] Completed: extracted ${count} coin types from ${processed} files`);
+}
+
 export const NomismaLocalParser = {
   isLocalDataAvailable,
   getLocalDataStats,
   getNomismaDataFiles,
   ingestEntitiesFromLocal,
   extractRelationshipsFromLocal,
+  extractCoinTypesFromLocal,
 };

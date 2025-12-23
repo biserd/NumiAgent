@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insertImageAssetSchema, insertSimilarMatchSchema, EDGE_TYPES } from "@shared/schema";
-import { getCoinTypesForMint, getCoinTypesForRuler, getCoinTypesForDenomination, getMintCoordinates, getPhysicalCoinsForType } from "./services/nomisma-sparql";
+import { extractCoinTypesFromLocal } from "./ingestion/nomisma-local-parser";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
@@ -1455,53 +1455,39 @@ export async function registerRoutes(
 
         enrichmentProgress.total = entitiesToEnrich.rows.length;
 
-        for (const row of entitiesToEnrich.rows as any[]) {
+        // Extract coin types from local RDF data
+        console.log('Extracting coin types from local Nomisma RDF files...');
+        const coinTypesGenerator = extractCoinTypesFromLocal();
+        
+        for await (const ct of coinTypesGenerator) {
+          if (enrichmentProgress.processed >= enrichmentProgress.total) break;
+          
+          if (!ct.uri || existingUris.has(ct.uri)) continue;
+
           try {
-            console.log(`Enriching ${row.type}: ${row.label} (${row.nomisma_uri})`);
-            let fetchedTypes;
-            if (row.type === 'MINT') {
-              fetchedTypes = await getCoinTypesForMint(row.nomisma_uri, 50);
-            } else {
-              fetchedTypes = await getCoinTypesForRuler(row.nomisma_uri, 50);
-            }
-
-            console.log(`  Fetched ${(fetchedTypes || []).length} coin types`);
-
-            for (const ct of fetchedTypes || []) {
-              if (!ct.uri || existingUris.has(ct.uri)) continue;
-
-              try {
-                await db.execute(sql`
-                  INSERT INTO coin_types (source_id, nomisma_uri, source_url, label, authority, mint, denomination, metal, linked_entity_id)
-                  VALUES (
-                    'nomisma-sparql',
-                    ${ct.uri},
-                    ${ct.uri},
-                    ${ct.label || ct.uri.split('/').pop() || 'Unknown'},
-                    ${ct.authorityLabel || null},
-                    ${ct.mintLabel || (row.type === 'MINT' ? row.label : null)},
-                    ${ct.denominationLabel || null},
-                    ${ct.materialLabel || null},
-                    ${row.id}
-                  )
-                  ON CONFLICT DO NOTHING
-                `);
-                existingUris.add(ct.uri);
-                enrichmentProgress.coinTypes++;
-              } catch (e) {
-                console.error(`  Error inserting coin type:`, e);
-                enrichmentProgress.errors++;
-              }
-            }
-
-            enrichmentProgress.processed++;
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await db.execute(sql`
+              INSERT INTO coin_types (source_id, nomisma_uri, source_url, label, linked_entity_id)
+              VALUES (
+                'nomisma-sparql',
+                ${ct.uri},
+                ${ct.uri},
+                ${ct.label},
+                ${entitiesToEnrich.rows[enrichmentProgress.processed]?.id || null}
+              )
+              ON CONFLICT DO NOTHING
+            `);
+            existingUris.add(ct.uri);
+            enrichmentProgress.coinTypes++;
           } catch (e) {
-            console.error(`Error enriching entity ${row.label}:`, e);
+            console.error(`Error inserting coin type ${ct.uri}:`, e);
             enrichmentProgress.errors++;
-            enrichmentProgress.processed++;
           }
+
+          // Throttle to avoid overwhelming the DB
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
+        
+        enrichmentProgress.processed = enrichmentProgress.total;
       } catch (error) {
         console.error("Enrichment error:", error);
       } finally {

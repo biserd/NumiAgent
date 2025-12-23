@@ -135,7 +135,9 @@ export async function getSmithsonianRecord(id: string): Promise<SmithsonianRecor
 
 function isCoin(record: SmithsonianRecord): boolean {
   const title = (record.title || "").toLowerCase();
-  const objectTypes = (record.content?.indexedStructured?.object_type || []).map(t => t.toLowerCase());
+  const objectTypes = (record.content?.indexedStructured?.object_type || []).map(t => 
+    typeof t === 'string' ? t.toLowerCase() : (t as any)?.content?.toLowerCase() || ''
+  );
   
   // Exclude books, catalogs, documents, and other non-physical coin items
   const excludeKeywords = [
@@ -146,12 +148,37 @@ function isCoin(record: SmithsonianRecord): boolean {
     "edition", "reprint", "facsimile", "photocopy", "microfilm", "slide",
     "photograph of", "image of", "picture of", "drawing of", "painting of",
     "coin box", "coin case", "coin holder", "coin cabinet", "coin tray",
-    "telephone", "machine", "scale", "balance", "die", "mold", "press"
+    "telephone", "machine", "scale", "balance", "die", "mold", "press",
+    // Publication indicators
+    "foreword", "edited by", "compiled by", "lesson plan", "illustrated",
+    "fully illustrated", "price list", "auction", "sale", "advertisement",
+    "brochure", "flyer", "leaflet", "circular", "announcement", "inventory",
+    "checklist", "register", "index", "list of", "collection of", "history of",
+    "story of", "treasury of", "world of", "introduction to", "study of",
+    // Publisher/author patterns
+    "/ by", "/ edited", "/ compiled", ": a guide", ": an introduction",
+    "pages", "pp.", "vol.", "no.", "issue", "quarterly", "monthly", "annual",
+    // Display items
+    "display board", "coin display", "exhibit", "exhibition"
   ];
   
   // Check if title contains excluded keywords
   if (excludeKeywords.some(keyword => title.includes(keyword))) {
     return false;
+  }
+  
+  // Exclude titles that end with author attribution pattern (common in book titles)
+  // Pattern: "Title - Author, Name" or "Title - Institution"
+  const authorPattern = / - [A-Z][a-zA-Z]+,?\s*[A-Z]?[a-zA-Z]*$/;
+  const institutionPattern = / - [A-Z][a-zA-Z\s]+(?:Inc|Ltd|Co|Company|Museum|Society|Institute|Press|Publishers?)\.?$/i;
+  if (authorPattern.test(record.title || "") || institutionPattern.test(record.title || "")) {
+    // Check if it still might be a coin (some coins have attribution too)
+    const hasCoinIndicator = ["coin", "medal", "token", "denarius", "drachm", "stater", "aureus"].some(
+      ind => title.includes(ind) && !title.includes(ind + "s of") && !title.includes("about " + ind)
+    );
+    if (!hasCoinIndicator) {
+      return false;
+    }
   }
   
   // Exclude if object type is clearly not a coin
@@ -193,7 +220,9 @@ function isCoin(record: SmithsonianRecord): boolean {
   ];
   
   // Also check topic field for coin-related terms
-  const topics = (record.content?.indexedStructured?.topic || []).map(t => t.toLowerCase());
+  const topics = (record.content?.indexedStructured?.topic || []).map(t => 
+    typeof t === 'string' ? t.toLowerCase() : (t as any)?.content?.toLowerCase() || ''
+  );
   const hasTopicCoin = topics.some(topic => 
     coinKeywordsInTitle.some(keyword => topic.includes(keyword))
   );

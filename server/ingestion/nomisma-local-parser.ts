@@ -21,6 +21,7 @@ const SKOS = 'http://www.w3.org/2004/02/skos/core#';
 const FOAF = 'http://xmlns.com/foaf/0.1/';
 const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 const GEO = 'http://www.w3.org/2003/01/geo/wgs84_pos#';
+const DCTERMS = 'http://purl.org/dc/terms/';
 
 // Entity type mappings from RDF types
 const ENTITY_TYPE_MAP: Record<string, string> = {
@@ -39,6 +40,8 @@ interface ParsedEntity {
   wikidataQid: string | null;
   pleiadesUri: string | null;
   hasMaterial: string | null;
+  broader: string | null;
+  isPartOf: string | null;
   lat: number | null;
   lng: number | null;
 }
@@ -63,6 +66,8 @@ async function parseRdfFile(filePath: string): Promise<ParsedEntity | null> {
       wikidataQid: null,
       pleiadesUri: null,
       hasMaterial: null,
+      broader: null,
+      isPartOf: null,
       lat: null,
       lng: null,
     };
@@ -120,6 +125,16 @@ async function parseRdfFile(filePath: string): Promise<ParsedEntity | null> {
       // Extract material link for denominations
       if (predicate === `${NMO}hasMaterial`) {
         entity.hasMaterial = objectValue;
+      }
+
+      // Extract broader relationship (hierarchical parent)
+      if (predicate === `${SKOS}broader` && objectValue.startsWith('http://nomisma.org/id/')) {
+        entity.broader = objectValue;
+      }
+
+      // Extract isPartOf relationship (category membership)
+      if (predicate === `${DCTERMS}isPartOf` && objectValue.startsWith('http://nomisma.org/id/')) {
+        entity.isPartOf = objectValue;
       }
     });
 
@@ -309,19 +324,42 @@ export async function* extractRelationshipsFromLocal(
       const entity = await parseRdfFile(file);
       processed++;
 
+      if (!entity) continue;
+
       // For denominations, extract HAS_METAL relationships
-      if (entity && entity.type === 'denomination' && entity.hasMaterial) {
+      if (entity.type === 'denomination' && entity.hasMaterial) {
         const rel: RelationshipInfo = {
           sourceUri: entity.uri,
           targetUri: entity.hasMaterial,
           edgeType: 'HAS_METAL',
         };
-
         count++;
         yield rel;
       }
 
-      if (count % 100 === 0) {
+      // Extract BROADER_THAN relationships (hierarchical: entity → parent)
+      if (entity.broader) {
+        const rel: RelationshipInfo = {
+          sourceUri: entity.uri,
+          targetUri: entity.broader,
+          edgeType: 'BROADER_THAN',
+        };
+        count++;
+        yield rel;
+      }
+
+      // Extract PART_OF relationships (category membership)
+      if (entity.isPartOf) {
+        const rel: RelationshipInfo = {
+          sourceUri: entity.uri,
+          targetUri: entity.isPartOf,
+          edgeType: 'PART_OF',
+        };
+        count++;
+        yield rel;
+      }
+
+      if (count % 500 === 0) {
         console.log(`[nomisma-local] Extracted ${count} relationships from ${processed} files`);
       }
     } catch (error) {

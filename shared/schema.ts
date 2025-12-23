@@ -18,7 +18,7 @@ export const ENTITY_TYPES = ['PERSON', 'MINT', 'DENOMINATION', 'METAL', 'PLACE',
 export type EntityType = typeof ENTITY_TYPES[number];
 
 // Edge types enum values
-export const EDGE_TYPES = ['ISSUED_BY', 'MINTED_AT', 'HAS_DENOMINATION', 'HAS_METAL', 'CITES_REFERENCE', 'CANDIDATE_TYPE', 'PRIMARY_TYPE', 'APPEARED_IN', 'MATCHES_LOT', 'DIE_OBV', 'DIE_REV', 'DIE_LINK'] as const;
+export const EDGE_TYPES = ['ISSUED_BY', 'MINTED_AT', 'HAS_DENOMINATION', 'HAS_METAL', 'CITES_REFERENCE', 'CANDIDATE_TYPE', 'PRIMARY_TYPE', 'APPEARED_IN', 'MATCHES_LOT', 'DIE_OBV', 'DIE_REV', 'DIE_LINK', 'BROADER_THAN', 'PART_OF'] as const;
 export type EdgeType = typeof EDGE_TYPES[number];
 
 // Sources table - Rights registry

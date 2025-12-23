@@ -61,17 +61,28 @@ interface IngestionProgress {
 const SI_API_BASE = "https://api.si.edu/openaccess/api/v1.0";
 const SOURCE_ID = "smithsonian";
 
+// Get API key from environment
+function getApiKey(): string {
+  const apiKey = process.env.SMITHSONIAN_API_KEY;
+  if (!apiKey) {
+    console.warn("SMITHSONIAN_API_KEY not set - API requests may be rate limited");
+    return "";
+  }
+  return apiKey;
+}
+
 export async function searchSmithsonianCoins(
-  query: string = "coin numismatic",
+  query: string = "coin",
   start: number = 0,
   rows: number = 50
 ): Promise<{ records: SmithsonianRecord[]; total: number }> {
   try {
+    const apiKey = getApiKey();
     const params = new URLSearchParams({
       q: query,
       start: start.toString(),
       rows: rows.toString(),
-      online_visual_material: "true",
+      api_key: apiKey,
     });
     
     const url = `${SI_API_BASE}/search?${params}`;
@@ -232,54 +243,60 @@ export async function* ingestSmithsonianCoins(
   limit: number = 100,
   onProgress?: (progress: IngestionProgress) => void
 ): AsyncGenerator<{ coinType: InsertCoinType; rights: InsertRightsRecord }> {
-  const queries = [
-    "coin ancient",
-    "medal ancient",
-    "numismatic roman",
-    "numismatic greek",
-  ];
-  
+  // Use a single broad "coin" query to access all 380k+ coin records
+  const query = "coin";
   let totalProcessed = 0;
+  let totalYielded = 0;
+  let start = 0;
+  const batchSize = 100; // Larger batch size for efficiency
   
-  for (const query of queries) {
-    if (totalProcessed >= limit) break;
+  // First, get the total count
+  const { total: grandTotal } = await searchSmithsonianCoins(query, 0, 1);
+  console.log(`[INFO] Smithsonian collection has ${grandTotal} coin records available`);
+  
+  while (totalYielded < limit) {
+    const { records, total } = await searchSmithsonianCoins(query, start, batchSize);
     
-    let start = 0;
-    const batchSize = 50;
+    if (records.length === 0) {
+      console.log(`[INFO] No more records from Smithsonian at offset ${start}`);
+      break;
+    }
     
-    while (totalProcessed < limit) {
-      const { records, total } = await searchSmithsonianCoins(query, start, batchSize);
+    for (const record of records) {
+      if (totalYielded >= limit) break;
       
-      if (records.length === 0) break;
+      totalProcessed++;
       
-      for (const record of records) {
-        if (totalProcessed >= limit) break;
-        
-        const coinType = transformSmithsonianRecordToCoinType(record);
-        if (!coinType) continue;
-        
-        const rights = buildSmithsonianRightsRecord(record);
-        
-        totalProcessed++;
-        
-        if (onProgress) {
-          onProgress({
-            processed: totalProcessed,
-            total: Math.min(total, limit),
-            currentRecord: record.id,
-          });
-        }
-        
-        yield { coinType, rights };
+      const coinType = transformSmithsonianRecordToCoinType(record);
+      if (!coinType) continue;
+      
+      const rights = buildSmithsonianRightsRecord(record);
+      
+      totalYielded++;
+      
+      if (onProgress) {
+        onProgress({
+          processed: totalProcessed,
+          total: Math.min(grandTotal, limit),
+          currentRecord: record.id,
+        });
       }
       
-      start += batchSize;
-      
-      if (start >= total) break;
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
+      yield { coinType, rights };
     }
+    
+    start += batchSize;
+    
+    if (start >= total) {
+      console.log(`[INFO] Reached end of Smithsonian collection at offset ${start}`);
+      break;
+    }
+    
+    // Rate limiting - be nice to the API
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
+  
+  console.log(`[INFO] Smithsonian ingestion complete: ${totalProcessed} processed, ${totalYielded} yielded`);
 }
 
 export const SmithsonianAdapter = {

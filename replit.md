@@ -132,6 +132,12 @@ Preferred communication style: Simple, everyday language.
 - `/api/admin/entities/edges`: Create entity edges (graph relationships)
 - `/api/admin/vector/*`: Vector index health (stats/sync/reindex)
 - `/api/admin/nomisma/*`: Nomisma.org integration (stats/entities/edges ingestion)
+- `/api/admin/enrichment/*`: Batch enrichment (stats/start/progress) for fetching coin types from Nomisma SPARQL
+
+### Coin Types & Entity Linkage
+- **CoinTypes table**: Stores coin type records from museum sources and Nomisma SPARQL
+- **linkedEntityId column**: FK to entities table linking coin types to their source entity (mint/ruler)
+- **Batch enrichment**: Admin UI at `/admin/enrichment` triggers background jobs to query Nomisma SPARQL for coin types associated with mints and rulers, with rate limiting (1.5s delay per entity)
 
 ### Nomisma.org Integration (Local Data)
 - **Source**: GitHub data dump from https://github.com/nomisma/data

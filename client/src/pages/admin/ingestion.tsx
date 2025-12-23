@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -224,6 +225,7 @@ export default function AdminIngestionPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedSource, setSelectedSource] = useState<string>("");
+  const [ingestionLimit, setIngestionLimit] = useState<number>(100);
   const [selectedRun, setSelectedRun] = useState<IngestionRun | null>(null);
   const [logViewerOpen, setLogViewerOpen] = useState(false);
 
@@ -240,8 +242,8 @@ export default function AdminIngestionPage() {
   });
 
   const startIngestionMutation = useMutation({
-    mutationFn: async (sourceId: string) => {
-      const res = await apiRequest("POST", "/api/admin/ingestion-runs", { sourceId });
+    mutationFn: async ({ sourceId, limit }: { sourceId: string; limit: number }) => {
+      const res = await apiRequest("POST", "/api/admin/ingestion-runs", { sourceId, limit });
       return res.json();
     },
     onSuccess: () => {
@@ -259,7 +261,8 @@ export default function AdminIngestionPage() {
       toast({ title: "Select a source", variant: "destructive" });
       return;
     }
-    startIngestionMutation.mutate(selectedSource);
+    const validLimit = Number.isNaN(ingestionLimit) || ingestionLimit < 1 ? 100 : Math.min(ingestionLimit, 10000);
+    startIngestionMutation.mutate({ sourceId: selectedSource, limit: validLimit });
   };
 
   const enabledSources = sources?.filter(s => s.isEnabled) || [];
@@ -345,6 +348,21 @@ export default function AdminIngestionPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="ingestion-limit" className="text-sm text-muted-foreground whitespace-nowrap">
+                    Limit:
+                  </label>
+                  <Input
+                    id="ingestion-limit"
+                    type="number"
+                    value={ingestionLimit}
+                    onChange={(e) => setIngestionLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-[100px]"
+                    min={1}
+                    max={10000}
+                    data-testid="input-ingestion-limit"
+                  />
+                </div>
                 <Button 
                   onClick={handleStartIngestion} 
                   disabled={!selectedSource || startIngestionMutation.isPending}

@@ -133,13 +133,12 @@ Preferred communication style: Simple, everyday language.
 - `/api/admin/vector/*`: Vector index health (stats/sync/reindex)
 - `/api/admin/nomisma/*`: Nomisma.org integration (stats/entities/edges ingestion)
 
-### Nomisma.org Integration
-- **Source**: Nomisma.org Linked Open Data for numismatic entities
+### Nomisma.org Integration (Local Data)
+- **Source**: GitHub data dump from https://github.com/nomisma/data
 - **License**: CC-BY (commercial use allowed with attribution)
-- **SPARQL Endpoints**:
-  - `https://nomisma.org/query`: Entities (rulers, mints, denominations, materials)
-  - `https://numismatics.org/ocre/query`: OCRE (Roman Imperial coin types)
-  - `https://numismatics.org/crro/query`: CRRO (Roman Republican coin types)
+- **Local Data**: RDF/XML files stored in `nomisma-data/id/` directory (20,105 files)
+- **Parsing**: Uses rdfxml-streaming-parser to extract entities from local files (no SPARQL queries)
+- **Entity Counts**: ~4,215 rulers, ~2,580 mints, ~1,074 denominations, ~36 materials
 - **Entity Types**: rulers, mints, denominations, materials with Wikidata QIDs and Pleiades URIs
-- **Edge Types**: MINTED_AT, HAS_DENOMINATION, HAS_METAL relationships from ontology
-- **Validation**: Skips blank nodes and invalid URIs during ingestion
+- **Edge Types**: HAS_METAL relationships extracted from nmo:hasMaterial predicates
+- **Caching**: Stats are cached for 1 hour after full file scan

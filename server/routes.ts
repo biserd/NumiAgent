@@ -375,13 +375,13 @@ export async function registerRoutes(
     }
   });
   
-  // ============ NOMISMA ENTITY INGESTION ============
+  // ============ NOMISMA ENTITY INGESTION (LOCAL DATA) ============
   
-  // Get Nomisma stats
+  // Get Nomisma local data stats
   app.get("/api/admin/nomisma/stats", requireAdmin, async (req, res) => {
     try {
-      const { NomismaAdapter } = await import("./ingestion/nomisma-adapter");
-      const stats = await NomismaAdapter.getStats();
+      const { NomismaLocalParser } = await import("./ingestion/nomisma-local-parser");
+      const stats = await NomismaLocalParser.getLocalDataStats();
       res.json(stats);
     } catch (error) {
       console.error("Error fetching Nomisma stats:", error);
@@ -389,23 +389,37 @@ export async function registerRoutes(
     }
   });
   
-  // Ingest entities from Nomisma
+  // Ingest entities from local Nomisma data
   app.post("/api/admin/nomisma/entities", requireAdmin, async (req, res) => {
     try {
       const { entityType, limit = 100 } = req.body;
       
-      if (!entityType || !['rulers', 'mints', 'denominations', 'materials'].includes(entityType)) {
+      // Map plural to singular for local parser
+      const typeMap: Record<string, 'ruler' | 'mint' | 'denomination' | 'metal'> = {
+        'rulers': 'ruler',
+        'mints': 'mint', 
+        'denominations': 'denomination',
+        'materials': 'metal',
+      };
+      
+      if (!entityType || !typeMap[entityType]) {
         return res.status(400).json({ 
           error: "entityType is required and must be one of: rulers, mints, denominations, materials" 
         });
       }
       
-      const { NomismaAdapter } = await import("./ingestion/nomisma-adapter");
+      const { NomismaLocalParser } = await import("./ingestion/nomisma-local-parser");
+      
+      if (!NomismaLocalParser.isLocalDataAvailable()) {
+        return res.status(400).json({
+          error: "Local Nomisma data not available. Please ensure nomisma-data directory exists."
+        });
+      }
       
       let ingested = 0;
       let skipped = 0;
       
-      for await (const entity of NomismaAdapter.ingestEntities(entityType, limit)) {
+      for await (const entity of NomismaLocalParser.ingestEntitiesFromLocal(typeMap[entityType], limit)) {
         try {
           // Check if entity with this nomisma URI already exists
           const existing = await storage.getEntityByNomismaUri(entity.nomismaUri!);
@@ -421,29 +435,35 @@ export async function registerRoutes(
         }
       }
       
-      res.json({ entityType, ingested, skipped });
+      res.json({ entityType, ingested, skipped, source: 'local' });
     } catch (error) {
       console.error("Error ingesting Nomisma entities:", error);
       res.status(500).json({ error: "Failed to ingest Nomisma entities" });
     }
   });
   
-  // Ingest edges from Nomisma
+  // Ingest edges from local Nomisma data
   app.post("/api/admin/nomisma/edges", requireAdmin, async (req, res) => {
     try {
       const { limit = 500 } = req.body;
       
-      const { NomismaAdapter } = await import("./ingestion/nomisma-adapter");
+      const { NomismaLocalParser } = await import("./ingestion/nomisma-local-parser");
+      
+      if (!NomismaLocalParser.isLocalDataAvailable()) {
+        return res.status(400).json({
+          error: "Local Nomisma data not available. Please ensure nomisma-data directory exists."
+        });
+      }
       
       let created = 0;
       let skipped = 0;
       let errors = 0;
       
-      for await (const edge of NomismaAdapter.ingestEdges(limit)) {
+      for await (const rel of NomismaLocalParser.extractRelationshipsFromLocal(limit)) {
         try {
-          // Edges reference entities by nomisma ID - need to look up actual entity IDs
-          const srcEntity = await storage.getEntityByNomismaUri(`http://nomisma.org/id/${edge.srcId}`);
-          const dstEntity = await storage.getEntityByNomismaUri(`http://nomisma.org/id/${edge.dstId}`);
+          // Look up entity IDs by Nomisma URIs
+          const srcEntity = await storage.getEntityByNomismaUri(rel.sourceUri);
+          const dstEntity = await storage.getEntityByNomismaUri(rel.targetUri);
           
           if (!srcEntity || !dstEntity) {
             skipped++;
@@ -451,9 +471,11 @@ export async function registerRoutes(
           }
           
           await storage.createEntityEdge({
-            ...edge,
             srcId: srcEntity.id,
             dstId: dstEntity.id,
+            edgeType: rel.edgeType,
+            confidence: '1.0',
+            provenance: 'nomisma-data',
           });
           created++;
         } catch (err) {
@@ -461,7 +483,7 @@ export async function registerRoutes(
         }
       }
       
-      res.json({ created, skipped, errors });
+      res.json({ created, skipped, errors, source: 'local' });
     } catch (error) {
       console.error("Error ingesting Nomisma edges:", error);
       res.status(500).json({ error: "Failed to ingest Nomisma edges" });

@@ -11,7 +11,7 @@
 import { createReadStream, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { RdfXmlParser } from 'rdfxml-streaming-parser';
-import type { InsertEntity, InsertEntityEdge } from '@shared/schema';
+import type { InsertEntity } from '@shared/schema';
 
 const NOMISMA_DATA_DIR = 'nomisma-data/id';
 
@@ -169,8 +169,14 @@ export function isLocalDataAvailable(): boolean {
   return existsSync(NOMISMA_DATA_DIR);
 }
 
+// Cache for stats to avoid recounting every time
+let cachedStats: { available: boolean; totalFiles: number; rulers: number; mints: number; denominations: number; materials: number } | null = null;
+let statsCacheTime: number = 0;
+const STATS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 /**
  * Get stats about available local Nomisma data
+ * Processes all files for accurate counts (cached for 1 hour)
  */
 export async function getLocalDataStats(): Promise<{
   available: boolean;
@@ -184,32 +190,49 @@ export async function getLocalDataStats(): Promise<{
     return { available: false, totalFiles: 0, rulers: 0, mints: 0, denominations: 0, materials: 0 };
   }
 
+  // Return cached stats if still valid
+  if (cachedStats && Date.now() - statsCacheTime < STATS_CACHE_TTL) {
+    return cachedStats;
+  }
+
   const files = getNomismaDataFiles();
-  
-  // Sample first 500 files to estimate distribution
-  const sampleSize = Math.min(500, files.length);
   const counts = { ruler: 0, mint: 0, denomination: 0, metal: 0, authority: 0, other: 0 };
   
-  for (let i = 0; i < sampleSize; i++) {
-    const entity = await parseRdfFile(files[i]);
-    if (entity?.type) {
-      counts[entity.type as keyof typeof counts] = (counts[entity.type as keyof typeof counts] || 0) + 1;
-    } else {
-      counts.other++;
+  // Process all files for accurate counts
+  console.log(`[nomisma-local] Counting entities in ${files.length} files...`);
+  let processed = 0;
+  
+  for (const file of files) {
+    try {
+      const entity = await parseRdfFile(file);
+      if (entity?.type) {
+        counts[entity.type as keyof typeof counts] = (counts[entity.type as keyof typeof counts] || 0) + 1;
+      } else {
+        counts.other++;
+      }
+      processed++;
+      
+      if (processed % 2000 === 0) {
+        console.log(`[nomisma-local] Processed ${processed}/${files.length} files`);
+      }
+    } catch (error) {
+      // Skip files that fail to parse
     }
   }
 
-  // Extrapolate to full dataset
-  const ratio = files.length / sampleSize;
+  console.log(`[nomisma-local] Count complete: ${counts.ruler} rulers, ${counts.mint} mints, ${counts.denomination} denominations, ${counts.metal} materials`);
   
-  return {
+  cachedStats = {
     available: true,
     totalFiles: files.length,
-    rulers: Math.round(counts.ruler * ratio),
-    mints: Math.round(counts.mint * ratio),
-    denominations: Math.round(counts.denomination * ratio),
-    materials: Math.round(counts.metal * ratio),
+    rulers: counts.ruler + counts.authority, // Include authorities with rulers
+    mints: counts.mint,
+    denominations: counts.denomination,
+    materials: counts.metal,
   };
+  statsCacheTime = Date.now();
+  
+  return cachedStats;
 }
 
 /**
@@ -258,16 +281,26 @@ export async function* ingestEntitiesFromLocal(
 }
 
 /**
- * Generator function to extract entity edges (relationships) from local RDF files
+ * Relationship info extracted from RDF files (needs entity ID resolution before becoming edges)
  */
-export async function* extractEdgesFromLocal(
+interface RelationshipInfo {
+  sourceUri: string;
+  targetUri: string;
+  edgeType: string;
+}
+
+/**
+ * Generator function to extract relationship info from local RDF files
+ * These need to be resolved to entity IDs before creating edges
+ */
+export async function* extractRelationshipsFromLocal(
   limit: number = 5000
-): AsyncGenerator<InsertEntityEdge> {
+): AsyncGenerator<RelationshipInfo> {
   const files = getNomismaDataFiles();
   let count = 0;
   let processed = 0;
 
-  console.log(`[nomisma-local] Starting edge extraction from ${files.length} files`);
+  console.log(`[nomisma-local] Starting relationship extraction from ${files.length} files`);
 
   for (const file of files) {
     if (count >= limit) break;
@@ -276,29 +309,27 @@ export async function* extractEdgesFromLocal(
       const entity = await parseRdfFile(file);
       processed++;
 
-      // For denominations, extract HAS_METAL edges
+      // For denominations, extract HAS_METAL relationships
       if (entity && entity.type === 'denomination' && entity.hasMaterial) {
-        const edge: InsertEntityEdge = {
+        const rel: RelationshipInfo = {
           sourceUri: entity.uri,
           targetUri: entity.hasMaterial,
           edgeType: 'HAS_METAL',
-          confidence: 1.0,
-          provenance: 'nomisma-data',
         };
 
         count++;
-        yield edge;
+        yield rel;
       }
 
       if (count % 100 === 0) {
-        console.log(`[nomisma-local] Extracted ${count} edges from ${processed} files`);
+        console.log(`[nomisma-local] Extracted ${count} relationships from ${processed} files`);
       }
     } catch (error) {
-      console.error(`[nomisma-local] Error extracting edges from ${file}:`, error);
+      console.error(`[nomisma-local] Error extracting relationships from ${file}:`, error);
     }
   }
 
-  console.log(`[nomisma-local] Completed: extracted ${count} edges from ${processed} files`);
+  console.log(`[nomisma-local] Completed: extracted ${count} relationships from ${processed} files`);
 }
 
 export const NomismaLocalParser = {
@@ -306,5 +337,5 @@ export const NomismaLocalParser = {
   getLocalDataStats,
   getNomismaDataFiles,
   ingestEntitiesFromLocal,
-  extractEdgesFromLocal,
+  extractRelationshipsFromLocal,
 };

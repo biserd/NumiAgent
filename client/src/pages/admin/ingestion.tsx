@@ -249,7 +249,7 @@ export default function AdminIngestionPage() {
     queryKey: ["/api/admin/ingestion-runs"],
   });
   
-  const { data: nomismaStats } = useQuery<{ rulers: number; mints: number; denominations: number; materials: number }>({
+  const { data: nomismaStats } = useQuery<{ available: boolean; totalFiles: number; rulers: number; mints: number; denominations: number; materials: number }>({
     queryKey: ["/api/admin/nomisma/stats"],
   });
 
@@ -378,8 +378,22 @@ export default function AdminIngestionPage() {
             <div className="flex items-center gap-2">
               <Globe className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle>Nomisma.org - Linked Open Data</CardTitle>
-                <CardDescription>Ingest canonical entities and relationships from Nomisma.org</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  Nomisma.org - Local Data
+                  {nomismaStats?.available && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      {nomismaStats.totalFiles.toLocaleString()} files
+                    </Badge>
+                  )}
+                  {nomismaStats && !nomismaStats.available && (
+                    <Badge variant="destructive">
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Not Available
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>Ingest entities from local Nomisma GitHub data dump (no SPARQL queries)</CardDescription>
               </div>
             </div>
           </CardHeader>

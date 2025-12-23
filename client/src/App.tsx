@@ -23,6 +23,8 @@ import AdminSourcesPage from "@/pages/admin/sources";
 import AdminIngestionPage from "@/pages/admin/ingestion";
 import AdminJobsPage from "@/pages/admin/jobs";
 import AdminRightsPage from "@/pages/admin/rights";
+import AdminCoinsPage from "@/pages/admin/coins";
+import AdminGraphPage from "@/pages/admin/graph";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import AboutPage from "@/pages/about";
@@ -43,6 +45,8 @@ function AuthenticatedRoutes() {
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/admin" component={AdminDashboardPage} />
+      <Route path="/admin/coins" component={AdminCoinsPage} />
+      <Route path="/admin/graph" component={AdminGraphPage} />
       <Route path="/admin/sources" component={AdminSourcesPage} />
       <Route path="/admin/ingestion" component={AdminIngestionPage} />
       <Route path="/admin/jobs" component={AdminJobsPage} />

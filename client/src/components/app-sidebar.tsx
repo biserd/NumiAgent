@@ -12,7 +12,8 @@ import {
   Database,
   Activity,
   ListTodo,
-  FileCheck
+  FileCheck,
+  Network
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,6 +46,8 @@ const collectionItems = [
 
 const adminItems = [
   { title: "Admin Dashboard", url: "/admin", icon: Activity },
+  { title: "Coins Database", url: "/admin/coins", icon: Coins },
+  { title: "Entity Graph", url: "/admin/graph", icon: Network },
   { title: "Jobs Queue", url: "/admin/jobs", icon: ListTodo },
   { title: "Ingestion Runs", url: "/admin/ingestion", icon: Database },
   { title: "Sources", url: "/admin/sources", icon: Shield },

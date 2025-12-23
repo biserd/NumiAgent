@@ -60,6 +60,8 @@ export interface IStorage {
   getCoinTypeById(id: string): Promise<CoinType | undefined>;
   getCoinTypeBySourceRecord(sourceId: string, sourceRecordId: string): Promise<CoinType | undefined>;
   createCoinType(coinType: InsertCoinType): Promise<CoinType>;
+  getCoinTypesPaginated(filters: { sourceId?: string; search?: string; page?: number; limit?: number }): Promise<{ items: CoinType[]; total: number; page: number; totalPages: number }>;
+  getCoinTypesStats(): Promise<{ total: number; bySource: Record<string, number> }>;
   
   // Rights Records
   createRightsRecord(rights: InsertRightsRecord): Promise<RightsRecord>;
@@ -277,6 +279,69 @@ export class DatabaseStorage implements IStorage {
   async createCoinType(coinType: InsertCoinType): Promise<CoinType> {
     const [created] = await db.insert(coinTypes).values(coinType).returning();
     return created;
+  }
+
+  async getCoinTypesPaginated(filters: { sourceId?: string; search?: string; page?: number; limit?: number }): Promise<{ items: CoinType[]; total: number; page: number; totalPages: number }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    const offset = (page - 1) * limit;
+    
+    const conditions = [];
+    
+    if (filters.sourceId) {
+      conditions.push(eq(coinTypes.sourceId, filters.sourceId));
+    }
+    if (filters.search) {
+      conditions.push(or(
+        ilike(coinTypes.label, `%${filters.search}%`),
+        ilike(coinTypes.authority, `%${filters.search}%`),
+        ilike(coinTypes.mint, `%${filters.search}%`),
+        ilike(coinTypes.denomination, `%${filters.search}%`)
+      ));
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : sql`true`;
+    
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(coinTypes)
+      .where(whereClause);
+    
+    const total = countResult?.count || 0;
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 1;
+    
+    const items = await db
+      .select()
+      .from(coinTypes)
+      .where(whereClause)
+      .orderBy(desc(coinTypes.id))
+      .limit(limit)
+      .offset(offset);
+    
+    return { items, total, page, totalPages };
+  }
+
+  async getCoinTypesStats(): Promise<{ total: number; bySource: Record<string, number> }> {
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(coinTypes);
+    
+    const bySourceResults = await db
+      .select({ 
+        sourceId: coinTypes.sourceId, 
+        count: sql<number>`count(*)::int` 
+      })
+      .from(coinTypes)
+      .groupBy(coinTypes.sourceId);
+    
+    const bySource: Record<string, number> = {};
+    for (const row of bySourceResults) {
+      if (row.sourceId) {
+        bySource[row.sourceId] = row.count;
+      }
+    }
+    
+    return { total: countResult?.count || 0, bySource };
   }
 
   // Rights Records

@@ -392,6 +392,50 @@ export async function registerRoutes(
     }
   });
 
+  // ============ ADMIN: COIN TYPES BROWSER ============
+
+  // Get paginated coin types
+  app.get("/api/admin/coin-types", requireAdmin, async (req, res) => {
+    try {
+      const { sourceId, search, page, limit } = req.query;
+      const result = await storage.getCoinTypesPaginated({
+        sourceId: sourceId as string,
+        search: search as string,
+        page: page ? parseInt(page as string, 10) : 1,
+        limit: limit ? parseInt(limit as string, 10) : 20,
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching coin types:", error);
+      res.status(500).json({ error: "Failed to fetch coin types" });
+    }
+  });
+
+  // Get coin types stats
+  app.get("/api/admin/coin-types/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getCoinTypesStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching coin types stats:", error);
+      res.status(500).json({ error: "Failed to fetch coin types stats" });
+    }
+  });
+
+  // Get single coin type by ID
+  app.get("/api/admin/coin-types/:id", requireAdmin, async (req, res) => {
+    try {
+      const coinType = await storage.getCoinTypeById(req.params.id);
+      if (!coinType) {
+        return res.status(404).json({ error: "Coin type not found" });
+      }
+      res.json(coinType);
+    } catch (error) {
+      console.error("Error fetching coin type:", error);
+      res.status(500).json({ error: "Failed to fetch coin type" });
+    }
+  });
+
   // ============ NORMALIZATION PIPELINE ============
 
   // Run normalization on coin types

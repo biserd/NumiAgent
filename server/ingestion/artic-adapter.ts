@@ -69,7 +69,7 @@ interface IngestionProgress {
 
 const ARTIC_API_BASE = "https://api.artic.edu/api/v1";
 const ARTIC_IIIF_BASE = "https://www.artic.edu/iiif/2";
-const SOURCE_ID = "artic-chicago";
+const SOURCE_ID = "aic";
 
 export async function searchArticCoins(
   page: number = 1,

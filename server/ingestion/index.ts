@@ -71,9 +71,9 @@ const adapters: Record<string, IngestionAdapter> = {
   "ans-mantis": ANSAdapter,
   "british-museum": BMAdapter,
   "smithsonian": SmithsonianAdapter,
-  "walters-museum": WaltersAdapter,
-  "artic-chicago": ArticAdapter,
-  "nga-washington": NGAAdapter,
+  "walters": WaltersAdapter,
+  "aic": ArticAdapter,
+  "nga": NGAAdapter,
 };
 
 export async function runIngestion(
@@ -149,15 +149,15 @@ export async function runIngestion(
         ingestionGenerator = SmithsonianAdapter.ingest(limit);
         break;
       }
-      case 'walters-museum': {
+      case 'walters': {
         ingestionGenerator = WaltersAdapter.ingest(limit);
         break;
       }
-      case 'artic-chicago': {
+      case 'aic': {
         ingestionGenerator = ArticAdapter.ingest(limit);
         break;
       }
-      case 'nga-washington': {
+      case 'nga': {
         ingestionGenerator = NGAAdapter.ingest(limit);
         break;
       }

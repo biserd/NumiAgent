@@ -56,7 +56,7 @@ interface IngestionProgress {
 }
 
 const WALTERS_API_BASE = "https://api.thewalters.org/v1";
-const SOURCE_ID = "walters-museum";
+const SOURCE_ID = "walters";
 
 export async function searchWaltersCoins(
   page: number = 1,

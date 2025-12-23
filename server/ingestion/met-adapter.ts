@@ -49,7 +49,9 @@ const SOURCE_ID = "met-museum";
 
 export async function searchMetCoins(query: string = "coin"): Promise<number[]> {
   try {
-    const url = `${MET_API_BASE}/search?q=${encodeURIComponent(query)}&departmentId=4`;
+    // Search without department filter to get more results
+    // The Met has coins across multiple departments
+    const url = `${MET_API_BASE}/search?q=${encodeURIComponent(query)}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -163,11 +165,12 @@ export async function* ingestMetCoins(
   limit: number = 100,
   onProgress?: (progress: IngestionProgress) => void
 ): AsyncGenerator<{ coinType: InsertCoinType; rights: InsertRightsRecord }> {
-  const coinIds = await searchMetCoins("coin");
-  const medalIds = await searchMetCoins("medal ancient");
+  // Search for numismatic items - more targeted than broad "coin" search
+  // This returns ~200 items which is manageable
+  const numismaticIds = await searchMetCoins("numismatic");
   
-  const allIds = Array.from(new Set([...coinIds, ...medalIds]));
-  const idsToProcess = allIds.slice(0, limit);
+  // Use numismatic search results, capped at limit
+  const idsToProcess = numismaticIds.slice(0, limit);
   
   const progress: IngestionProgress = {
     total: idsToProcess.length,

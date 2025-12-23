@@ -50,7 +50,7 @@ interface IngestionProgress {
 
 const NGA_API_BASE = "https://api.nga.gov/art/";
 const NGA_IIIF_BASE = "https://api.nga.gov/iiif";
-const SOURCE_ID = "nga-washington";
+const SOURCE_ID = "nga";
 
 export async function searchNGACoins(
   page: number = 1,

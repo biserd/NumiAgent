@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+         xmlns:wordnet="http://ontologi.es/WordNet/class/"
+         xmlns:nm="http://nomisma.org/id/"
+         xmlns:crmdig="http://www.ics.forth.gr/isl/CRMdig/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:org="http://www.w3.org/ns/org#"
+         xmlns:osgeo="http://data.ordnancesurvey.co.uk/ontology/geometry/"
+         xmlns:prov="http://www.w3.org/ns/prov#"
+         xmlns:rdac="http://www.rdaregistry.info/Elements/c/"
+         xmlns:bio="http://purl.org/vocab/bio/0.1/"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:crm="http://www.cidoc-crm.org/cidoc-crm/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:un="http://www.owl-ontologies.com/Ontology1181490123.owl#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+   <nmo:Mint rdf:about="http://nomisma.org/id/tarabulus">
+      
+        <skos:prefLabel xml:lang="en">Tarabulus</skos:prefLabel>
+        <skos:prefLabel xml:lang="ar">طرابلس</skos:prefLabel>
+      
+      
+      
+        <skos:prefLabel xml:lang="pl">Trypolis</skos:prefLabel>
+        <skos:prefLabel xml:lang="eu">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="es">Trípoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="oc">Trípol</skos:prefLabel>
+        <skos:prefLabel xml:lang="ms">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="hu">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="et">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="sq">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="nl">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="sv">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="pt">Trípoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="eo">Tripolo</skos:prefLabel>
+        <skos:prefLabel xml:lang="yi">טריפאלי</skos:prefLabel>
+        <skos:prefLabel xml:lang="ru">Триполи</skos:prefLabel>
+        <skos:prefLabel xml:lang="tr">Trablusşam</skos:prefLabel>
+        <skos:prefLabel xml:lang="kl">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="fi">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="uk">Триполі</skos:prefLabel>
+        <skos:prefLabel xml:lang="da">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="ko">트리폴리</skos:prefLabel>
+        <skos:prefLabel xml:lang="he">טריפולי</skos:prefLabel>
+        <skos:prefLabel xml:lang="fr">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="it">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="de">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="id">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="ja">トリポリ</skos:prefLabel>
+        <skos:prefLabel xml:lang="ml">ട്രിപ്പൊളി</skos:prefLabel>
+        <skos:prefLabel xml:lang="hi">त्रिपोली</skos:prefLabel>
+        <skos:prefLabel xml:lang="th">ตริโปลี</skos:prefLabel>
+        <skos:prefLabel xml:lang="ro">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="ca">Trípoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="cy">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="sl">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="cs">Tripolis</skos:prefLabel>
+        <skos:prefLabel xml:lang="fa">طرابلس</skos:prefLabel>
+        <skos:prefLabel xml:lang="bg">Триполи</skos:prefLabel>
+        <skos:prefLabel xml:lang="ka">ტრიპოლი</skos:prefLabel>
+        <skos:prefLabel xml:lang="ur">طرابلس الشام</skos:prefLabel>
+        <skos:prefLabel xml:lang="el">Τρίπολη</skos:prefLabel>
+        <skos:prefLabel xml:lang="sh">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="zh">的黎波里</skos:prefLabel>
+        <skos:prefLabel xml:lang="sr">Триполи</skos:prefLabel>
+        <skos:prefLabel xml:lang="br">Tripoli (Liban)</skos:prefLabel>
+        <skos:prefLabel xml:lang="nb">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="be">Горад Трыпалі</skos:prefLabel>
+        <skos:prefLabel xml:lang="lt">Tripolis</skos:prefLabel>
+        <skos:prefLabel xml:lang="hy">Տրիպոլի</skos:prefLabel>
+        <skos:prefLabel xml:lang="uz">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="vi">Tripoli</skos:prefLabel>
+        <skos:prefLabel xml:lang="nn">Tripoli i Libanon</skos:prefLabel>
+        <skos:prefLabel xml:lang="mr">त्रिपोली, लेबेनॉन</skos:prefLabel>
+        <skos:prefLabel xml:lang="lv">Tripole</skos:prefLabel>
+        <skos:prefLabel xml:lang="sk">Tripolis</skos:prefLabel>
+        <skos:prefLabel xml:lang="gl">Trípoli</skos:prefLabel>
+      
+      
+      
+        <skos:definition xml:lang="en">Tripoli (Arabic: طرابلس‎ / ALA-LC: Ṭarābulus</skos:definition>
+      
+      
+      
+      
+        <dcterms:isReplacedBy rdf:resource="http://nomisma.org/id/tarabulus_libya"/>
+    </nmo:Mint>
+   
+   
+</rdf:RDF>

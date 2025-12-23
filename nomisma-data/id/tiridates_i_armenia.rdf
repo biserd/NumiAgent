@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+         xmlns:wordnet="http://ontologi.es/WordNet/class/"
+         xmlns:nm="http://nomisma.org/id/"
+         xmlns:crmdig="http://www.ics.forth.gr/isl/CRMdig/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:org="http://www.w3.org/ns/org#"
+         xmlns:osgeo="http://data.ordnancesurvey.co.uk/ontology/geometry/"
+         xmlns:prov="http://www.w3.org/ns/prov#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdac="http://www.rdaregistry.info/Elements/c/"
+         xmlns:bio="http://purl.org/vocab/bio/0.1/"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:crm="http://www.cidoc-crm.org/cidoc-crm/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:un="http://www.owl-ontologies.com/Ontology1181490123.owl#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+   <foaf:Person rdf:about="http://nomisma.org/id/tiridates_i_armenia">
+      <skos:prefLabel xml:lang="en">Tiridates I of Armenia</skos:prefLabel>
+      <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+      <skos:definition xml:lang="en">Tiridates I (Parthian: 𐭕𐭉𐭓𐭉𐭃𐭕, Tīridāt; Greek: Τιριδάτης, Tiridátes) was King of Armenia beginning in 53 and the founder of the Arsacid dynasty of Armenia. The dates of his birth and death are unknown. Tiridates was the son of Vonones II of Parthia, and brother of Vologases I, who placed him on the throne of Armenia </skos:definition>
+      <skos:inScheme rdf:resource="http://nomisma.org/id/"/>
+      <skos:changeNote rdf:resource="http://nomisma.org/id/tiridates_i_armenia#provenance"/>
+      <org:hasMembership rdf:resource="http://nomisma.org/id/tiridates_i_armenia#membership_7d76a35f91fde33ead826b7fbd40d013"/>
+      <org:memberOf rdf:resource="http://nomisma.org/id/arsacid_dynasty_armenia"/>
+      <skos:exactMatch rdf:resource="http://www.wikidata.org/entity/Q317042"/>
+      <skos:exactMatch rdf:resource="http://dbpedia.org/resource/Tiridates_I_of_Armenia"/>
+      <skos:prefLabel xml:lang="pt">Tiridates I da Arménia</skos:prefLabel>
+      <skos:prefLabel xml:lang="eo">Tiridato la 1-a</skos:prefLabel>
+      <skos:prefLabel xml:lang="eu">Tiridates I.a Armeniakoa</skos:prefLabel>
+      <skos:prefLabel xml:lang="pl">Tiridates I</skos:prefLabel>
+      <skos:prefLabel xml:lang="fr">Tiridate Ier d'Arménie</skos:prefLabel>
+      <skos:prefLabel xml:lang="ru">Трдат I</skos:prefLabel>
+      <skos:prefLabel xml:lang="hy">Տրդատ Ա</skos:prefLabel>
+      <skos:prefLabel xml:lang="es">Tiridates I de Armenia</skos:prefLabel>
+      <skos:prefLabel xml:lang="tr">I. Tiridates</skos:prefLabel>
+      <skos:prefLabel xml:lang="th">สมเด็จพระเจ้าทิริดาทีสที่ 1 แห่งอาร์เมเนีย</skos:prefLabel>
+      <skos:prefLabel xml:lang="ca">Tiridates I d'Armènia</skos:prefLabel>
+      <skos:prefLabel xml:lang="fi">Tiridates I</skos:prefLabel>
+      <skos:prefLabel xml:lang="it">Tiridate I di Armenia</skos:prefLabel>
+      <skos:prefLabel xml:lang="de">Trdat I.</skos:prefLabel>
+      <skos:prefLabel xml:lang="id">Tiridates I dari Armenia</skos:prefLabel>
+      <skos:prefLabel xml:lang="ml">ടിറിഡേറ്റ്സ് I</skos:prefLabel>
+      <skos:prefLabel xml:lang="bg">Тиридат I</skos:prefLabel>
+      <skos:prefLabel xml:lang="sh">Tiridat I od Armenije</skos:prefLabel>
+      <skos:prefLabel xml:lang="ka">თრდატ I</skos:prefLabel>
+      <skos:prefLabel xml:lang="hr">Tiridat I. Armenski</skos:prefLabel>
+      <skos:prefLabel xml:lang="el">Τιριδάτης Α΄ της Αρμενίας</skos:prefLabel>
+      <skos:prefLabel xml:lang="fa">تیرداد یکم ارمنستان</skos:prefLabel>
+      <skos:prefLabel xml:lang="uk">Трдат I</skos:prefLabel>
+      <skos:prefLabel xml:lang="he">טירידאטס הראשון, מלך ארמניה</skos:prefLabel>
+      <skos:prefLabel xml:lang="nl">Tiridates I van Armenië</skos:prefLabel>
+      <skos:prefLabel xml:lang="ja">ティリダテス1世</skos:prefLabel>
+      <skos:prefLabel xml:lang="ro">Tiridate I al Armeniei</skos:prefLabel>
+      <skos:prefLabel xml:lang="gl">Tiridates I de Amenia</skos:prefLabel>
+      <skos:prefLabel xml:lang="zh">亚美尼亚的梯利达特斯一世</skos:prefLabel>
+      <skos:exactMatch rdf:resource="http://viaf.org/viaf/62348650"/>
+      <skos:exactMatch rdf:resource="http://d-nb.info/gnd/118974033"/>
+      <skos:exactMatch rdf:resource="https://www.freebase.com/m/0b3chs"/>
+      <org:hasMembership rdf:resource="http://nomisma.org/id/tiridates_i_armenia#membership_de7243dc220a585ef16b858c86351bc3"/>
+   </foaf:Person>
+   <dcterms:ProvenanceStatement rdf:about="http://nomisma.org/id/tiridates_i_armenia#provenance">
+      <foaf:topic rdf:resource="http://nomisma.org/id/tiridates_i_armenia"/>
+      <prov:wasGeneratedBy>
+         <prov:Activity>
+            <rdf:type rdf:resource="http://www.w3.org/ns/prov#Create"/>
+            <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2021-03-02T11:06:28.416-06:00</prov:atTime>
+            <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/ameadows"/>
+            <dcterms:type>manual</dcterms:type>
+         </prov:Activity>
+      </prov:wasGeneratedBy>
+      <prov:activity>
+         <prov:Activity>
+            <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+            <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2021-08-11T06:15:56.633-05:00</prov:atTime>
+            <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/ameadows"/>
+            <dcterms:type>manual</dcterms:type>
+         </prov:Activity>
+      </prov:activity>
+      <prov:activity>
+         <prov:Activity>
+            <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+            <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2021-08-11T07:44:17.5-05:00</prov:atTime>
+            <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/ameadows"/>
+            <dcterms:type>manual</dcterms:type>
+         </prov:Activity>
+      </prov:activity>
+   </dcterms:ProvenanceStatement>
+   <org:Membership rdf:about="http://nomisma.org/id/tiridates_i_armenia#membership_7d76a35f91fde33ead826b7fbd40d013">
+      <org:role rdf:resource="http://nomisma.org/id/authority"/>
+      <org:organization rdf:resource="http://nomisma.org/id/armenian_kingdom"/>
+      <nmo:hasStartDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">0052</nmo:hasStartDate>
+      <nmo:hasEndDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">0060</nmo:hasEndDate>
+   </org:Membership>
+   <org:Membership rdf:about="http://nomisma.org/id/tiridates_i_armenia#membership_de7243dc220a585ef16b858c86351bc3">
+      <org:role rdf:resource="http://nomisma.org/id/authority"/>
+      <nmo:hasStartDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">0066</nmo:hasStartDate>
+      <nmo:hasEndDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">0077</nmo:hasEndDate>
+      <org:organization rdf:resource="http://nomisma.org/id/armenian_kingdom"/>
+   </org:Membership>
+</rdf:RDF>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+         xmlns:wordnet="http://ontologi.es/WordNet/class/"
+         xmlns:nm="http://nomisma.org/id/"
+         xmlns:crmdig="http://www.ics.forth.gr/isl/CRMdig/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:org="http://www.w3.org/ns/org#"
+         xmlns:osgeo="http://data.ordnancesurvey.co.uk/ontology/geometry/"
+         xmlns:prov="http://www.w3.org/ns/prov#"
+         xmlns:rdac="http://www.rdaregistry.info/Elements/c/"
+         xmlns:bio="http://purl.org/vocab/bio/0.1/"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:crm="http://www.cidoc-crm.org/cidoc-crm/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:un="http://www.owl-ontologies.com/Ontology1181490123.owl#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+   <nmo:Mint rdf:about="http://nomisma.org/id/macedonia">
+      
+      
+        <skos:prefLabel xml:lang="en">Macedonia</skos:prefLabel>
+        <skos:definition xml:lang="en">Stub for the ancient region of Macedonia.</skos:definition>
+      
+        <skos:prefLabel xml:lang="eu">Mazedonia</skos:prefLabel>
+        <skos:prefLabel xml:lang="hu">Makedónia</skos:prefLabel>
+        <skos:prefLabel xml:lang="nl">Macedonië</skos:prefLabel>
+        <skos:prefLabel xml:lang="tr">Makedonya</skos:prefLabel>
+        <skos:prefLabel xml:lang="he">מוקדון</skos:prefLabel>
+        <skos:prefLabel xml:lang="lv">Maķedonija</skos:prefLabel>
+        <skos:prefLabel xml:lang="de">Makedonien</skos:prefLabel>
+        <skos:prefLabel xml:lang="sh">Makedonija</skos:prefLabel>
+        <skos:prefLabel xml:lang="sk">Macedónia</skos:prefLabel>
+        <skos:prefLabel xml:lang="hy">Հին Մակեդոնիա</skos:prefLabel>
+        <skos:prefLabel xml:lang="fy">Makedoanje</skos:prefLabel>
+        <skos:prefLabel xml:lang="th">ราชอาณาจักรมาซิโดเนีย</skos:prefLabel>
+        <skos:prefLabel xml:lang="ro">Macedonia Antică</skos:prefLabel>
+        <skos:prefLabel xml:lang="ca">Regne de Macedònia</skos:prefLabel>
+        <skos:prefLabel xml:lang="la">Macedonia antiqua</skos:prefLabel>
+        <skos:prefLabel xml:lang="cy">Macedon</skos:prefLabel>
+        <skos:prefLabel xml:lang="cs">Starověká Makedonie</skos:prefLabel>
+        <skos:prefLabel xml:lang="bg">Древна Македония</skos:prefLabel>
+        <skos:prefLabel xml:lang="fa">مقدونیه باستان</skos:prefLabel>
+        <skos:prefLabel xml:lang="ka">მაკედონია</skos:prefLabel>
+        <skos:prefLabel xml:lang="lt">Senovės Makedonija</skos:prefLabel>
+        <skos:prefLabel xml:lang="sr">Античка Македонија</skos:prefLabel>
+        <skos:prefLabel xml:lang="mn">Македоны эзэнт гүрэн</skos:prefLabel>
+        <skos:prefLabel xml:lang="zh">馬其頓王國</skos:prefLabel>
+        <skos:prefLabel xml:lang="nb">Oldtidens Makedonia</skos:prefLabel>
+        <skos:prefLabel xml:lang="nn">Makedonia i antikken</skos:prefLabel>
+        <skos:prefLabel xml:lang="sq">Maqedonia e lashtë</skos:prefLabel>
+        <skos:prefLabel xml:lang="ta">மக்கெடோனியா</skos:prefLabel>
+        <skos:prefLabel xml:lang="az">Makedoniya İmperiyası</skos:prefLabel>
+        <skos:prefLabel xml:lang="bn">মেসিডেনীয় সভ্যতা</skos:prefLabel>
+        <skos:prefLabel xml:lang="sl">Kraljevina Makedonija</skos:prefLabel>
+        <skos:prefLabel xml:lang="ku">Keyaniya Makedonî</skos:prefLabel>
+        <skos:prefLabel xml:lang="ur">مقدونیہ</skos:prefLabel>
+        <skos:prefLabel xml:lang="ne">म्यासेडोनियाली साम्राज्य</skos:prefLabel>
+        <skos:prefLabel xml:lang="si">මැසඩෝනියාව (පුරාතන රාජධානිය)</skos:prefLabel>
+        <skos:prefLabel xml:lang="ky">Македония Байыркы</skos:prefLabel>
+        <skos:prefLabel xml:lang="uz">Makedoniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="is">Makedónía</skos:prefLabel>
+        <skos:prefLabel xml:lang="kk">Ежелгі Македония</skos:prefLabel>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        <dcterms:isReplacedBy rdf:resource="http://nomisma.org/id/macedon"/>
+    </nmo:Mint>
+   
+   
+</rdf:RDF>

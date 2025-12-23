@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+         xmlns:wordnet="http://ontologi.es/WordNet/class/"
+         xmlns:nm="http://nomisma.org/id/"
+         xmlns:crmdig="http://www.ics.forth.gr/isl/CRMdig/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:org="http://www.w3.org/ns/org#"
+         xmlns:osgeo="http://data.ordnancesurvey.co.uk/ontology/geometry/"
+         xmlns:prov="http://www.w3.org/ns/prov#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdac="http://www.rdaregistry.info/Elements/c/"
+         xmlns:bio="http://purl.org/vocab/bio/0.1/"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:crm="http://www.cidoc-crm.org/cidoc-crm/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:un="http://www.owl-ontologies.com/Ontology1181490123.owl#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+   <nmo:NumismaticTerm rdf:about="http://nomisma.org/id/denomination">
+      <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+      <skos:prefLabel xml:lang="de">Nominal</skos:prefLabel>
+      <skos:prefLabel xml:lang="en">Denomination</skos:prefLabel>
+      <skos:prefLabel xml:lang="el">Νομισματική Αξία</skos:prefLabel>
+      <skos:prefLabel xml:lang="es">Denominación</skos:prefLabel>
+      <skos:prefLabel xml:lang="fr">Dénomination</skos:prefLabel>
+      <skos:prefLabel xml:lang="nl">Muntsoort</skos:prefLabel>
+      <skos:definition xml:lang="en">Term indicating the value of a coin. Examples: tetradrachm, chalkous, denarius.</skos:definition>
+      <skos:exactMatch rdf:resource="http://dbpedia.org/resource/Denomination_(currency)"/>
+      <skos:exactMatch rdf:resource="http://www.wikidata.org/entity/Q918448"/>
+      <skos:prefLabel xml:lang="pl">Denominacja</skos:prefLabel>
+      <skos:prefLabel xml:lang="ro">Denominare</skos:prefLabel>
+      <skos:prefLabel xml:lang="hu">Címlet</skos:prefLabel>
+      <skos:prefLabel xml:lang="ja">デノミネーション</skos:prefLabel>
+      <skos:prefLabel xml:lang="sl">Denominacija</skos:prefLabel>
+      <skos:prefLabel xml:lang="bg">Деноминация</skos:prefLabel>
+      <skos:prefLabel xml:lang="lt">Denominacija</skos:prefLabel>
+      <skos:prefLabel xml:lang="be">дэнамінацыя, эканоміка</skos:prefLabel>
+      <skos:prefLabel xml:lang="ko">디노미네이션</skos:prefLabel>
+      <skos:prefLabel xml:lang="zh">面额</skos:prefLabel>
+      <skos:prefLabel xml:lang="az">Denominasiya</skos:prefLabel>
+      <skos:prefLabel xml:lang="hr">Denominacija</skos:prefLabel>
+      <skos:prefLabel xml:lang="hy">Դենոմինացիա</skos:prefLabel>
+      <skos:prefLabel xml:lang="ru">номинал</skos:prefLabel>
+      <skos:prefLabel xml:lang="sr">Деноминација</skos:prefLabel>
+      <skos:exactMatch rdf:resource="https://www.freebase.com/m/02lgmr"/>
+      <skos:inScheme rdf:resource="http://nomisma.org/id/"/>
+      <skos:changeNote rdf:resource="http://nomisma.org/id/denomination#provenance"/>
+      <skos:exactMatch rdf:resource="https://ikmk.smb.museum/ndp/category/nominal"/>
+   </nmo:NumismaticTerm>
+   <dcterms:ProvenanceStatement rdf:about="http://nomisma.org/id/denomination#provenance">
+      <foaf:topic rdf:resource="http://nomisma.org/id/denomination"/>
+      <prov:wasGeneratedBy>
+         <prov:Activity>
+            <rdf:type rdf:resource="http://www.w3.org/ns/prov#Create"/>
+            <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2012-10-28T21:43:36+00:00</prov:atTime>
+            <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/ameadows"/>
+            <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/sfsheath"/>
+            <dcterms:description xml:lang="en">This is among the original Nomisma XHTML+RDFa fragments, most likely created between 2010-2012 by Sebastian Heath and/or Andy Meadows.</dcterms:description>
+            <dcterms:type>manual</dcterms:type>
+         </prov:Activity>
+      </prov:wasGeneratedBy>
+      <prov:activity>
+         <prov:Activity>
+            <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+            <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2016-06-30T04:00:02+00:00</prov:atTime>
+            <dcterms:type>manual</dcterms:type>
+         </prov:Activity>
+      </prov:activity>
+   </dcterms:ProvenanceStatement>
+</rdf:RDF>

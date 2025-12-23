@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+         xmlns:wordnet="http://ontologi.es/WordNet/class/"
+         xmlns:nm="http://nomisma.org/id/"
+         xmlns:crmdig="http://www.ics.forth.gr/isl/CRMdig/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:org="http://www.w3.org/ns/org#"
+         xmlns:osgeo="http://data.ordnancesurvey.co.uk/ontology/geometry/"
+         xmlns:prov="http://www.w3.org/ns/prov#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdac="http://www.rdaregistry.info/Elements/c/"
+         xmlns:bio="http://purl.org/vocab/bio/0.1/"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:crm="http://www.cidoc-crm.org/cidoc-crm/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:un="http://www.owl-ontologies.com/Ontology1181490123.owl#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+   <foaf:Person rdf:about="http://nomisma.org/id/artaxerxes_ii_persia">
+      <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+      <skos:inScheme rdf:resource="http://nomisma.org/id/"/>
+      <skos:prefLabel xml:lang="en">Artaxerxes II of Persia</skos:prefLabel>
+      <skos:definition xml:lang="en">Artaxerxes II Mnemon (Old Persian: 𐎠𐎼𐎫𐎧𐏁𐏂, meaning "whose reign is through truth") was the King of Kings (Xšâyathiya Xšâyathiyânâm) of Persia from 404 BC until his death in 358 BC. He was a son of Darius II and Parysatis.</skos:definition>
+      <skos:prefLabel xml:lang="pl">Artakserkses II</skos:prefLabel>
+      <skos:prefLabel xml:lang="eu">Artaxerxes II.a</skos:prefLabel>
+      <skos:prefLabel xml:lang="fr">Artaxerxès II</skos:prefLabel>
+      <skos:prefLabel xml:lang="he">ארתחששתא השני</skos:prefLabel>
+      <skos:prefLabel xml:lang="es">Artajerjes II</skos:prefLabel>
+      <skos:prefLabel xml:lang="hu">II. Artakhsaszjá perzsa király</skos:prefLabel>
+      <skos:prefLabel xml:lang="it">Artaserse II di Persia</skos:prefLabel>
+      <skos:prefLabel xml:lang="gl">Artaxerxes II</skos:prefLabel>
+      <skos:prefLabel xml:lang="de">Artaxerxes II.</skos:prefLabel>
+      <skos:prefLabel xml:lang="ja">アルタクセルクセス2世</skos:prefLabel>
+      <skos:prefLabel xml:lang="vi">Artaxerxes II</skos:prefLabel>
+      <skos:prefLabel xml:lang="el">Αρταξέρξης Β΄</skos:prefLabel>
+      <skos:prefLabel xml:lang="sh">Artakserks II</skos:prefLabel>
+      <skos:prefLabel xml:lang="nl">Artaxerxes II</skos:prefLabel>
+      <skos:prefLabel xml:lang="sv">Artaxerxes II</skos:prefLabel>
+      <skos:prefLabel xml:lang="pt">Artaxerxes II da Pérsia</skos:prefLabel>
+      <skos:prefLabel xml:lang="eo">Artaĥŝaŝt la 2-a</skos:prefLabel>
+      <skos:prefLabel xml:lang="sk">Artaxerxes II.</skos:prefLabel>
+      <skos:prefLabel xml:lang="ru">Артаксеркс II</skos:prefLabel>
+      <skos:prefLabel xml:lang="hy">Արտաքսերքսես II</skos:prefLabel>
+      <skos:prefLabel xml:lang="ro">Artaxerxes al II-lea</skos:prefLabel>
+      <skos:prefLabel xml:lang="ca">Artaxerxes II de Pèrsia</skos:prefLabel>
+      <skos:prefLabel xml:lang="fi">Artakserkses II</skos:prefLabel>
+      <skos:prefLabel xml:lang="uk">Артаксеркс II</skos:prefLabel>
+      <skos:prefLabel xml:lang="la">Artaxerxes II</skos:prefLabel>
+      <skos:prefLabel xml:lang="cy">Artaxerxes II, brenin Persia</skos:prefLabel>
+      <skos:prefLabel xml:lang="cs">Artaxerxés II.</skos:prefLabel>
+      <skos:prefLabel xml:lang="fa">اردشیر دوم</skos:prefLabel>
+      <skos:prefLabel xml:lang="bg">Артаксеркс II</skos:prefLabel>
+      <skos:prefLabel xml:lang="ka">არტაქსერქსე II</skos:prefLabel>
+      <skos:prefLabel xml:lang="hr">Artakserkso II.</skos:prefLabel>
+      <skos:prefLabel xml:lang="kk">Артаксеркс II</skos:prefLabel>
+      <skos:prefLabel xml:lang="sr">Артаксеркс II</skos:prefLabel>
+      <skos:prefLabel xml:lang="tl">Artaxerxes II</skos:prefLabel>
+      <skos:prefLabel xml:lang="zh">阿尔塔薛西斯二世</skos:prefLabel>
+      <skos:prefLabel xml:lang="nb">Artaxerxes II av Persia</skos:prefLabel>
+      <skos:prefLabel xml:lang="id">Artahsasta II dari Persia</skos:prefLabel>
+      <skos:prefLabel xml:lang="ko">아르타크세르크세스 2세</skos:prefLabel>
+      <skos:prefLabel xml:lang="sl">Artakserks II.</skos:prefLabel>
+      <skos:prefLabel xml:lang="az">II Artakserks</skos:prefLabel>
+      <skos:prefLabel xml:lang="ar">أردشير الثاني الأخميني</skos:prefLabel>
+      <skos:prefLabel xml:lang="ur">اردشیر دؤم</skos:prefLabel>
+      <skos:prefLabel xml:lang="mg">Artakserksesy II</skos:prefLabel>
+      <skos:exactMatch rdf:resource="http://www.wikidata.org/entity/Q188472"/>
+      <skos:exactMatch rdf:resource="http://d-nb.info/gnd/137407769"/>
+      <skos:exactMatch rdf:resource="https://www.freebase.com/m/0n5z5"/>
+      <skos:exactMatch rdf:resource="http://catalogue.bnf.fr/ark:/12148/cb14979312q"/>
+      <skos:exactMatch rdf:resource="http://www.idref.fr/084334347"/>
+      <skos:exactMatch rdf:resource="http://viaf.org/viaf/224111652"/>
+      <skos:altLabel xml:lang="en">Artaxerxes II</skos:altLabel>
+      <org:memberOf rdf:resource="http://nomisma.org/id/achaemenid_dynasty"/>
+      <org:hasMembership rdf:resource="http://nomisma.org/id/artaxerxes_ii_persia#membership_9527101f974f5aedc4d6296954375b98"/>
+      <dcterms:isPartOf rdf:resource="http://nomisma.org/id/greek_numismatics"/>
+      <rdfs:seeAlso rdf:resource="http://www.britannica.com/EBchecked/topic/36748/Artaxerxes-II"/>
+      <skos:changeNote rdf:resource="http://nomisma.org/id/artaxerxes_ii_persia#provenance"/>
+      <skos:exactMatch rdf:resource="https://ikmk.smb.museum/ndp/person/10220"/>
+   </foaf:Person>
+   <org:Membership rdf:about="http://nomisma.org/id/artaxerxes_ii_persia#membership_9527101f974f5aedc4d6296954375b98">
+      <org:role rdf:resource="http://nomisma.org/id/authority"/>
+      <org:organization rdf:resource="http://nomisma.org/id/achaemenid_empire"/>
+      <nmo:hasStartDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">-0404</nmo:hasStartDate>
+      <nmo:hasEndDate rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">-0358</nmo:hasEndDate>
+   </org:Membership>
+   <dcterms:ProvenanceStatement rdf:about="http://nomisma.org/id/artaxerxes_ii_persia#provenance">
+      <foaf:topic rdf:resource="http://nomisma.org/id/artaxerxes_ii_persia"/>
+      <prov:wasGeneratedBy>
+         <prov:Activity>
+            <rdf:type rdf:resource="http://www.w3.org/ns/prov#Create"/>
+            <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2020-03-09T15:14:09.132-05:00</prov:atTime>
+            <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/egruber"/>
+            <prov:used rdf:resource="https://docs.google.com/spreadsheets/d/1VrK8iDlcEzALvwMgZI49JiYV5gcVs_cAlzkdDh0PGEc/pubhtml"/>
+            <dcterms:type>spreadsheet</dcterms:type>
+         </prov:Activity>
+      </prov:wasGeneratedBy>
+   </dcterms:ProvenanceStatement>
+</rdf:RDF>

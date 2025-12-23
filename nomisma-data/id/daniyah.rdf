@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+         xmlns:wordnet="http://ontologi.es/WordNet/class/"
+         xmlns:nm="http://nomisma.org/id/"
+         xmlns:crmdig="http://www.ics.forth.gr/isl/CRMdig/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:org="http://www.w3.org/ns/org#"
+         xmlns:osgeo="http://data.ordnancesurvey.co.uk/ontology/geometry/"
+         xmlns:prov="http://www.w3.org/ns/prov#"
+         xmlns:rdac="http://www.rdaregistry.info/Elements/c/"
+         xmlns:bio="http://purl.org/vocab/bio/0.1/"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:crm="http://www.cidoc-crm.org/cidoc-crm/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:un="http://www.owl-ontologies.com/Ontology1181490123.owl#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+   <nmo:Mint rdf:about="http://nomisma.org/id/daniyah">
+        <skos:definition xml:lang="es">Ceca medieval islámica situada en la actual ciudad de Denia, en la provincia de Alicante, España. Comenzó a acuñar moneda a partir de la disolución del califato de Córdoba, cuando se convirtió en la capital de un importante reino de taifa entre los siglos XI y XIII, que llegaría a conquistar las islas Baleares y enfrentarse a las repúblicas comerciales italianas del momento. Para la ceca cristiana, véase “Denia”.</skos:definition>
+        <skos:definition xml:lang="ca">Seca medieval islàmica situada en l'actual ciutat de Dénia, en la província d'Alacant, Espanya. Va començar a encunyar moneda a partir de la dissolució del califat de Còrdova, quan es convertí en capital d'un important regne de taifa entre els segles XI i XIII, que arribaria a conquerir les illes Balears i enfrontar-se a les repúbliques comercials italianes del moment. Per a la seca cristiana, vegeu “Dénia”.</skos:definition>
+        <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+        <skos:prefLabel xml:lang="en">Daniyah</skos:prefLabel>
+        <skos:prefLabel xml:lang="es">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="ca">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="ar">دانيه</skos:prefLabel>
+        <skos:closeMatch rdf:resource="http://dbpedia.org/resource/D%C3%A9nia"/>
+        <skos:closeMatch rdf:resource="http://www.wikidata.org/entity/Q646725"/>
+        <skos:prefLabel xml:lang="eu">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="pl">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="fr">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="uz">Daniya</skos:prefLabel>
+      
+        <skos:prefLabel xml:lang="oc">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="it">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="gl">Daniya</skos:prefLabel>
+        <skos:prefLabel xml:lang="de">Daniya</skos:prefLabel>
+      
+      
+        <skos:prefLabel xml:lang="nl">Daniya</skos:prefLabel>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+        <skos:closeMatch rdf:resource="https://www.freebase.com/m/01hsdb"/>
+        <skos:closeMatch rdf:resource="http://sws.geonames.org/2518878/"/>
+        <skos:closeMatch rdf:resource="http://d-nb.info/gnd/4336673-9"/>
+        <skos:definition xml:lang="en">Medieval muslim mint located in the actual city of Dénia, in the province of Alicante, Spain. It began minting coins after the dissolution of the Caliphate of Córdoba when it became the capital of an important taifa kingdom between the 11th and 13th centuries, which even conquered the Balearic Islands and competed with the Italian merchant republics of the time. For the non-muslim mint of Zaragoza, see "Dénia". </skos:definition>
+        <geo:location rdf:resource="http://nomisma.org/id/daniyah#this"/>
+        <dcterms:isPartOf rdf:resource="http://nomisma.org/id/islamic_numismatics"/>
+        <skos:inScheme rdf:resource="http://nomisma.org/id/"/>
+        <skos:changeNote rdf:resource="http://nomisma.org/id/daniyah#provenance"/>
+        <dcterms:isPartOf rdf:resource="http://nomisma.org/id/medieval_spanish_numismatics"/>
+        <dcterms:isPartOf rdf:resource="http://nomisma.org/id/medieval_european_numismatics"/>
+        <skos:closeMatch rdf:resource="http://www.geonames.org/2518878/denia.html"/>
+    </nmo:Mint>
+   <geo:SpatialThing rdf:about="http://nomisma.org/id/daniyah#this">
+        <geo:lat rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">38.84078</geo:lat>
+        <geo:long rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">0.10574</geo:long>
+   </geo:SpatialThing>
+   <dcterms:ProvenanceStatement rdf:about="http://nomisma.org/id/daniyah#provenance">
+        <foaf:topic rdf:resource="http://nomisma.org/id/daniyah"/>
+        <prov:wasGeneratedBy>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Create"/>
+                <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2015-07-28T17:58:06+00:00</prov:atTime>
+                <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/egruber"/>
+                <prov:used rdf:resource="https://docs.google.com/spreadsheets/d/1coVOCMmTGlmh89lBLwT-_TX2qYeRHc6VLZVbCVfqyNk/pubhtml"/>
+                <dcterms:type>spreadsheet</dcterms:type>
+            </prov:Activity>
+        </prov:wasGeneratedBy>
+        <prov:activity>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+                <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2020-12-07T11:00:32.874-06:00</prov:atTime>
+                <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/egruber"/>
+                <dcterms:type>manual</dcterms:type>
+            </prov:Activity>
+        </prov:activity>
+        <prov:activity>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+					           <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2024-06-14T11:58:11.01Z</prov:atTime>
+					           <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/cweiss"/>
+					           <dcterms:type>manual</dcterms:type>
+				        </prov:Activity>
+        </prov:activity>
+        <prov:activity>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+					           <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2024-07-16T14:00:54.431Z</prov:atTime>
+					           <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/cweiss"/>
+					           <prov:used rdf:resource="https://docs.google.com/spreadsheets/d/1jBrhbwwVnBC9iXeYobXRFeU51Jmxp9M7jVABN2CcEeI/pubhtml"/>
+					           <dcterms:type>spreadsheet</dcterms:type>
+				        </prov:Activity>
+        </prov:activity>
+    </dcterms:ProvenanceStatement>
+</rdf:RDF>

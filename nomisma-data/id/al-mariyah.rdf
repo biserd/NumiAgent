@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+         xmlns:wordnet="http://ontologi.es/WordNet/class/"
+         xmlns:nm="http://nomisma.org/id/"
+         xmlns:crmdig="http://www.ics.forth.gr/isl/CRMdig/"
+         xmlns:nmo="http://nomisma.org/ontology#"
+         xmlns:org="http://www.w3.org/ns/org#"
+         xmlns:osgeo="http://data.ordnancesurvey.co.uk/ontology/geometry/"
+         xmlns:prov="http://www.w3.org/ns/prov#"
+         xmlns:rdac="http://www.rdaregistry.info/Elements/c/"
+         xmlns:bio="http://purl.org/vocab/bio/0.1/"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:crm="http://www.cidoc-crm.org/cidoc-crm/"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:un="http://www.owl-ontologies.com/Ontology1181490123.owl#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+   <nmo:Mint rdf:about="http://nomisma.org/id/al-mariyah">
+        <rdf:type rdf:resource="http://www.w3.org/2004/02/skos/core#Concept"/>
+        <prov:alternateOf rdf:resource="http://nomisma.org/id/almeria"/>
+        <skos:prefLabel xml:lang="en">al-Mariyah</skos:prefLabel>
+        <skos:prefLabel xml:lang="ar">المريه</skos:prefLabel>
+        
+        <skos:closeMatch rdf:resource="http://dbpedia.org/resource/D%C3%A9nia"/>
+        <skos:closeMatch rdf:resource="http://www.wikidata.org/entity/Q646725"/>
+        <skos:prefLabel xml:lang="eu">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="pl">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="fr">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="uz">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="es">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="oc">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="it">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="gl">al-Mariya</skos:prefLabel>
+        <skos:prefLabel xml:lang="de">al-Mariya</skos:prefLabel>
+        
+        
+        <skos:prefLabel xml:lang="nl">al-Mariya</skos:prefLabel>
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        <skos:closeMatch rdf:resource="https://www.freebase.com/m/01hsdb"/>
+        <skos:closeMatch rdf:resource="http://sws.geonames.org/2518878/"/>
+        <skos:closeMatch rdf:resource="http://d-nb.info/gnd/4336673-9"/>
+        <skos:definition xml:lang="en">The islamic mint of al-Mariyah, modern Almeria, the capital of the province of Almeria, Spain.</skos:definition>
+        <geo:location rdf:resource="http://nomisma.org/id/al-mariyah#this"/>
+        <dcterms:isPartOf rdf:resource="http://nomisma.org/id/islamic_numismatics"/>
+        <skos:inScheme rdf:resource="http://nomisma.org/id/"/>
+        <skos:changeNote rdf:resource="http://nomisma.org/id/al-mariyah#provenance"/>
+        <dcterms:isPartOf rdf:resource="http://nomisma.org/id/medieval_european_numismatics"/>
+        <dcterms:isPartOf rdf:resource="http://nomisma.org/id/medieval_spanish_numismatics"/>
+        <skos:prefLabel xml:lang="ca">Al-Mariya</skos:prefLabel>
+        <skos:definition xml:lang="ca">Seca medieval islàmica localitzada en l'actual ciutat d'Almeria, Espanya. La seua activitat es va desenvolupar des del segle XI fins a la conquesta cristiana de la ciutat.</skos:definition>
+        <skos:definition xml:lang="es">Ceca medieval islámica localizada en la actual ciudad de Almería, comunidad autónoma de Andalucía, España. Su actividad se desarrolló desde el siglo XI hasta la conquista cristiana de la ciudad.</skos:definition>
+        <skos:closeMatch rdf:resource="http://dbpedia.org/resource/Almer%C3%ADa"/>
+        <skos:closeMatch rdf:resource="http://www.geonames.org/2521886/almeria.html"/>
+    </nmo:Mint>
+   <geo:SpatialThing rdf:about="http://nomisma.org/id/al-mariyah#this">
+        <geo:lat rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">36.83814</geo:lat>
+        <geo:long rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">-2.45974</geo:long>
+   </geo:SpatialThing>
+   <dcterms:ProvenanceStatement rdf:about="http://nomisma.org/id/al-mariyah#provenance">
+        <foaf:topic rdf:resource="http://nomisma.org/id/al-mariyah"/>
+        <prov:wasGeneratedBy>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Create"/>
+                <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2015-07-28T17:58:06+00:00</prov:atTime>
+                <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/egruber"/>
+                <prov:used rdf:resource="https://docs.google.com/spreadsheets/d/1coVOCMmTGlmh89lBLwT-_TX2qYeRHc6VLZVbCVfqyNk/pubhtml"/>
+                <dcterms:type>spreadsheet</dcterms:type>
+            </prov:Activity>
+        </prov:wasGeneratedBy>
+        <prov:activity>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+                <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2020-12-07T15:47:46.439-06:00</prov:atTime>
+                <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/egruber"/>
+                <dcterms:type>manual</dcterms:type>
+            </prov:Activity>
+        </prov:activity>
+        <prov:activity>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+					           <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-06-21T16:33:16.54Z</prov:atTime>
+					           <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/cweiss"/>
+					           <dcterms:type>manual</dcterms:type>
+				        </prov:Activity>
+        </prov:activity>
+        <prov:activity>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+					           <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-06-22T06:49:24.919Z</prov:atTime>
+					           <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/cweiss"/>
+					           <dcterms:type>manual</dcterms:type>
+				        </prov:Activity>
+        </prov:activity>
+        <prov:activity>
+            <prov:Activity>
+                <rdf:type rdf:resource="http://www.w3.org/ns/prov#Modify"/>
+					           <prov:atTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2024-07-16T14:00:54.431Z</prov:atTime>
+					           <prov:wasAssociatedWith rdf:resource="http://nomisma.org/editor/cweiss"/>
+					           <prov:used rdf:resource="https://docs.google.com/spreadsheets/d/1jBrhbwwVnBC9iXeYobXRFeU51Jmxp9M7jVABN2CcEeI/pubhtml"/>
+					           <dcterms:type>spreadsheet</dcterms:type>
+				        </prov:Activity>
+        </prov:activity>
+    </dcterms:ProvenanceStatement>
+</rdf:RDF>

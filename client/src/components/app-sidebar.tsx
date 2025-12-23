@@ -13,7 +13,8 @@ import {
   Activity,
   ListTodo,
   FileCheck,
-  Network
+  Network,
+  RefreshCw
 } from "lucide-react";
 import {
   Sidebar,
@@ -48,6 +49,7 @@ const adminItems = [
   { title: "Admin Dashboard", url: "/admin", icon: Activity },
   { title: "Coins Database", url: "/admin/coins", icon: Coins },
   { title: "Entity Graph", url: "/admin/graph", icon: Network },
+  { title: "Enrichment", url: "/admin/enrichment", icon: RefreshCw },
   { title: "Jobs Queue", url: "/admin/jobs", icon: ListTodo },
   { title: "Ingestion Runs", url: "/admin/ingestion", icon: Database },
   { title: "Sources", url: "/admin/sources", icon: Shield },

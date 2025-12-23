@@ -226,7 +226,7 @@ export default function AdminGraphPage() {
 
   const canFetchCoinTypes = selectedEntity && 
     selectedEntity.nomismaUri && 
-    ['MINT', 'PERSON', 'DENOMINATION'].includes(selectedEntity.type);
+    ['MINT', 'PERSON', 'RULER', 'DENOMINATION'].includes(selectedEntity.type);
 
   const { data: coinTypesData, isLoading: coinTypesLoading, refetch: refetchCoinTypes } = useQuery<CoinTypesResponse>({
     queryKey: ["/api/entities", selectedEntity?.id, "coin-types"],

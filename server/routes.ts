@@ -1209,7 +1209,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Entity has no Nomisma URI" });
       }
 
-      const limit = parseInt(req.query.limit as string) || 50;
+      const parsedLimit = parseInt(req.query.limit as string);
+      const limit = (Number.isFinite(parsedLimit) && parsedLimit > 0 && parsedLimit <= 100) ? parsedLimit : 50;
       let coinTypes;
 
       switch (entity.type) {
@@ -1217,6 +1218,7 @@ export async function registerRoutes(
           coinTypes = await getCoinTypesForMint(entity.nomismaUri, limit);
           break;
         case 'PERSON':
+        case 'RULER':
           coinTypes = await getCoinTypesForRuler(entity.nomismaUri, limit);
           break;
         case 'DENOMINATION':

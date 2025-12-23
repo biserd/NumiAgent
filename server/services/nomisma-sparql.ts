@@ -1,6 +1,6 @@
 import pRetry from 'p-retry';
 
-const SPARQL_ENDPOINT = 'http://nomisma.org/sparql';
+const SPARQL_ENDPOINT = 'https://nomisma.org/sparql';
 
 interface SparqlBinding {
   type: string;

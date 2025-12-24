@@ -1525,8 +1525,12 @@ export async function registerRoutes(
 
           // Create BROADER_THAN edge for hierarchical relationships
           const normalizedBroader = entity.broader ? normalizeUri(entity.broader) : null;
+          if (normalizedBroader) {
+            console.log(`Checking broader: ${normalizedBroader}, exists in lookup: ${entityLookup.has(normalizedBroader)}`);
+          }
           if (normalizedBroader && entityLookup.has(normalizedBroader)) {
             const dstEntity = entityLookup.get(normalizedBroader)!;
+            console.log(`Creating BROADER_THAN edge: ${srcEntity.id} -> ${dstEntity.id}`);
             const edgeKey = `${srcEntity.id}:${dstEntity.id}:BROADER_THAN`;
             
             if (!existingEdges.has(edgeKey)) {

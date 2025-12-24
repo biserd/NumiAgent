@@ -1393,8 +1393,8 @@ export async function registerRoutes(
       const row = stats.rows[0] as any;
       res.json({
         entitiesWithNomisma: parseInt(row.entities_with_nomisma || '0'),
-        enrichedCoinTypes: parseInt(row.edges_from_rdf || '0'), // Now showing edges from RDF
-        nomismaCoinTypes: parseInt(row.total_edges || '0'), // Total edges
+        edgesFromRdf: parseInt(row.edges_from_rdf || '0'),
+        totalEdges: parseInt(row.total_edges || '0'),
       });
     } catch (error) {
       console.error("Error fetching enrichment stats:", error);
@@ -1404,7 +1404,7 @@ export async function registerRoutes(
 
   // Start batch enrichment (runs in background)
   let enrichmentRunning = false;
-  let enrichmentProgress = { processed: 0, total: 0, coinTypes: 0, errors: 0 };
+  let enrichmentProgress = { processed: 0, total: 0, edgesCreated: 0, errors: 0 };
 
   app.post("/api/admin/enrichment/start", requireAdmin, async (req, res) => {
     if (enrichmentRunning) {
@@ -1414,7 +1414,7 @@ export async function registerRoutes(
     const limit = Math.min(parseInt(req.body.limit as string) || 50, 500);
 
     enrichmentRunning = true;
-    enrichmentProgress = { processed: 0, total: 0, coinTypes: 0, errors: 0 };
+    enrichmentProgress = { processed: 0, total: 0, edgesCreated: 0, errors: 0 };
 
     res.json({ message: "Enrichment started", limit });
 
@@ -1461,18 +1461,32 @@ export async function registerRoutes(
         }
         console.log(`Found ${existingEdges.size} existing edges`);
 
+        // Build set of target URIs from queued entities to process
+        const targetUris = new Set<string>();
+        for (const row of entitiesToEnrich.rows as any[]) {
+          if (row.nomisma_uri) {
+            targetUris.add(row.nomisma_uri);
+          }
+        }
+        enrichmentProgress.total = targetUris.size;
+        console.log(`Target: ${targetUris.size} entities to enrich`);
+
         // Extract relationships from local RDF data and create entity edges
+        // Scan all RDF files but only process entities in our target set
         console.log('Extracting relationships from local Nomisma RDF files...');
-        const entitiesGenerator = extractEntitiesWithRelations(limit * 100);
-        enrichmentProgress.total = entityLookup.size; // Total entities we can process
+        const entitiesGenerator = extractEntitiesWithRelations(); // No limit on file scan
         let edgesCreated = 0;
-        let entitiesProcessed = 0;
+        let entitiesEnriched = 0;
+        const enrichedUris = new Set<string>();
         
         for await (const entity of entitiesGenerator) {
-          // Skip if this entity isn't in our database
-          if (!entityLookup.has(entity.uri)) continue;
+          // Skip if not in our target set OR already processed
+          if (!targetUris.has(entity.uri) || enrichedUris.has(entity.uri)) continue;
           
-          entitiesProcessed++;
+          enrichedUris.add(entity.uri);
+          entitiesEnriched++;
+          enrichmentProgress.processed = entitiesEnriched;
+          
           const srcEntity = entityLookup.get(entity.uri)!;
 
           // Create HAS_METAL edge for denominations
@@ -1515,14 +1529,14 @@ export async function registerRoutes(
             }
           }
 
-          enrichmentProgress.processed = entitiesProcessed;
-          enrichmentProgress.coinTypes = edgesCreated; // Edges created
+          enrichmentProgress.edgesCreated = edgesCreated;
           
           // Throttle
           await new Promise(resolve => setTimeout(resolve, 10));
+          
+          // Stop if we've enriched all target entities
+          if (entitiesEnriched >= targetUris.size) break;
         }
-        
-        enrichmentProgress.total = entitiesProcessed; // Final count
       } catch (error) {
         console.error("Enrichment error:", error);
       } finally {

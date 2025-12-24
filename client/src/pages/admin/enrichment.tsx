@@ -20,15 +20,15 @@ import { useToast } from "@/hooks/use-toast";
 
 interface EnrichmentStats {
   entitiesWithNomisma: number;
-  enrichedCoinTypes: number;
-  nomismaCoinTypes: number;
+  edgesFromRdf: number;
+  totalEdges: number;
 }
 
 interface EnrichmentProgress {
   running: boolean;
   processed: number;
   total: number;
-  coinTypes: number;
+  edgesCreated: number;
   errors: number;
 }
 
@@ -55,7 +55,7 @@ export default function EnrichmentPage() {
       if (progress.processed > 0) {
         toast({
           title: "Enrichment Complete",
-          description: `Processed ${progress.processed} entities, created ${progress.coinTypes} edges`,
+          description: `Enriched ${progress.processed} entities, created ${progress.edgesCreated} edges`,
         });
       }
     }
@@ -128,7 +128,7 @@ export default function EnrichmentPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
-                {stats?.enrichedCoinTypes?.toLocaleString() || 0}
+                {stats?.edgesFromRdf?.toLocaleString() || 0}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Entity relationships from local data
@@ -144,7 +144,7 @@ export default function EnrichmentPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
-                {stats?.nomismaCoinTypes?.toLocaleString() || 0}
+                {stats?.totalEdges?.toLocaleString() || 0}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 All edges in the graph
@@ -212,14 +212,14 @@ export default function EnrichmentPage() {
             {progress?.running && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>Processing entities...</span>
+                  <span>Enriching entities...</span>
                   <span>{progress.processed} / {progress.total}</span>
                 </div>
                 <Progress value={progressPercent} />
                 <div className="flex flex-wrap gap-4 text-sm">
                   <Badge variant="secondary">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                    {progress.coinTypes} edges created
+                    {progress.edgesCreated} edges created
                   </Badge>
                   {progress.errors > 0 && (
                     <Badge variant="destructive">
@@ -235,7 +235,7 @@ export default function EnrichmentPage() {
               <div className="p-4 bg-muted rounded-md">
                 <p className="font-medium">Last run complete</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Processed {progress.processed} entities, created {progress.coinTypes} edges
+                  Enriched {progress.processed} entities, created {progress.edgesCreated} edges
                   {progress.errors > 0 && `, ${progress.errors} errors`}
                 </p>
               </div>

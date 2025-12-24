@@ -1512,12 +1512,13 @@ export async function registerRoutes(
               try {
                 await db.execute(sql`
                   INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
-                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'HAS_METAL', '1.0', 'nomisma-local-rdf')
-                  ON CONFLICT DO NOTHING
+                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'HAS_METAL', 1.0, 'nomisma-local-rdf')
                 `);
                 existingEdges.add(edgeKey);
                 edgesCreated++;
-              } catch (e) {
+                console.log(`HAS_METAL edge created: ${edgesCreated}`);
+              } catch (e: any) {
+                console.error(`Failed to create HAS_METAL edge: ${e.message}`);
                 enrichmentProgress.errors++;
               }
             }
@@ -1537,12 +1538,13 @@ export async function registerRoutes(
               try {
                 await db.execute(sql`
                   INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
-                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'BROADER_THAN', '1.0', 'nomisma-local-rdf')
-                  ON CONFLICT DO NOTHING
+                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'BROADER_THAN', 1.0, 'nomisma-local-rdf')
                 `);
                 existingEdges.add(edgeKey);
                 edgesCreated++;
-              } catch (e) {
+                console.log(`BROADER_THAN edge created: ${edgesCreated}`);
+              } catch (e: any) {
+                console.error(`Failed to create BROADER_THAN edge: ${e.message}`);
                 enrichmentProgress.errors++;
               }
             }
@@ -1558,12 +1560,13 @@ export async function registerRoutes(
               try {
                 await db.execute(sql`
                   INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
-                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'IS_PART_OF', '1.0', 'nomisma-local-rdf')
-                  ON CONFLICT DO NOTHING
+                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'IS_PART_OF', 1.0, 'nomisma-local-rdf')
                 `);
                 existingEdges.add(edgeKey);
                 edgesCreated++;
-              } catch (e) {
+                console.log(`IS_PART_OF edge created: ${edgesCreated}`);
+              } catch (e: any) {
+                console.error(`Failed to create IS_PART_OF edge: ${e.message}`);
                 enrichmentProgress.errors++;
               }
             }

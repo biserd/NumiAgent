@@ -1534,19 +1534,24 @@ export async function registerRoutes(
             console.log(`Creating BROADER_THAN edge: ${srcEntity.id} -> ${dstEntity.id}`);
             const edgeKey = `${srcEntity.id}:${dstEntity.id}:BROADER_THAN`;
             
+            console.log(`Checking if edge exists: ${edgeKey}, exists: ${existingEdges.has(edgeKey)}`);
             if (!existingEdges.has(edgeKey)) {
+              console.log(`Attempting to insert edge...`);
               try {
-                await db.execute(sql`
+                const result = await db.execute(sql`
                   INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
                   VALUES (${srcEntity.id}, ${dstEntity.id}, 'BROADER_THAN', 1.0, 'nomisma-local-rdf')
                 `);
+                console.log(`Insert result:`, result);
                 existingEdges.add(edgeKey);
                 edgesCreated++;
                 console.log(`BROADER_THAN edge created: ${edgesCreated}`);
               } catch (e: any) {
-                console.error(`Failed to create BROADER_THAN edge: ${e.message}`);
+                console.error(`Failed to create BROADER_THAN edge: ${e.message}`, e);
                 enrichmentProgress.errors++;
               }
+            } else {
+              console.log(`Edge already exists, skipping`);
             }
           }
 

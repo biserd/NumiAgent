@@ -1411,7 +1411,7 @@ export async function registerRoutes(
       return res.status(409).json({ error: "Enrichment already running", progress: enrichmentProgress });
     }
 
-    const limit = Math.min(parseInt(req.body.limit as string) || 50, 500);
+    const limit = Math.min(parseInt(req.body.limit as string) || 50, 10000);
 
     enrichmentRunning = true;
     enrichmentProgress = { processed: 0, total: 0, edgesCreated: 0, errors: 0 };

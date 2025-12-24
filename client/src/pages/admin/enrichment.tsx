@@ -175,7 +175,7 @@ export default function EnrichmentPage() {
                   onChange={(e) => setLimit(e.target.value)}
                   className="w-32"
                   min="1"
-                  max="500"
+                  max="10000"
                   disabled={progress?.running}
                   data-testid="input-enrichment-limit"
                 />

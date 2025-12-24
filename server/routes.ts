@@ -1443,15 +1443,21 @@ export async function registerRoutes(
         enrichmentProgress.total = entitiesToEnrich.rows.length;
 
         // Build URI → entity ID lookup map from database
+        // Normalize URIs to handle http/https differences
+        const normalizeUri = (uri: string) => uri.replace('https://', 'http://');
+        
         console.log('Building entity URI lookup map...');
         const entityLookup = new Map<string, { id: string; label: string; type: string }>();
         const allEntities = await db.execute(sql`
           SELECT id, label, type, nomisma_uri FROM entities WHERE nomisma_uri IS NOT NULL
         `);
         for (const row of allEntities.rows as any[]) {
+          // Store both original and normalized versions
+          const normalizedUri = normalizeUri(row.nomisma_uri);
+          entityLookup.set(normalizedUri, { id: row.id, label: row.label, type: row.type });
           entityLookup.set(row.nomisma_uri, { id: row.id, label: row.label, type: row.type });
         }
-        console.log(`Built lookup map with ${entityLookup.size} entities`);
+        console.log(`Built lookup map with ${entityLookup.size} entries (${allEntities.rows.length} entities)`);
 
         // Get existing edges to avoid duplicates
         const existingEdges = new Set<string>();
@@ -1490,10 +1496,16 @@ export async function registerRoutes(
           enrichmentProgress.processed = entitiesEnriched;
           
           const srcEntity = entityLookup.get(entity.uri)!;
+          
+          // Debug: log relationships found
+          if (entity.hasMaterial || entity.broader || entity.isPartOf) {
+            console.log(`Entity ${entity.uri} has relationships: hasMaterial=${entity.hasMaterial}, broader=${entity.broader}, isPartOf=${entity.isPartOf}`);
+          }
 
           // Create HAS_METAL edge for denominations
-          if (entity.hasMaterial && entityLookup.has(entity.hasMaterial)) {
-            const dstEntity = entityLookup.get(entity.hasMaterial)!;
+          const normalizedMaterial = entity.hasMaterial ? normalizeUri(entity.hasMaterial) : null;
+          if (normalizedMaterial && entityLookup.has(normalizedMaterial)) {
+            const dstEntity = entityLookup.get(normalizedMaterial)!;
             const edgeKey = `${srcEntity.id}:${dstEntity.id}:HAS_METAL`;
             
             if (!existingEdges.has(edgeKey)) {
@@ -1512,8 +1524,9 @@ export async function registerRoutes(
           }
 
           // Create BROADER_THAN edge for hierarchical relationships
-          if (entity.broader && entityLookup.has(entity.broader)) {
-            const dstEntity = entityLookup.get(entity.broader)!;
+          const normalizedBroader = entity.broader ? normalizeUri(entity.broader) : null;
+          if (normalizedBroader && entityLookup.has(normalizedBroader)) {
+            const dstEntity = entityLookup.get(normalizedBroader)!;
             const edgeKey = `${srcEntity.id}:${dstEntity.id}:BROADER_THAN`;
             
             if (!existingEdges.has(edgeKey)) {
@@ -1532,8 +1545,9 @@ export async function registerRoutes(
           }
 
           // Create IS_PART_OF edge for category membership
-          if (entity.isPartOf && entityLookup.has(entity.isPartOf)) {
-            const dstEntity = entityLookup.get(entity.isPartOf)!;
+          const normalizedIsPartOf = entity.isPartOf ? normalizeUri(entity.isPartOf) : null;
+          if (normalizedIsPartOf && entityLookup.has(normalizedIsPartOf)) {
+            const dstEntity = entityLookup.get(normalizedIsPartOf)!;
             const edgeKey = `${srcEntity.id}:${dstEntity.id}:IS_PART_OF`;
             
             if (!existingEdges.has(edgeKey)) {

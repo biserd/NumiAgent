@@ -1431,10 +1431,12 @@ export async function registerRoutes(
           ON CONFLICT (id) DO NOTHING
         `);
 
+        // Query ALL entity types - different types have different relationships
+        // DENOMINATION has hasMaterial, most types can have broader/isPartOf
         const entitiesToEnrich = await db.execute(sql`
           SELECT id, type, label, nomisma_uri 
           FROM entities 
-          WHERE nomisma_uri IS NOT NULL AND type IN ('MINT', 'PERSON')
+          WHERE nomisma_uri IS NOT NULL
           LIMIT ${limit}
         `);
 
@@ -1519,6 +1521,26 @@ export async function registerRoutes(
                 await db.execute(sql`
                   INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
                   VALUES (${srcEntity.id}, ${dstEntity.id}, 'BROADER_THAN', '1.0', 'nomisma-local-rdf')
+                  ON CONFLICT DO NOTHING
+                `);
+                existingEdges.add(edgeKey);
+                edgesCreated++;
+              } catch (e) {
+                enrichmentProgress.errors++;
+              }
+            }
+          }
+
+          // Create IS_PART_OF edge for category membership
+          if (entity.isPartOf && entityLookup.has(entity.isPartOf)) {
+            const dstEntity = entityLookup.get(entity.isPartOf)!;
+            const edgeKey = `${srcEntity.id}:${dstEntity.id}:IS_PART_OF`;
+            
+            if (!existingEdges.has(edgeKey)) {
+              try {
+                await db.execute(sql`
+                  INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
+                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'IS_PART_OF', '1.0', 'nomisma-local-rdf')
                   ON CONFLICT DO NOTHING
                 `);
                 existingEdges.add(edgeKey);

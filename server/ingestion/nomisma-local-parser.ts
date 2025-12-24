@@ -386,6 +386,60 @@ export interface LocalCoinType {
   materialLabel?: string;
 }
 
+export interface ParsedEntityWithRelations {
+  uri: string;
+  type: string | null;
+  label: string;
+  hasMaterial: string | null;
+  broader: string | null;
+  isPartOf: string | null;
+}
+
+/**
+ * Extract all entities with their relationships from local RDF files
+ * Returns full relationship info for proper entity linking
+ */
+export async function* extractEntitiesWithRelations(
+  limit: number = 10000
+): AsyncGenerator<ParsedEntityWithRelations> {
+  const files = getNomismaDataFiles();
+  let count = 0;
+  let processed = 0;
+
+  console.log(`[nomisma-local] Extracting entities with relationships from ${files.length} files`);
+
+  for (const file of files) {
+    if (count >= limit) break;
+    
+    try {
+      const entity = await parseRdfFile(file);
+      processed++;
+
+      if (entity && entity.label) {
+        const result: ParsedEntityWithRelations = {
+          uri: entity.uri,
+          type: entity.type,
+          label: entity.label,
+          hasMaterial: entity.hasMaterial,
+          broader: entity.broader,
+          isPartOf: entity.isPartOf,
+        };
+        
+        count++;
+        yield result;
+
+        if (count % 1000 === 0) {
+          console.log(`[nomisma-local] Processed ${count} entities from ${processed} files`);
+        }
+      }
+    } catch (error) {
+      // Skip files that fail
+    }
+  }
+
+  console.log(`[nomisma-local] Completed: extracted ${count} entities from ${processed} files`);
+}
+
 export async function* extractCoinTypesFromLocal(
   entityUri?: string
 ): AsyncGenerator<LocalCoinType> {
@@ -431,4 +485,5 @@ export const NomismaLocalParser = {
   ingestEntitiesFromLocal,
   extractRelationshipsFromLocal,
   extractCoinTypesFromLocal,
+  extractEntitiesWithRelations,
 };

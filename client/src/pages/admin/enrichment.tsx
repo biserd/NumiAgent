@@ -55,7 +55,7 @@ export default function EnrichmentPage() {
       if (progress.processed > 0) {
         toast({
           title: "Enrichment Complete",
-          description: `Processed ${progress.processed} entities, created ${progress.coinTypes} coin types`,
+          description: `Processed ${progress.processed} entities, created ${progress.coinTypes} edges`,
         });
       }
     }
@@ -77,7 +77,7 @@ export default function EnrichmentPage() {
       refetchProgress();
       toast({
         title: "Enrichment Started",
-        description: `Processing up to ${limit} entities from Nomisma SPARQL`,
+        description: `Processing up to ${limit} entities from local Nomisma RDF`,
       });
     },
     onError: (error: any) => {
@@ -99,7 +99,7 @@ export default function EnrichmentPage() {
         <div>
           <h1 className="text-2xl font-bold">Nomisma Enrichment</h1>
           <p className="text-muted-foreground">
-            Batch fetch coin types from Nomisma SPARQL for all entities
+            Extract entity relationships (HAS_METAL, BROADER_THAN) from local Nomisma RDF data
           </p>
         </div>
 
@@ -123,7 +123,7 @@ export default function EnrichmentPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Enriched Coin Types
+                Edges from RDF
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -131,7 +131,7 @@ export default function EnrichmentPage() {
                 {stats?.enrichedCoinTypes?.toLocaleString() || 0}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Coin types with Nomisma URIs
+                Entity relationships from local data
               </p>
             </CardContent>
           </Card>
@@ -139,7 +139,7 @@ export default function EnrichmentPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                From Nomisma SPARQL
+                Total Entity Edges
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -147,7 +147,7 @@ export default function EnrichmentPage() {
                 {stats?.nomismaCoinTypes?.toLocaleString() || 0}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Fetched via batch enrichment
+                All edges in the graph
               </p>
             </CardContent>
           </Card>
@@ -160,7 +160,7 @@ export default function EnrichmentPage() {
               Batch Enrichment
             </CardTitle>
             <CardDescription>
-              Query Nomisma SPARQL endpoint to fetch coin types for mints and rulers.
+              Parse local Nomisma RDF files to extract entity relationships and create graph edges.
               This process runs in the background with rate limiting.
             </CardDescription>
           </CardHeader>
@@ -219,7 +219,7 @@ export default function EnrichmentPage() {
                 <div className="flex flex-wrap gap-4 text-sm">
                   <Badge variant="secondary">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                    {progress.coinTypes} coin types created
+                    {progress.coinTypes} edges created
                   </Badge>
                   {progress.errors > 0 && (
                     <Badge variant="destructive">
@@ -235,7 +235,7 @@ export default function EnrichmentPage() {
               <div className="p-4 bg-muted rounded-md">
                 <p className="font-medium">Last run complete</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Processed {progress.processed} entities, created {progress.coinTypes} coin types
+                  Processed {progress.processed} entities, created {progress.coinTypes} edges
                   {progress.errors > 0 && `, ${progress.errors} errors`}
                 </p>
               </div>

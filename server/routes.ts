@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { insertUserCoinSchema, insertWatchlistSchema, insertSourceSchema, insertImageAssetSchema, insertSimilarMatchSchema, EDGE_TYPES } from "@shared/schema";
-import { extractCoinTypesFromLocal } from "./ingestion/nomisma-local-parser";
+import { extractEntitiesWithRelations } from "./ingestion/nomisma-local-parser";
 import { z, ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
@@ -1195,9 +1195,9 @@ export async function registerRoutes(
     }
   });
 
-  // ============ NOMISMA SPARQL QUERIES ============
+  // ============ COIN TYPES QUERIES (LOCAL DATABASE) ============
 
-  // Fetch coin types from Nomisma for an entity (live SPARQL query)
+  // Fetch coin types linked to an entity (from local database)
   app.get("/api/entities/:id/coin-types", requireAuth, async (req, res) => {
     try {
       const entity = await storage.getEntityById(req.params.id);
@@ -1205,28 +1205,16 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Entity not found" });
       }
 
-      if (!entity.nomismaUri) {
-        return res.status(400).json({ error: "Entity has no Nomisma URI" });
-      }
-
       const parsedLimit = parseInt(req.query.limit as string);
       const limit = (Number.isFinite(parsedLimit) && parsedLimit > 0 && parsedLimit <= 100) ? parsedLimit : 50;
-      let coinTypes;
-
-      switch (entity.type) {
-        case 'MINT':
-          coinTypes = await getCoinTypesForMint(entity.nomismaUri, limit);
-          break;
-        case 'PERSON':
-        case 'RULER':
-          coinTypes = await getCoinTypesForRuler(entity.nomismaUri, limit);
-          break;
-        case 'DENOMINATION':
-          coinTypes = await getCoinTypesForDenomination(entity.nomismaUri, limit);
-          break;
-        default:
-          return res.status(400).json({ error: `Cannot fetch coin types for entity type: ${entity.type}` });
-      }
+      
+      // Query coin types linked to this entity from local database
+      const result = await db.execute(sql`
+        SELECT id, source_id, nomisma_uri, source_url, label, authority, mint, denomination, metal
+        FROM coin_types
+        WHERE linked_entity_id = ${req.params.id}
+        LIMIT ${limit}
+      `);
 
       res.json({
         entity: {
@@ -1235,16 +1223,16 @@ export async function registerRoutes(
           type: entity.type,
           nomismaUri: entity.nomismaUri,
         },
-        coinTypes,
-        count: coinTypes.length,
+        coinTypes: result.rows,
+        count: result.rows.length,
       });
     } catch (error) {
-      console.error("Error fetching coin types from Nomisma:", error);
-      res.status(500).json({ error: "Failed to fetch coin types from Nomisma SPARQL" });
+      console.error("Error fetching coin types:", error);
+      res.status(500).json({ error: "Failed to fetch coin types" });
     }
   });
 
-  // Get geographic coordinates for a mint from Nomisma
+  // Get geographic coordinates for a mint (placeholder - coordinates not yet in local data)
   app.get("/api/entities/:id/coordinates", requireAuth, async (req, res) => {
     try {
       const entity = await storage.getEntityById(req.params.id);
@@ -1256,14 +1244,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Coordinates only available for MINT entities" });
       }
 
-      if (!entity.nomismaUri) {
-        return res.status(400).json({ error: "Entity has no Nomisma URI" });
-      }
-
-      const coords = await getMintCoordinates(entity.nomismaUri);
+      // Coordinates would need to be extracted from Pleiades URIs or stored in entities table
       res.json({
         entity: { id: entity.id, label: entity.label },
-        coordinates: coords,
+        coordinates: null,
+        note: "Coordinates not yet available - Pleiades integration pending",
       });
     } catch (error) {
       console.error("Error fetching coordinates:", error);
@@ -1400,16 +1385,16 @@ export async function registerRoutes(
     try {
       const stats = await db.execute(sql`
         SELECT 
-          (SELECT count(*) FROM entities WHERE nomisma_uri IS NOT NULL AND type IN ('MINT', 'PERSON')) as entities_with_nomisma,
-          (SELECT count(*) FROM coin_types WHERE nomisma_uri IS NOT NULL) as enriched_coin_types,
-          (SELECT count(*) FROM coin_types WHERE source_id = 'nomisma-sparql') as nomisma_coin_types
+          (SELECT count(*) FROM entities WHERE nomisma_uri IS NOT NULL) as entities_with_nomisma,
+          (SELECT count(*) FROM entity_edges WHERE provenance = 'nomisma-local-rdf') as edges_from_rdf,
+          (SELECT count(*) FROM entity_edges) as total_edges
       `);
       
       const row = stats.rows[0] as any;
       res.json({
         entitiesWithNomisma: parseInt(row.entities_with_nomisma || '0'),
-        enrichedCoinTypes: parseInt(row.enriched_coin_types || '0'),
-        nomismaCoinTypes: parseInt(row.nomisma_coin_types || '0'),
+        enrichedCoinTypes: parseInt(row.edges_from_rdf || '0'), // Now showing edges from RDF
+        nomismaCoinTypes: parseInt(row.total_edges || '0'), // Total edges
       });
     } catch (error) {
       console.error("Error fetching enrichment stats:", error);
@@ -1455,39 +1440,89 @@ export async function registerRoutes(
 
         enrichmentProgress.total = entitiesToEnrich.rows.length;
 
-        // Extract coin types from local RDF data
-        console.log('Extracting coin types from local Nomisma RDF files...');
-        const coinTypesGenerator = extractCoinTypesFromLocal();
-        
-        for await (const ct of coinTypesGenerator) {
-          if (enrichmentProgress.processed >= enrichmentProgress.total) break;
-          
-          if (!ct.uri || existingUris.has(ct.uri)) continue;
+        // Build URI → entity ID lookup map from database
+        console.log('Building entity URI lookup map...');
+        const entityLookup = new Map<string, { id: string; label: string; type: string }>();
+        const allEntities = await db.execute(sql`
+          SELECT id, label, type, nomisma_uri FROM entities WHERE nomisma_uri IS NOT NULL
+        `);
+        for (const row of allEntities.rows as any[]) {
+          entityLookup.set(row.nomisma_uri, { id: row.id, label: row.label, type: row.type });
+        }
+        console.log(`Built lookup map with ${entityLookup.size} entities`);
 
-          try {
-            await db.execute(sql`
-              INSERT INTO coin_types (source_id, nomisma_uri, source_url, label, linked_entity_id)
-              VALUES (
-                'nomisma-sparql',
-                ${ct.uri},
-                ${ct.uri},
-                ${ct.label},
-                ${entitiesToEnrich.rows[enrichmentProgress.processed]?.id || null}
-              )
-              ON CONFLICT DO NOTHING
-            `);
-            existingUris.add(ct.uri);
-            enrichmentProgress.coinTypes++;
-          } catch (e) {
-            console.error(`Error inserting coin type ${ct.uri}:`, e);
-            enrichmentProgress.errors++;
+        // Get existing edges to avoid duplicates
+        const existingEdges = new Set<string>();
+        const edgeResult = await db.execute(sql`
+          SELECT src_id, dst_id, edge_type FROM entity_edges
+        `);
+        for (const row of edgeResult.rows as any[]) {
+          existingEdges.add(`${row.src_id}:${row.dst_id}:${row.edge_type}`);
+        }
+        console.log(`Found ${existingEdges.size} existing edges`);
+
+        // Extract relationships from local RDF data and create entity edges
+        console.log('Extracting relationships from local Nomisma RDF files...');
+        const entitiesGenerator = extractEntitiesWithRelations(limit * 100);
+        enrichmentProgress.total = entityLookup.size; // Total entities we can process
+        let edgesCreated = 0;
+        let entitiesProcessed = 0;
+        
+        for await (const entity of entitiesGenerator) {
+          // Skip if this entity isn't in our database
+          if (!entityLookup.has(entity.uri)) continue;
+          
+          entitiesProcessed++;
+          const srcEntity = entityLookup.get(entity.uri)!;
+
+          // Create HAS_METAL edge for denominations
+          if (entity.hasMaterial && entityLookup.has(entity.hasMaterial)) {
+            const dstEntity = entityLookup.get(entity.hasMaterial)!;
+            const edgeKey = `${srcEntity.id}:${dstEntity.id}:HAS_METAL`;
+            
+            if (!existingEdges.has(edgeKey)) {
+              try {
+                await db.execute(sql`
+                  INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
+                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'HAS_METAL', '1.0', 'nomisma-local-rdf')
+                  ON CONFLICT DO NOTHING
+                `);
+                existingEdges.add(edgeKey);
+                edgesCreated++;
+              } catch (e) {
+                enrichmentProgress.errors++;
+              }
+            }
           }
 
-          // Throttle to avoid overwhelming the DB
-          await new Promise(resolve => setTimeout(resolve, 50));
+          // Create BROADER_THAN edge for hierarchical relationships
+          if (entity.broader && entityLookup.has(entity.broader)) {
+            const dstEntity = entityLookup.get(entity.broader)!;
+            const edgeKey = `${srcEntity.id}:${dstEntity.id}:BROADER_THAN`;
+            
+            if (!existingEdges.has(edgeKey)) {
+              try {
+                await db.execute(sql`
+                  INSERT INTO entity_edges (src_id, dst_id, edge_type, confidence, provenance)
+                  VALUES (${srcEntity.id}, ${dstEntity.id}, 'BROADER_THAN', '1.0', 'nomisma-local-rdf')
+                  ON CONFLICT DO NOTHING
+                `);
+                existingEdges.add(edgeKey);
+                edgesCreated++;
+              } catch (e) {
+                enrichmentProgress.errors++;
+              }
+            }
+          }
+
+          enrichmentProgress.processed = entitiesProcessed;
+          enrichmentProgress.coinTypes = edgesCreated; // Edges created
+          
+          // Throttle
+          await new Promise(resolve => setTimeout(resolve, 10));
         }
         
-        enrichmentProgress.processed = enrichmentProgress.total;
+        enrichmentProgress.total = entitiesProcessed; // Final count
       } catch (error) {
         console.error("Enrichment error:", error);
       } finally {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import SiteNav from './SiteNav.vue'
 const selected = ref(0)
 const steps = [
   {label:'Capture',title:'A tray at a time.',description:'Shoot both sides on your phone or add a full batch from your photo library. Watch the import progress and come back to the same batch to resume.',sample:'Front and back retained together',value:'Bulk photo import'},
@@ -11,9 +12,7 @@ const step = computed(()=>steps[selected.value])
 </script>
 <template>
   <div class="public-page">
-    <header class="site-header wrap"><a class="brand" href="/"><img src="/mark.svg" alt="" width="36" height="36">Numis<span>Vault</span></a>
-      <nav aria-label="Main"><a href="#workflow">How it works</a><a href="#features">Features</a><a class="header-button" href="/app">Sign in <span aria-hidden="true">↗</span></a></nav>
-    </header>
+    <SiteNav landing/>
     <main>
       <section class="hero wrap">
         <div class="hero-copy"><p class="eyebrow">THE PRIVATE NUMISMATIC CATALOG</p><h1>Every piece<br>has a <em>story.</em></h1>
@@ -36,6 +35,6 @@ const step = computed(()=>steps[selected.value])
         <article><h3>Collect with a goal.</h3><p>Track a series or ruler checklist. Search for gaps, save queries, and follow available matches back to the auction house.</p></article>
       </section>
     </main>
-    <footer class="site-header wrap"><a class="brand" href="/"><img src="/mark.svg" alt="" width="32" height="32">Numis<span>Vault</span></a><a href="/app">Open the catalog ↗</a></footer>
+    <SiteNav footer/>
   </div>
 </template>

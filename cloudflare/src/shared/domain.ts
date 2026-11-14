@@ -1,8 +1,15 @@
 import { z } from 'zod'
+import { contactTopics } from './contact.ts'
 import { firstCenturyRulers, normalize } from './references.ts'
 export { normalize } from './references.ts'
 
 export const id = z.string().uuid()
+export const contactInput = z.object({
+  email:z.email().max(250),
+  topic:z.enum(contactTopics),
+  message:z.string().trim().min(10).max(3000),
+  challenge:z.string().max(2048).optional()
+})
 export const text = z.string().trim().max(180)
 const short = text.default('')
 const long = z.string().trim().max(4000).default('')

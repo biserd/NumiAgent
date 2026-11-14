@@ -38,7 +38,7 @@ consent.on(['GET','POST'],'/oauth/authorize',async c=>{
     if (c.req.method==='GET') {
       const client = await oauth.lookupClient(request.clientId)
       return c.html(html`<!doctype html><html lang="en"><meta charset="UTF-8"><meta name="viewport" content="width=device-width">
-        <title>Connect an agent · NumisVault</title><main>
+        <title>Connect an agent · NumiAgent</title><main>
         <h1>Connect an agent</h1><p>Allow <strong>${client?.clientName || request.clientId}</strong> to read collection records,
         saved identifications, valuations and themes for ${current.email}, and search configured marketplaces?</p>
         <p>Redirect destination <code>${request.redirectUri}</code></p>
@@ -85,7 +85,7 @@ const safe = async (get:()=>Promise<unknown>)=>{
   }
 }
 function makeServer(env:Env,user:string) {
-  const server = new McpServer({name:'NumisVault',version:'0.1.0'})
+  const server = new McpServer({name:'NumiAgent',version:'0.1.0'})
   const options = (description:string) => ({description,annotations:{readOnlyHint:true}})
   const itemId = z.object({itemId:id})
   const themeId = z.object({themeId:id})

@@ -1,4 +1,4 @@
-name: Deploy NumisVault to Cloudflare
+name: Deploy NumiAgent to Cloudflare
 on:
   workflow_dispatch:
     inputs:

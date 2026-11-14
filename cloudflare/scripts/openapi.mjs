@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
-import { id, item, photoLink, sale, slot } from '../src/shared/domain.ts'
+import { contactInput, id, item, photoLink, sale, slot } from '../src/shared/domain.ts'
 import { legacyBatch } from '../src/shared/legacy.ts'
 
 const json = schema => ({'application/json':{schema}})
@@ -46,6 +46,8 @@ endpoint('get','/health','Worker health',{publicRoute:true})
 endpoint('get','/auth/config','Get Turnstile site key',{publicRoute:true})
 endpoint('post','/auth/request','Request a sign-in link',{publicRoute:true,status:202,input:object({email:{type:'string',format:'email'},challenge:string},['email'])})
 endpoint('post','/auth/verify','Consume the one-time link and issue a session cookie',{publicRoute:true,input:object({token:string})})
+endpoint('post','/contact','Submit a private support message',{publicRoute:true,status:201,
+  input:z.toJSONSchema(contactInput,{target:'openapi-3.0',io:'input'}),output:object({reference:uuid})})
 endpoint('get','/me','Get the collector account')
 endpoint('get','/me/usage','Read daily account usage and quotas')
 endpoint('delete','/me','Schedule account deletion',{status:202,input:object({confirm:{const:'DELETE'}})})
@@ -96,7 +98,7 @@ endpoint('get','/watchlists','List saved marketplace searches',{output:array(typ
 endpoint('post','/watchlists','Upsert a watch with optional email opt-in',{status:201,input:object({query:string,alert:yes},['query'])})
 endpoint('delete','/watchlists/{id}','Remove a watch',empty)
 
-const spec={openapi:'3.1.0',info:{title:'NumisVault REST API',version:'1.0.0',
+const spec={openapi:'3.1.0',info:{title:'NumiAgent REST API',version:'1.0.0',
   description:'Browser mutations require an Origin header equal to APP_ORIGIN. Remote MCP uses separate OAuth and Streamable HTTP at /mcp.'},
   servers:[{url:'/api/v1'}],paths,components:{schemas:definitions,securitySchemes:{session:{type:'apiKey',in:'cookie',name:'__Host-numis_session'}}}}
 await writeFile('public/openapi.json',JSON.stringify(spec,null,2)+'\n')

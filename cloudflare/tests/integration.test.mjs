@@ -41,6 +41,19 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     return verified.headers.get('set-cookie').split(';')[0]
   }
   try {
+    for(const [path,heading] of [['/about','About NumiAgent'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent']]){
+      const response=await fetch(base+path)
+      assert.equal(response.status,200)
+      const markup=await response.text()
+      assert.ok(markup.includes('<h1>'+heading+'</h1>'))
+      assert.ok(markup.includes('https://numiagent.com'+path))
+    }
+    assert.equal((await fetch(base+'/nonexistent-numiagent-page')).status,404)
+    const contact={email:'integration-contact@example.test',topic:'Report an issue',message:'Test message from an anonymous visitor.'}
+    assert.equal((await api('/contact',null,'POST',{...contact,email:'invalid-address'})).status,400)
+    const receipt=await json(await api('/contact',null,'POST',contact),201)
+    assert.match(receipt.reference,/^[0-9a-f-]{36}$/)
+    assert.equal((await api('/contact')).status,401)
     assert.equal((await api('/items')).status,401)
     const a=await login('collector@example.test')
     const b=await login('another@example.test')

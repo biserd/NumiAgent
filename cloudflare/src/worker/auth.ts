@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { all, body, digest, fail, isLocal, limit, now, one, router, run, sameOrigin, token, uid, usageWindow } from './core'
 import type { Env, WebContext } from './core'
 import { id } from '../shared/domain'
+import { requireChallenge } from './challenge'
 
 const cookie = (env: Env) => isLocal(env) ? 'numis_session' : '__Host-numis_session'
 const options = (env: Env) => ({ path: '/', httpOnly: true, sameSite: 'Lax' as const, secure: !isLocal(env) })
@@ -30,15 +31,8 @@ auth.post('/request', async c => {
   const local = isLocal(c.env)
   const ip = c.req.header('CF-Connecting-IP') ?? 'local'
   await limit(c.env,'login_ip', await digest(ip), 15, 3600)
-  if (!local) {
-    if (!c.env.TURNSTILE_SECRET || !c.env.EMAIL || !c.env.EMAIL_FROM) fail(503,'Sign-in service is unavailable')
-    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{
-      method:'POST', body:new URLSearchParams({secret:c.env.TURNSTILE_SECRET!,response:input.challenge ?? '',remoteip:ip}),
-      signal: AbortSignal.timeout(8000)
-    })
-    const result = await response.json<{success: boolean; hostname: string; action: string}>()
-    if (!result.success || result.hostname !== new URL(c.env.APP_ORIGIN).hostname || result.action !== 'login') fail(403,'Complete the sign-in challenge')
-  }
+  if (!local && (!c.env.EMAIL || !c.env.EMAIL_FROM)) fail(503,'Sign-in service is unavailable')
+  await requireChallenge(c,'login',input.challenge)
   try { await limit(c.env,'login_email',await digest(email), 5, 3600) }
   catch (error) {
     if (error instanceof Error && 'status' in error && error.status === 429) return c.json({accepted:true},202)
@@ -49,7 +43,7 @@ auth.post('/request', async c => {
   await run(c.env,'INSERT INTO login_links VALUES(?,?,?)',key,email,now()+600)
   const url = new URL('/app#signin=' + raw,c.env.APP_ORIGIN).href
   if (local) return c.json({accepted:true, developmentLink:url},202)
-  c.executionCtx.waitUntil(c.env.EMAIL!.send({from:c.env.EMAIL_FROM!,to:email,subject:'Your NumisVault sign-in link',
+  c.executionCtx.waitUntil(c.env.EMAIL!.send({from:{email:c.env.EMAIL_FROM!,name:'NumiAgent'},to:email,subject:'Your NumiAgent sign-in link',
     text:'Open this link to sign in. It expires in 10 minutes.\n\n' + url}).catch(async () => {
     console.warn('Magic link delivery failed')
     await run(c.env,'DELETE FROM login_links WHERE token=?',key)
@@ -120,6 +114,6 @@ profile.get('/export',async c => {
   const tables = ['collections','items','item_photos','imports','photos','sales','valuation_history','themes','watchlists','audit','oauth_consents']
   const data = await c.env.DB.batch(tables.map(table => c.env.DB.prepare('SELECT * FROM ' + table + ' WHERE user_id=?').bind(c.get('user').id)))
   return c.json({account:{email:c.get('user').email}, ...Object.fromEntries(tables.map((table,i)=>[table,data[i].results]))},
-    200, {'Content-Disposition':'attachment; filename="numisgraph.json"'})
+    200, {'Content-Disposition':'attachment; filename="numiagent.json"'})
 })
 export { auth }

@@ -17,7 +17,7 @@ The legacy production bundle builds. The legacy TypeScript check still reports t
 ## Collector transfer
 
 1. While signed in to the existing NumisVault app, open `/api/coins` on that same origin and save the response as a JSON file. It contains the signed-in account's records. Keep it private and out of Git.
-2. Sign in to the Cloudflare NumisVault app. In **My collection**, open **Collection folders, import, and export**. Select **Import NumisGraph coin JSON**. Optionally select a target collection first. The importer retains both date endpoints and physical measurements. Reuploading the same export skips existing source IDs and preserves changes made in Cloudflare.
+2. Sign in to the Cloudflare NumisVault app. In **My collection**, open **Collection folders, import, and export**. Open **Transfer an existing portfolio** and choose **Import portfolio JSON**. Optionally select a target collection first. The importer retains both date endpoints and physical measurements. Reuploading the same export skips existing source IDs and preserves changes made in Cloudflare.
 3. Use **Imports** to upload your original photos into private R2. Open a migrated specimen and use **Link an imported photo** to select a processed photo and assign its side. The legacy export's image IDs are reported as a count so you can reconcile photos separately. Legacy object URLs and credentials never enter the new account.
 4. Compare the imported counts and spot-check dates, inscriptions and photos. The existing app remains the source of truth until an environment and data cutover are approved.
 

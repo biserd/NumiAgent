@@ -1,4 +1,4 @@
-# NumisVault
+# NumiAgent
 
 A private, Cloudflare-native catalog for coins and banknotes. It ships a Vue web app, a Hono API, and a stateless remote MCP server in one Worker project.
 

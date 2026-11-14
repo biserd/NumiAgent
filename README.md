@@ -1,6 +1,6 @@
 # NumisGraph
 
-NumisVault is a coin collection and research app. This repository contains the existing React/Express application and a Cloudflare pilot under [cloudflare/](cloudflare/README.md).
+NumiAgent is a private catalog for coins and banknotes. This repository contains its Cloudflare application and the original NumisGraph research application. NumiAgent lives under [cloudflare/](cloudflare/README.md).
 
 ## Cloudflare pilot
 

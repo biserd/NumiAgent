@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { referenceKinds, searchReferences } from '../shared/references'
 import { agentRequest, grants } from './agent'
 import { auth, currentUser, deleteAccount, profile } from './auth'
+import { contactRetentionDays, submitContact } from './contact'
 import { collections, items, themes, valuations } from './collection'
 import { all, fail, limit, now, router, run, sameOrigin, usageWindow } from './core'
 import type { Env, Job } from './core'
@@ -13,6 +14,7 @@ export { PhotoWorkflow } from './ingest'
 const api = router()
 api.get('/health',c=>c.json({ok:true}))
 api.route('/auth',auth)
+api.post('/contact',submitContact)
 api.use('*',async(c,next)=>{
   const user = await currentUser(c)
   if (!user) return fail(401,'Sign in to continue')
@@ -78,7 +80,8 @@ async function maintenance(env:Env) {
   await env.DB.batch([
     env.DB.prepare('DELETE FROM login_links WHERE expires<?').bind(now()),
     env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(now()),
-    env.DB.prepare('DELETE FROM limits WHERE window<?').bind(now()-8*86400)
+    env.DB.prepare('DELETE FROM limits WHERE window<?').bind(now()-8*86400),
+    env.DB.prepare('DELETE FROM contact_messages WHERE created<?').bind(now()-contactRetentionDays*86400)
   ])
   for (const user of await all<{id:string}>(env,'SELECT id FROM users WHERE deleting=1 LIMIT 20')) {
     try { await deleteAccount(env,user.id) } catch { console.error('Account deletion will retry') }
@@ -103,7 +106,7 @@ async function notifyBudget(env:Env) {
   const claimed = await run(env,"INSERT INTO limits VALUES('budget_alert','global',?,1) ON CONFLICT DO NOTHING",usageWindow())
   if (!claimed.meta.changes) return
   try {
-    await env.EMAIL.send({to:env.BUDGET_ALERT_EMAIL,from:env.EMAIL_FROM,subject:'NumisVault daily usage',
+    await env.EMAIL.send({to:env.BUDGET_ALERT_EMAIL,from:env.EMAIL_FROM,subject:'NumiAgent daily usage',
       text:'Usage has reached 80% of a daily limit.\n'+over.map(meter=>meter.action+': '+meter.count+'/'+caps.get(meter.action)).join('\n')})
   } catch {
     await run(env,"DELETE FROM limits WHERE action='budget_alert' AND subject='global' AND window=?",usageWindow())

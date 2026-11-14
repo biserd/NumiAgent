@@ -4,6 +4,7 @@ import { cleanItem, emptyItem, message, photoURL, request } from './api'
 import type { Folder, Link, Photo, RecordForm, Specimen } from './api'
 import ItemFields from './ItemFields.vue'
 import PrivatePhoto from './PrivatePhoto.vue'
+const props = defineProps<{startWithNew?:boolean}>()
 const rows=ref<Specimen[]>([])
 const folders=ref<Folder[]>([])
 const selected=ref<string[]>([])
@@ -41,7 +42,11 @@ async function action(fn:()=>Promise<unknown>){
   error.value='';notice.value=''
   try {await fn()}catch(e){error.value=message(e)}
 }
-onMounted(()=>action(async()=>{folders.value=await request('/collections');await load()}))
+onMounted(()=>action(async()=>{
+  folders.value=await request('/collections')
+  if(props.startWithNew) create()
+  await load()
+}))
 async function load(page=0){
   const params = new URLSearchParams({q:query.value,type:type.value,collection:collection.value,sort:sort.value,page:String(page)})
   const result=await request<{items:Specimen[];next:number|null}>('/items?'+params)
@@ -146,9 +151,9 @@ async function importNumisGraph(event:Event) {
   field.value=''
   if (!file) return
   await action(async()=>{
-    if (file.size>10*1024*1024) throw new Error('Choose a NumisGraph export of 10 MB or less.')
+    if (file.size>10*1024*1024) throw new Error('Choose a portfolio export of 10 MB or less.')
     const coins=JSON.parse(await file.text())
-    if (!Array.isArray(coins) || !coins.length) throw new Error('Choose the JSON array exported from the signed-in NumisGraph coin list.')
+    if (!Array.isArray(coins) || !coins.length) throw new Error('Choose a JSON array of coin records from your existing portfolio.')
     const counts={imported:0,skipped:0,legacyPhotoLinks:0}
     try {
       for (let offset=0;offset<coins.length;offset+=25) {
@@ -162,7 +167,8 @@ async function importNumisGraph(event:Event) {
       throw new Error(counts.imported+' imported, '+counts.skipped+' already present. '+message(e))
     }
     await load()
-    notice.value=counts.imported+' NumisGraph specimens imported · '+counts.skipped+' already present · '+counts.legacyPhotoLinks+' photo references to reconcile'
+    const noun=counts.imported===1?'specimen':'specimens'
+    notice.value=counts.imported+' '+noun+' imported · '+counts.skipped+' already present · '+counts.legacyPhotoLinks+' photo references to reconcile'
   })
 }
 </script>
@@ -243,7 +249,7 @@ async function importNumisGraph(event:Event) {
       <button v-if="collection" type="button" @click="action(removeFolder)">Delete selected folder</button>
     </form>
     <label>Import specimen JSON<input type="file" accept=".json,application/json" @change="importJson"></label>
-    <label>Import NumisGraph coin JSON<input type="file" accept=".json,application/json" @change="importNumisGraph"></label>
+    <details><summary>Transfer an existing portfolio</summary><label>Import portfolio JSON<input type="file" accept=".json,application/json" @change="importNumisGraph"></label></details>
     <a href="/api/v1/items/export.csv" download>Download collection CSV</a>
   </details>
   <button v-if="selected.length" @click="action(bulkMove)">Move {{selected.length}} to {{folders.find(f=>f.id===collection)?.name ?? 'Unfiled'}}</button>

@@ -12,7 +12,10 @@ test('Mobile landing, email sign-in, photo review and collection search',async({
   await page.getByLabel('Email address').fill('browser@example.test')
   await page.getByRole('button',{name:'Send sign-in link'}).click()
   await page.getByRole('link',{name:'Open local sign-in link'}).click()
-  await expect(page.getByRole('heading',{name:'Your ledger',exact:true})).toBeVisible({timeout:15000})
+  await expect(page.getByRole('heading',{name:'Collection overview',exact:true})).toBeVisible({timeout:15000})
+  await page.getByRole('button',{name:'Add a specimen'}).click()
+  await expect(page.getByRole('heading',{name:'New specimen'})).toBeVisible()
+  await page.getByRole('button',{name:'Overview',exact:true}).click()
   await page.getByRole('button',{name:'Import photos'}).click()
   await page.getByLabel('Photo library').setInputFiles('public/icon-192.png')
   await page.getByRole('button',{name:'Start new batch'}).click()
@@ -37,7 +40,7 @@ test('A collector transfers a legacy portfolio row and attaches a private photo'
   await page.getByLabel('Email address').fill('transfer@example.test')
   await page.getByRole('button',{name:'Send sign-in link'}).click()
   await page.getByRole('link',{name:'Open local sign-in link'}).click()
-  await expect(page.getByRole('heading',{name:'Your ledger',exact:true})).toBeVisible({timeout:15000})
+  await expect(page.getByRole('heading',{name:'Collection overview',exact:true})).toBeVisible({timeout:15000})
   await page.getByRole('button',{name:'Import photos'}).click()
   await page.getByLabel('Batch label').fill('Transferred photos')
   await page.getByLabel('Photo library').setInputFiles('public/icon-192.png')
@@ -45,11 +48,12 @@ test('A collector transfers a legacy portfolio row and attaches a private photo'
   await expect(page.getByRole('button',{name:'Catalog manually'})).toBeVisible()
   await page.getByRole('button',{name:'Collection',exact:true}).click()
   await page.getByText('Collection folders, import, and export',{exact:true}).click()
-  await page.getByLabel('Import NumisGraph coin JSON').setInputFiles({
+  await page.getByText('Transfer an existing portfolio',{exact:true}).click()
+  await page.getByLabel('Import portfolio JSON').setInputFiles({
     name:'portfolio.json',mimeType:'application/json',
     buffer:Buffer.from(JSON.stringify([{id:'legacy-coin-test',title:'NumisGraph import example',weightG:'3.050',obvImageId:'legacy-photo'}]))
   })
-  await expect(page.getByText(/1 NumisGraph specimens imported/)).toBeVisible()
+  await expect(page.getByText(/1 specimen imported/)).toBeVisible()
   await page.getByRole('button',{name:/NumisGraph import example/}).click()
   await page.getByText('Link an imported photo',{exact:true}).click()
   await page.getByLabel('Photo import batch').selectOption({label:'Transferred photos'})
@@ -58,4 +62,21 @@ test('A collector transfers a legacy portfolio row and attaches a private photo'
   await page.getByRole('button',{name:'Save specimen'}).click()
   await expect(page.getByText('Specimen saved.')).toBeVisible()
   await expect(page.getByRole('img',{name:'obverse',exact:true})).toBeVisible()
+})
+
+test('Public information pages and contact form work without an account',async({page})=>{
+  await page.goto(server.url)
+  const footer=page.getByRole('navigation',{name:'Site information'})
+  for(const [label,title] of [['About','About NumiAgent'],['Terms','Terms of Service'],['Privacy','Privacy Policy'],['Help','Collector guide']]){
+    await footer.getByRole('link',{name:label,exact:true}).click()
+    await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible()
+    await expect(page).toHaveTitle(new RegExp(title))
+  }
+  await footer.getByRole('link',{name:'Contact',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Contact NumiAgent'})).toBeVisible()
+  await page.getByLabel('Reply email').fill('browser-contact@example.test')
+  await page.getByLabel('Topic').selectOption('Privacy request')
+  await page.getByLabel('Message').fill('Synthetic contact form browser test for the private inbox.')
+  await page.getByRole('button',{name:'Send message'}).click()
+  await expect(page.getByRole('status')).toContainText('Message received')
 })

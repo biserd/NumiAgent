@@ -1,1 +1,1 @@
-{"name":"NumisVault","short_name":"NumisVault","start_url":"/app","scope":"/","display":"standalone","background_color":"#f7f4ed","theme_color":"#13120f","icons":[{"src":"/icon-192.png","sizes":"192x192","type":"image/png"},{"src":"/icon-512.png","sizes":"512x512","type":"image/png"}]}
+{"name":"NumiAgent","short_name":"NumiAgent","start_url":"/app","scope":"/","display":"standalone","background_color":"#f7f4ed","theme_color":"#13120f","icons":[{"src":"/icon-192.png","sizes":"192x192","type":"image/png"},{"src":"/icon-512.png","sizes":"512x512","type":"image/png"}]}

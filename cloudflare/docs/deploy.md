@@ -28,6 +28,12 @@ For a pilot, assume 5,000 uploads at 0.6 MB each, 35,000 reads, 3,000 processed 
 
 ## Recovery and monitoring
 
+The public contact form uses the production Turnstile widget and stores messages in the private `contact_messages` D1 table. Operators with D1 access can review the inbox and use the reply email supplied by the sender. Cloudflare Email Sending's login sender is an outbound address. A scheduled cleanup removes contact rows older than 90 days.
+
+```sh
+npx wrangler d1 execute DB --remote --config wrangler.deploy.json --command "SELECT id, email, topic, message, datetime(created, 'unixepoch') AS received_at FROM contact_messages ORDER BY created DESC LIMIT 25"
+```
+
 - Filter Workers Logs by failed photo, queue delivery failures, email delivery failures, or watch refresh failures. Keep request-level URL logging disabled on the deployed worker. Inspect the dead-letter and pending queues and use the in-app retry path for failed photos.
 - Before data migrations, record a D1 Time Travel bookmark and export the schema and data to access-controlled storage. Use a separate, access-controlled R2 backup of private objects when appropriate for the retention policy. Keep original object keys so restored D1 photos can find their blobs.
 - Restore and test in an isolated environment first. After any restore, reconcile D1 photo rows against R2, reapply deletion requests recorded after the restore point and invalidate old sessions and OAuth grants. Do not treat D1 recovery as a backup of R2 or KV.

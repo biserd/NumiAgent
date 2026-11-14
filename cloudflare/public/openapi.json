@@ -1,0 +1,3471 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NumisVault REST API",
+    "version": "1.0.0",
+    "description": "Browser mutations require an Origin header equal to APP_ORIGIN. Remote MCP uses separate OAuth and Streamable HTTP at /mcp."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Worker health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/auth/config": {
+      "get": {
+        "summary": "Get Turnstile site key",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/auth/request": {
+      "post": {
+        "summary": "Request a sign-in link",
+        "security": [],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "challenge": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify": {
+      "post": {
+        "summary": "Consume the one-time link and issue a session cookie",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "summary": "Get the collector account",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Schedule account deletion",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "const": "DELETE"
+                  }
+                },
+                "required": [
+                  "confirm"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/usage": {
+      "get": {
+        "summary": "Read daily account usage and quotas",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/me/sessions": {
+      "get": {
+        "summary": "List active sessions",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/me/sessions/{id}": {
+      "delete": {
+        "summary": "Revoke a session",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/me/signout": {
+      "post": {
+        "summary": "Sign out of the current session",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/me/grants": {
+      "get": {
+        "summary": "List connected agents",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/me/grants/{id}": {
+      "delete": {
+        "summary": "Revoke an agent grant",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/me/export": {
+      "get": {
+        "summary": "Export account metadata",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/collections": {
+      "get": {
+        "summary": "List collection folders",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a folder",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Identifier"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collections/{id}": {
+      "put": {
+        "summary": "Rename a folder",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete the folder and unfile its specimens",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/items": {
+      "get": {
+        "summary": "Search and page physical specimens",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "collection",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Item"
+                      }
+                    },
+                    "next": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "next"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "post": {
+        "summary": "Catalog a physical specimen",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Identifier"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Item"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/bulk": {
+      "post": {
+        "summary": "Create or replace up to 50 specimen records",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    }
+                  },
+                  "required": [
+                    "ids"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Item"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": []
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/import/numisgraph": {
+      "post": {
+        "summary": "Import up to 25 owned legacy coin records using their original IDs",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "imported": {
+                      "type": "number"
+                    },
+                    "skipped": {
+                      "type": "number"
+                    },
+                    "legacyPhotoLinks": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "imported",
+                    "skipped",
+                    "legacyPhotoLinks"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "collectionId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "coins": {
+                    "minItems": 1,
+                    "maxItems": 25,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 180
+                        },
+                        "description": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 4000
+                        },
+                        "notes": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 4000
+                        },
+                        "ruler": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 180
+                        },
+                        "denomination": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 180
+                        },
+                        "mint": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 180
+                        },
+                        "metal": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 180
+                        },
+                        "reference": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 180
+                        },
+                        "dateFrom": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "dateTo": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -100000,
+                          "maximum": 100000
+                        },
+                        "weightG": {
+                          "nullable": true,
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\d+(?:\\.\\d+)?$"
+                            }
+                          ]
+                        },
+                        "diameterMm": {
+                          "nullable": true,
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\d+(?:\\.\\d+)?$"
+                            }
+                          ]
+                        },
+                        "axis": {
+                          "nullable": true,
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "obvLegend": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 180
+                        },
+                        "revLegend": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 180
+                        },
+                        "obvImageId": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "revImageId": {
+                          "nullable": true,
+                          "type": "string",
+                          "maxLength": 128
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "coins"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/statistics": {
+      "get": {
+        "summary": "Count owned specimens and photos",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/items/export.csv": {
+      "get": {
+        "summary": "Export specimen CSV",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/items/{id}": {
+      "get": {
+        "summary": "Get a specimen and its photo associations",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace specimen fields",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Item"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a specimen",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/imports": {
+      "get": {
+        "summary": "List import batches",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create or reopen a batch with a client UUID",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "analyze": {
+                    "type": "boolean"
+                  },
+                  "consent": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "analyze",
+                  "consent"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imports/{id}": {
+      "get": {
+        "summary": "Read batch progress and candidates",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/imports/{id}/photos": {
+      "put": {
+        "summary": "Upload a JPEG, PNG, or WebP as bytes (up to 6 MB)",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/imports/{id}/cancel": {
+      "post": {
+        "summary": "Cancel pending jobs",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/photos/{id}": {
+      "get": {
+        "summary": "Stream an owned private photo",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/photos/{id}/status": {
+      "get": {
+        "summary": "Read identification candidates",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/photos/{id}/retry": {
+      "post": {
+        "summary": "Retry failed analysis",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/themes": {
+      "get": {
+        "summary": "List themes",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "post": {
+        "summary": "Save a theme",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Identifier"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "slots": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Slot"
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "slots"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/themes/preview": {
+      "post": {
+        "summary": "Preview a supported checklist template",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "goal": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "goal"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/themes/{id}": {
+      "get": {
+        "summary": "Read checklist progress and missing slots",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace checklist rules",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "slots": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Slot"
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "slots"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a theme",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/valuations/{id}": {
+      "get": {
+        "summary": "Read sale-backed valuation",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Valuation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/valuations/{id}/sales": {
+      "post": {
+        "summary": "Record collector-attested realized sale facts",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Valuation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Sale"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/valuations/{id}/history": {
+      "get": {
+        "summary": "Read valuation snapshots",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/market/search": {
+      "get": {
+        "summary": "Search configured marketplace providers",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Market"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/references": {
+      "get": {
+        "summary": "Look up bundled Nomisma terms by English name or alias",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "sourceLabel": {
+                        "type": "string"
+                      },
+                      "aliases": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "attribution": {
+                        "type": "string"
+                      },
+                      "license": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "label",
+                      "sourceLabel",
+                      "aliases",
+                      "source",
+                      "attribution",
+                      "license"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/watchlists": {
+      "get": {
+        "summary": "List saved marketplace searches",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "post": {
+        "summary": "Upsert a watch with optional email opt-in",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string"
+                  },
+                  "alert": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/watchlists/{id}": {
+      "delete": {
+        "summary": "Remove a watch",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "coin",
+              "banknote"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "issuer": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "ruler": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "denomination": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "year": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "reference": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "grade": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "notes": {
+            "default": "",
+            "type": "string",
+            "maxLength": 4000
+          },
+          "tags": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "collection_id": {
+            "nullable": true,
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "metal": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "mint": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "serial": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "signatures": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "obverse": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "reverse": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "inscriptions": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "mintMark": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "series": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "variant": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "provenance": {
+                "default": "",
+                "type": "string",
+                "maxLength": 4000
+              },
+              "certification": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "purchaseSource": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "purchaseDate": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              "description": {
+                "default": "",
+                "type": "string",
+                "maxLength": 4000
+              },
+              "obverseLegend": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "reverseLegend": {
+                "default": "",
+                "type": "string",
+                "maxLength": 180
+              },
+              "dateFrom": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "dateTo": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "weightG": {
+                "type": "number",
+                "minimum": 0
+              },
+              "diameterMm": {
+                "type": "number",
+                "minimum": 0
+              },
+              "dieAxis": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "purchasePrice": {
+                "type": "number",
+                "minimum": 0
+              },
+              "fees": {
+                "type": "number",
+                "minimum": 0
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              }
+            }
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "photoId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "side": {
+                  "type": "string",
+                  "enum": [
+                    "obverse",
+                    "reverse",
+                    "overview"
+                  ]
+                },
+                "crop": {
+                  "nullable": true,
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "y": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "width": {
+                      "type": "number",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 1
+                    },
+                    "height": {
+                      "type": "number",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "width",
+                    "height"
+                  ]
+                }
+              },
+              "required": [
+                "photoId",
+                "side"
+              ]
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title"
+        ]
+      },
+      "Sale": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 1500,
+            "format": "uri"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 100000000
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "hammer",
+              "with_premium"
+            ]
+          },
+          "premium": {
+            "nullable": true,
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "house": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "lot": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "auction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "grade": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "match": {
+            "type": "string",
+            "enum": [
+              "strong",
+              "possible"
+            ]
+          },
+          "fx": {
+            "type": "object",
+            "properties": {
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              "rate": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 1000000
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 1500,
+                "format": "uri"
+              }
+            },
+            "required": [
+              "currency",
+              "rate",
+              "date",
+              "source"
+            ]
+          },
+          "sourceChecked": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "url",
+          "date",
+          "currency",
+          "amount",
+          "basis",
+          "house",
+          "lot",
+          "auction",
+          "match",
+          "sourceChecked"
+        ]
+      },
+      "Slot": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "ruler": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "reference": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "issuer": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "denomination": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "year": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "coin",
+              "banknote"
+            ]
+          },
+          "metal": {
+            "default": "",
+            "type": "string",
+            "maxLength": 180
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 1500,
+            "format": "uri"
+          },
+          "aliases": {
+            "default": [],
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        },
+        "required": [
+          "label"
+        ]
+      },
+      "Identifier": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Valuation": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "estimated",
+              "insufficient_market_evidence"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "basis": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "used": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "normalized": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "fx": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "id",
+                "amount",
+                "currency"
+              ]
+            }
+          },
+          "range": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "low": {
+                "type": "number"
+              },
+              "median": {
+                "type": "number"
+              },
+              "high": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": [
+          "status",
+          "currency",
+          "basis",
+          "asOf",
+          "evidence",
+          "used",
+          "normalized",
+          "range"
+        ]
+      },
+      "Market": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "unavailable",
+              "insufficient_verified_coverage",
+              "active_results"
+            ]
+          },
+          "retrievedAt": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string"
+                },
+                "domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "provider",
+                "domains",
+                "status"
+              ]
+            }
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "state": {
+                  "enum": [
+                    "active",
+                    "closed",
+                    "unknown"
+                  ]
+                },
+                "closesAt": {
+                  "type": "string"
+                },
+                "verifiedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "url",
+                "title",
+                "state"
+              ]
+            }
+          }
+        },
+        "required": [
+          "status",
+          "retrievedAt",
+          "query",
+          "coverage",
+          "results"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-numis_session"
+      }
+    }
+  }
+}

@@ -10,6 +10,7 @@
 
 import { createReadStream, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
+import type { Readable } from 'node:stream';
 import { RdfXmlParser } from 'rdfxml-streaming-parser';
 import type { InsertEntity } from '@shared/schema';
 
@@ -36,6 +37,7 @@ interface ParsedEntity {
   uri: string;
   type: string | null;
   label: string | null;
+  alternateLabels: string[];
   definition: string | null;
   wikidataQid: string | null;
   pleiadesUri: string | null;
@@ -55,13 +57,18 @@ interface Triple {
 /**
  * Parse a single RDF/XML file and extract entity data
  */
-async function parseRdfFile(filePath: string): Promise<ParsedEntity | null> {
+function parseRdfFile(filePath: string): Promise<ParsedEntity | null> {
+  return parseNomismaRdf(createReadStream(filePath, { encoding: 'utf8' }), filePath);
+}
+
+export function parseNomismaRdf(stream: Readable, filePath: string): Promise<ParsedEntity | null> {
   return new Promise((resolve, reject) => {
     const parser = new RdfXmlParser();
     const entity: ParsedEntity = {
       uri: '',
       type: null,
       label: null,
+      alternateLabels: [],
       definition: null,
       wikidataQid: null,
       pleiadesUri: null,
@@ -100,6 +107,10 @@ async function parseRdfFile(filePath: string): Promise<ParsedEntity | null> {
       // Extract English label
       if (predicate === `${SKOS}prefLabel` && lang === 'en') {
         entity.label = objectValue;
+      }
+
+      if (predicate === `${SKOS}altLabel` && lang === 'en') {
+        entity.alternateLabels.push(objectValue);
       }
 
       // Extract English definition
@@ -151,7 +162,6 @@ async function parseRdfFile(filePath: string): Promise<ParsedEntity | null> {
       }
     });
 
-    const stream = createReadStream(filePath, { encoding: 'utf8' });
     stream.on('error', (error) => {
       console.error(`Error reading ${filePath}:`, error.message);
       resolve(null);

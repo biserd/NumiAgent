@@ -1,0 +1,35 @@
+{
+  "name": "numisgraph-cloudflare",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=24.11.0"},
+  "scripts": {
+    "build": "vite build",
+    "check": "vue-tsc --noEmit",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "dev": "wrangler dev --ip 127.0.0.1",
+    "refs:build": "node scripts/build-nomisma.mjs",
+    "refs:check": "node scripts/build-nomisma.mjs --check",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/unit.test.mjs",
+    "test:integration": "node --test tests/integration.test.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "agents": "0.33.0",
+    "@cloudflare/workers-oauth-provider": "1.2.4",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "hono": "^4.0.0",
+    "vue": "^3.5.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261113.1",
+    "@playwright/test": "^1.55.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.0.0",
+    "vue-tsc": "^3.0.0",
+    "wrangler": "4.162.0"
+  }
+}

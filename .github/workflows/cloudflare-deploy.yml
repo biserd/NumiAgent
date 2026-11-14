@@ -1,0 +1,49 @@
+name: Deploy NumisVault to Cloudflare
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Cloudflare environment
+        type: choice
+        required: true
+        options: [staging, production]
+permissions:
+  contents: read
+concurrency: deploy-${{ inputs.target }}
+defaults:
+  run:
+    working-directory: cloudflare
+jobs:
+  deploy:
+    environment: ${{ inputs.target }}
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      NUMIS_APP_ORIGIN: ${{ vars.NUMIS_APP_ORIGIN }}
+      NUMIS_D1_ID: ${{ vars.NUMIS_D1_ID }}
+      NUMIS_OAUTH_KV_ID: ${{ vars.NUMIS_OAUTH_KV_ID }}
+      NUMIS_TURNSTILE_SITE_KEY: ${{ vars.NUMIS_TURNSTILE_SITE_KEY }}
+      NUMIS_EMAIL_FROM: ${{ vars.NUMIS_EMAIL_FROM }}
+      NUMIS_MARKET_DOMAINS: ${{ vars.NUMIS_MARKET_DOMAINS }}
+      NUMIS_MARKET_FEED_URL: ${{ vars.NUMIS_MARKET_FEED_URL }}
+      NUMIS_VISION_MODEL: ${{ vars.NUMIS_VISION_MODEL }}
+      NUMIS_AI_PER_USER: ${{ vars.NUMIS_AI_PER_USER }}
+      NUMIS_AI_GLOBAL: ${{ vars.NUMIS_AI_GLOBAL }}
+      NUMIS_MARKET_PER_USER: ${{ vars.NUMIS_MARKET_PER_USER }}
+      NUMIS_MARKET_GLOBAL: ${{ vars.NUMIS_MARKET_GLOBAL }}
+      NUMIS_DEPLOY_TARGET: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/cloudflare-config.mjs "$NUMIS_DEPLOY_TARGET"
+      - run: npx wrangler d1 migrations apply DB --remote --config wrangler.deploy.json
+      - run: npx wrangler deploy --config wrangler.deploy.json

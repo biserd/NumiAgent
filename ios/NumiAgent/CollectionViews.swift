@@ -34,6 +34,7 @@ struct CatalogScreen: View {
             ForEach(items) { item in
                 if workspaceSelection != nil {
                     NavigationLink(value: item.id) { row(item) }
+                        .accessibilityIdentifier("specimen-\(item.id)")
                 } else {
                     NavigationLink {
                         SpecimenScreen(item: item, api: api, demo: demo, onChange: reload)

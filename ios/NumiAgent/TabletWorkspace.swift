@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Keeps the selected record available when search or pagination changes the visible rows.
 struct WorkspaceListSelection<Item: Identifiable> {
@@ -61,6 +60,7 @@ struct TabletWorkspace: View {
                 NavigationLink(value: area) {
                     Label(area.title, systemImage: area.icon)
                 }
+                .accessibilityIdentifier("workspace-\(area)")
             }
             .listStyle(.sidebar)
             .navigationTitle("NumiAgent")
@@ -78,14 +78,6 @@ struct TabletWorkspace: View {
         .onChange(of: section) { _, newValue in
             if newValue != nil { compactColumn = .content }
         }
-        #if DEBUG
-        .task {
-            guard PreviewLaunch.screen != nil, ProcessInfo.processInfo.arguments.contains("--tablet-landscape"),
-                  let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
-                    .first(where: { $0.keyWindow != nil }) else { return }
-            window.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
-        }
-        #endif
     }
 
     @ViewBuilder

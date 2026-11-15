@@ -63,7 +63,7 @@ jobs:
           xcrun simctl status_bar "$device" override --time "9:41" --batteryLevel 100 --batteryState discharging
           xcrun simctl install "$device" "$RUNNER_TEMP/numiagent/Build/Products/Debug-iphonesimulator/NumiAgent.app"
           mkdir -p "$RUNNER_TEMP/numiagent-screenshots"
-          for view in collection capture valuation checklists; do
+          for view in sign-in collection capture valuation checklists; do
             launch="$(xcrun simctl launch --terminate-running-process "$device" com.numiagent.ios "--preview-$view")"
             pid="${launch##*: }"
             [[ "$pid" =~ ^[0-9]+$ ]]
@@ -76,6 +76,11 @@ jobs:
           name: NumiAgent-iPhone-screenshots
           path: ${{ runner.temp }}/numiagent-screenshots/*.png
           if-no-files-found: error
+      - name: Verify native sign-in and saved photo actions
+        run: |
+          xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Debug \
+            -destination "platform=iOS Simulator,id=$NUMIAGENT_SIMULATOR" -derivedDataPath "$RUNNER_TEMP/numiagent" \
+            -parallel-testing-enabled NO -only-testing:NumiAgentUITests/PhoneSignInAndReviewTests CODE_SIGNING_ALLOWED=NO test
   ipad:
     runs-on: macos-26
     timeout-minutes: 22

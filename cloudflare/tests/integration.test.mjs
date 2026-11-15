@@ -32,8 +32,8 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal(response.status,status,JSON.stringify(data))
     return data
   }
-  async function login(email){
-    const initial=await json(await api('/auth/request',null,'POST',{email}),202)
+  async function login(email, requestPath='/auth/request'){
+    const initial=await json(await api(requestPath,null,'POST',{email}),202)
     const token=new URL(initial.developmentLink).hash.slice(8)
     const verified=await api('/auth/verify',null,'POST',{token})
     assert.equal(verified.status,200,await verified.text())
@@ -111,7 +111,10 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await api('/contact')).status,401)
     assert.equal((await api('/items')).status,401)
     const a=await login('collector@example.test')
-    const b=await login('another@example.test')
+    const b=await login('another@example.test','/auth/native/request')
+    const invalidNativeOrigin=await fetch(base+'/api/v1/auth/native/request',{method:'POST',
+      headers:{Origin:'https://unrelated.example','Content-Type':'application/json'},body:JSON.stringify({email:'nobody@example.test'})})
+    assert.equal(invalidNativeOrigin.status,403)
     const openapi=await json(await fetch(base+'/openapi.json'))
     assert.ok(openapi.paths['/items'].get.security.some(entry=>entry.developerKey))
     assert.deepEqual(openapi.paths['/items'].post.security,[{session:[]}])
@@ -156,6 +159,26 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     const states=batch.photos.reduce((counts,photo)=>({...counts,[photo.state]:(counts[photo.state] ?? 0)+1}),{})
     assert.deepEqual(states,{review:101},server.logs())
     assert.ok(batch.photos.every(p=>p.candidates[0].title==='Synthetic test candidate'))
+    const manual=randomUUID()
+    await json(await api('/imports',a,'POST',{id:manual,label:'Saved without AI',analyze:false,consent:false}),201)
+    await json(await api('/imports/'+manual+'/photos',a,'PUT',fixture(150)),201)
+    const manualRoute='/imports/'+manual+'/analyze'
+    const summary=(await json(await api('/imports',a))).find(row=>row.id===manual)
+    assert.equal(summary.manual,1)
+    assert.equal(summary.pending,0)
+    assert.equal((await api(manualRoute,a,'POST',{consent:false})).status,400)
+    assert.equal((await api(manualRoute,b,'POST',{consent:true})).status,404)
+    assert.equal((await json(await api('/imports/'+manual,a))).photos[0].state,'manual')
+    assert.deepEqual(await json(await api(manualRoute,a,'POST',{consent:true}),202),{queued:1})
+    assert.deepEqual(await json(await api(manualRoute,a,'POST',{consent:true}),202),{queued:0})
+    let reconsidered
+    for(let j=0;j<30;j++) {
+      reconsidered=await json(await api('/imports/'+manual,a))
+      if (reconsidered.photos[0].state==='review') break
+      await wait(1000)
+    }
+    assert.equal(reconsidered.photos[0].state,'review',server.logs())
+    assert.equal((await json(await api('/imports',a))).find(row=>row.id===manual).suggestions,1)
     const saved=await json(await api('/items',a,'POST',{title:'Trajan denarius',ruler:'Trajan',type:'coin',grade:'VF',details:{metal:'Silver'},
       photos:[{photoId:ids[0],side:'obverse'},{photoId:ids[1],side:'reverse'}]}),201)
     const foreign=await json(await api('/items',b,'POST',{title:'Other private specimen',type:'coin'}),201)

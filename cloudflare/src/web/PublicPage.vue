@@ -17,7 +17,7 @@ defineProps<{page:SitePage;contact:boolean}>()
         <section v-for="section in page.sections" :key="section.title">
           <h2>{{section.title}}</h2>
           <p v-for="paragraph in section.paragraphs" :key="paragraph">{{paragraph}}</p>
-          <pre v-if="section.code" class="docs-code"><code>{{section.code}}</code></pre>
+          <pre v-if="section.code" class="docs-code" tabindex="0"><code>{{section.code}}</code></pre>
           <div v-if="section.links?.length" class="information-links">
             <a v-for="link in section.links" :key="link.href" :href="link.href">{{link.label}} <span aria-hidden="true">↗</span></a>
           </div>

@@ -93,6 +93,7 @@ test('Public information pages and contact form work without an account',async({
   await page.getByRole('link',{name:'REST API guide',exact:true}).click()
   await expect(page.getByRole('heading',{name:'REST API guide',exact:true})).toBeVisible()
   await expect(page.locator('pre code')).toContainText('Authorization: Bearer')
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390)
   await page.getByRole('link',{name:'Developer overview',exact:true}).click()
   await page.getByRole('link',{name:'MCP connection guide',exact:true}).click()
   await expect(page.getByRole('heading',{name:'MCP connection guide',exact:true})).toBeVisible()

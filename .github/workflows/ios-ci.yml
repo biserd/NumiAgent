@@ -43,12 +43,15 @@ jobs:
           ')"
           xcrun simctl boot "$device"
           xcrun simctl bootstatus "$device" -b
-          xcrun simctl status_bar "$device" override --time "9:41" --batteryLevel 100 --batteryState unplugged
+          xcrun simctl status_bar "$device" override --time "9:41" --batteryLevel 100 --batteryState discharging
           xcrun simctl install "$device" "$RUNNER_TEMP/numiagent/Build/Products/Debug-iphonesimulator/NumiAgent.app"
           mkdir -p "$RUNNER_TEMP/numiagent-screenshots"
           for view in collection capture valuation checklists; do
-            xcrun simctl launch --terminate-running-process "$device" com.numiagent.ios "--preview-$view"
+            launch="$(xcrun simctl launch --terminate-running-process "$device" com.numiagent.ios "--preview-$view")"
+            pid="${launch##*: }"
+            [[ "$pid" =~ ^[0-9]+$ ]]
             sleep 2
+            kill -0 "$pid"
             xcrun simctl io "$device" screenshot "$RUNNER_TEMP/numiagent-screenshots/$view.png"
           done
       - uses: actions/upload-artifact@v4

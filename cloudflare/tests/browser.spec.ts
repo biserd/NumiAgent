@@ -109,3 +109,16 @@ test('Public information pages and contact form work without an account',async({
   await page.getByRole('link',{name:'Open local sign-in link'}).click()
   await expect(page.getByRole('heading',{name:'Developer access',exact:true})).toBeVisible()
 })
+
+test('Public blog opens from the mobile header and links back from an article',async({page})=>{
+  await page.setViewportSize({width:320,height:720})
+  await page.goto(server.url)
+  await page.getByRole('navigation',{name:'Main',exact:true}).getByRole('link',{name:'Blog',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'NumiAgent blog',exact:true})).toBeVisible()
+  await expect(page.locator('.post-grid article')).toHaveCount(4)
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(320)
+  await page.getByRole('link',{name:'How to photograph coins and banknotes for your catalog'}).click()
+  await expect(page.getByRole('heading',{name:'Review before you save',exact:true})).toBeVisible()
+  await page.getByRole('link',{name:'NumiAgent blog'}).click()
+  await expect(page.getByRole('link',{name:'Subscribe via RSS'})).toHaveAttribute('href','/blog/rss.xml')
+})

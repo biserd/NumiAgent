@@ -1,6 +1,7 @@
 import type { Plugin } from 'vite'
 import { brand, canonicalOrigin, developerLinks, siteLinks, sitePages } from '../src/web/sitePages'
 import type { SitePage } from '../src/web/sitePages'
+import { blogDate, blogPosts } from '../src/web/blogPosts'
 
 const html = (text:string) => text.replace(/[&<>"']/g,char=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -15,12 +16,19 @@ function pageBody(page:SitePage,path:string) {
   const docs=path==='/developers' || path.startsWith('/developers/')
   const navigation=docs?'<nav class="developer-nav" aria-label="Developer documentation">'+developerLinks.map(link=>
     '<a href="'+html(link.href)+'"'+(path===link.href?' aria-current="page"':'')+'>'+html(link.label)+'</a>').join('')+'</nav>':''
+  const articleBack=page.article?'<a class="article-back" href="/blog">← NumiAgent blog</a>':''
+  const articleDate=page.article?'<p class="article-meta">'+html(page.article.topic)+' · <time datetime="'+
+    html(page.article.published)+'">'+html(blogDate(page.article.published))+'</time></p>':''
+  const postList=path==='/blog'?'<div class="post-grid">'+blogPosts.map(post=>
+    '<article><p class="article-meta">'+html(post.article.topic)+'</p><h2><a href="'+html(post.path)+'">'+html(post.title)+
+    '</a></h2><p>'+html(post.description)+'</p></article>').join('')+
+    '</div><a class="feed-link" href="/blog/rss.xml">Subscribe via RSS</a>':''
   return '<div class="public-page"><header class="site-header wrap"><a class="brand" href="/">'+brand+
-    '</a><a href="/app">Sign in</a></header><main class="information"><div class="information-header wrap">'+navigation+'<h1>'+
-    html(page.title)+'</h1><p>'+html(page.description)+'</p>'+
+    '</a><a href="/app">Sign in</a></header><main class="information"><div class="information-header wrap">'+navigation+articleBack+'<h1>'+
+    html(page.title)+'</h1><p>'+html(page.description)+'</p>'+articleDate+
     (page.effective?'<small>Effective '+html(page.effective)+'</small>':'')+
     '</div><div class="information-content wrap">'+
-    (path==='/contact'?'<noscript><p>Enable JavaScript to send a message.</p></noscript>':'')+sections+
+    (path==='/contact'?'<noscript><p>Enable JavaScript to send a message.</p></noscript>':'')+postList+sections+
     '</div></main><footer class="site-footer wrap"><nav aria-label="Site information">'+
     siteLinks.map(link=>'<a href="'+html(link.href)+'">'+html(link.label)+'</a>').join('')+
     '</nav></footer></div>'
@@ -54,6 +62,15 @@ export function publicPages():Plugin {
         'Find your way back to NumiAgent.','/404','<main><h1>Page unavailable</h1><p><a href="/">Return to NumiAgent</a></p></main>',false)})
       const urls=['/',...Object.keys(sitePages)].map(path=>'<url><loc>'+html(canonicalOrigin+path)+'</loc></url>').join('')
       this.emitFile({type:'asset',fileName:'sitemap.xml',source:'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+urls+'</urlset>'})
+      const items=blogPosts.map(post=>{
+        const url=html(canonicalOrigin+post.path)
+        const pubDate=new Date(post.article.published).toUTCString()
+        return '<item><title>'+html(post.title)+'</title><link>'+url+'</link><guid>'+url+'</guid><description>'+
+          html(post.description)+'</description><pubDate>'+pubDate+'</pubDate><category>'+html(post.article.topic)+'</category></item>'
+      }).join('')
+      this.emitFile({type:'asset',fileName:'blog/rss.xml',source:'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'+
+        '<title>NumiAgent blog</title><link>'+canonicalOrigin+'/blog</link><description>'+html(sitePages['/blog'].description)+
+        '</description><language>en</language>'+items+'</channel></rss>'})
     }}
   }
 }

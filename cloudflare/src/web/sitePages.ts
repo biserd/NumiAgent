@@ -1,4 +1,5 @@
 import { developerKeyLifespanDays, developerRequestLimit } from '../shared/developerAccess'
+import { blogPosts } from './blogPosts'
 
 export const brand = 'NumiAgent'
 export const canonicalOrigin = 'https://numiagent.com'
@@ -11,6 +12,7 @@ export type SitePage = {
   description:string
   sections:Section[]
   effective?:string
+  article?:{topic:string;published:string}
 }
 
 const contact = {href:'/contact',label:'Contact NumiAgent'}
@@ -30,6 +32,12 @@ export const developerLinks = [
 ]
 
 export const sitePages:Record<string,SitePage> = {
+  '/blog':{
+    label:'Blog',title:'NumiAgent blog',
+    description:'Practical guides for photographing, cataloging, researching, and collecting coins and banknotes.',
+    sections:[]
+  },
+  ...Object.fromEntries(blogPosts.map(post=>[post.path,post])),
   '/about':{
     label:'About',title:'About NumiAgent',
     description:'Why I’m building a private catalog that keeps coins, banknotes, and the research behind them together.',
@@ -248,5 +256,5 @@ export const sitePages:Record<string,SitePage> = {
     ]
   }
 }
-export const siteLinks = Object.entries(sitePages).filter(([href])=>!href.startsWith('/developers/'))
+export const siteLinks = Object.entries(sitePages).filter(([href,page])=>!href.startsWith('/developers/') && !page.article)
   .map(([href,page])=>({href,label:page.label}))

@@ -52,6 +52,23 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
       assert.ok(sitemap.includes('<loc>https://numiagent.com'+path+'</loc>'))
     }
     assert.ok(!sitemap.includes('<loc>https://numiagent.com/app'))
+    const blog=(await fetch(base+'/blog'))
+    assert.equal(blog.status,200)
+    const posts=Array.from((await blog.text()).matchAll(/href="(\/blog\/[^"]+)"/g),match=>match[1])
+      .filter(path=>path!=='/blog/rss.xml')
+    assert.equal(new Set(posts).size,4)
+    assert.ok(sitemap.includes('<loc>https://numiagent.com/blog</loc>'))
+    const feed=await fetch(base+'/blog/rss.xml')
+    assert.equal(feed.status,200)
+    assert.match(feed.headers.get('content-type'),/application\/rss\+xml/)
+    const rss=await feed.text()
+    for(const path of new Set(posts)){
+      assert.ok(sitemap.includes('<loc>https://numiagent.com'+path+'</loc>'))
+      assert.ok(rss.includes('<guid>https://numiagent.com'+path+'</guid>'))
+      const article=await fetch(base+path)
+      assert.equal(article.status,200)
+      assert.match(await article.text(),/<time datetime="2026-11-14">November 14, 2026<\/time>/)
+    }
     const robots=await (await fetch(base+'/robots.txt')).text()
     assert.match(robots,/Sitemap: https:\/\/numiagent\.com\/sitemap\.xml/)
     assert.match(robots,/Disallow: \/app/)

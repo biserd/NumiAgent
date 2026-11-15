@@ -6,3 +6,5 @@
 /.well-known/mcp-registry-auth
   Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=300
+/blog/rss.xml
+  Content-Type: application/rss+xml; charset=utf-8

@@ -5,6 +5,19 @@ import { convertLegacyCoin, legacyCoin } from '../src/shared/legacy.ts'
 import { matchReference } from '../src/shared/references.ts'
 import { ecbQuote, parseOcre } from '../src/worker/officialData.ts'
 import { normalizeEbay } from '../src/worker/ebay.ts'
+import { parseThemeDraft } from '../src/worker/themePlanning.ts'
+
+test('Theme drafts accept string years and strip unsourced references and URLs',()=>{
+  const draft=JSON.stringify({name:'Test draft',slots:[
+    {label:'Solidus from 501–600',type:'coin',denomination:'Solidus',dateFrom:'501',dateTo:'600',reference:'Made-up reference',source:'https://example.test/'},
+    {label:'Invalid range',type:'coin',dateFrom:'800',dateTo:'700'}
+  ]})
+  const parsed=parseThemeDraft(draft,'One solidus per century')
+  assert.equal(parsed.slots.length,1)
+  assert.equal(parsed.slots[0].dateFrom,501)
+  assert.equal(parsed.slots[0].reference,'')
+  assert.equal(parsed.slots[0].source,undefined)
+})
 
 test('ECB cross-rates require both observations on the same eligible date',()=>{
   const data='CURRENCY,TIME_PERIOD,OBS_VALUE\nUSD,2026-11-13,1.2\nGBP,2026-11-13,0.8\nUSD,2026-11-14,1.3\nGBP,2026-11-15,0.9'

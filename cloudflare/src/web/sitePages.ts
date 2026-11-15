@@ -3,12 +3,17 @@ import { blogPosts } from './blogPosts'
 
 export const brand = 'NumiAgent'
 export const canonicalOrigin = 'https://numiagent.com'
+export const landingSeo = {
+  title:'Coin & Banknote Collection Software | NumiAgent',
+  description:'Organize your coin and banknote collection. Import photos, review AI identifications, record auction prices, and track which pieces you still need.'
+}
 
 type Link = {href:string;label:string}
 type Section = {title:string;paragraphs:string[];links?:Link[];code?:string}
 export type SitePage = {
   label:string
   title:string
+  seoTitle?:string
   description:string
   sections:Section[]
   effective?:string
@@ -34,6 +39,7 @@ export const developerLinks = [
 export const sitePages:Record<string,SitePage> = {
   '/blog':{
     label:'Blog',title:'NumiAgent blog',
+    seoTitle:'Coin & Banknote Collecting Guides | NumiAgent',
     description:'Practical guides for photographing, cataloging, researching, and collecting coins and banknotes.',
     sections:[]
   },
@@ -61,6 +67,7 @@ export const sitePages:Record<string,SitePage> = {
   },
   '/features':{
     label:'Features',title:'NumiAgent features',
+    seoTitle:'Coin Catalog, Photo ID & Valuation Tools | NumiAgent',
     description:'See how NumiAgent imports and identifies coins and banknotes, manages private collections, tracks auction evidence, and connects to your tools.',
     sections:[
       {title:'Photograph and import a batch',paragraphs:[

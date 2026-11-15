@@ -10,6 +10,7 @@ import type { Env, Job } from './core'
 import { authorizeDeveloper, developerKeys } from './developer'
 import { imports, photos, processQueue, reconcileImports } from './ingest'
 import { market, refreshWatchlists, watchlists } from './market'
+import { publicPage } from './publicSite'
 export { PhotoWorkflow } from './ingest'
 
 const api = router()
@@ -65,7 +66,7 @@ export default {
     try {
       if (isApi) response = await app.fetch(request,env,ctx)
       else if (isAgent) response = await agentRequest(request,env,ctx)
-      else response = await env.ASSETS.fetch(request)
+      else response = await publicPage(request,url,env) ?? await env.ASSETS.fetch(request)
     } catch (error) {
       const status = error instanceof HTTPException ? error.status : 500
       response = Response.json({error:status===500 ? 'The request could not be completed':(error as Error).message},{status})

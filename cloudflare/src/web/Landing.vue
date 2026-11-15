@@ -15,7 +15,7 @@ const step = computed(()=>steps[selected.value])
     <SiteNav landing/>
     <main>
       <section class="hero wrap">
-        <div class="hero-copy"><p class="eyebrow">THE PRIVATE NUMISMATIC CATALOG</p><h1>Every piece<br>has a <em>story.</em></h1>
+        <div class="hero-copy"><h1>Coin &amp; banknote<br><em>catalog</em></h1>
           <p class="hero-description">Photograph your coins and banknotes, identify what you own, and find the pieces you’re missing.</p>
           <div class="hero-actions"><a class="button gold" href="/app">Start your collection <span aria-hidden="true">↗</span></a><a href="#workflow" class="text-link">See how it works ↓</a></div>
         </div>
@@ -35,6 +35,6 @@ const step = computed(()=>steps[selected.value])
         <article><h3>Collect with a goal.</h3><p>Track a series or ruler checklist. Search for gaps, save queries, and follow available matches back to the auction house.</p></article>
       </section>
     </main>
-    <SiteNav footer/>
+    <SiteNav footer path="/"/>
   </div>
 </template>

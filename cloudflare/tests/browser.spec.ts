@@ -5,7 +5,7 @@ test.beforeAll(async()=>{server=await localServer(8792)})
 test.afterAll(()=>server?.close())
 test('Mobile landing, email sign-in, photo review and collection search',async({page})=>{
   await page.goto(server.url)
-  await expect(page.getByRole('heading',{name:'Every piece has a story.'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:'Coin & banknote catalog'})).toBeVisible()
   await page.getByRole('button',{name:'Value',exact:true}).click()
   await expect(page.getByText('Comparable-sale evidence')).toBeVisible()
   await page.getByRole('link',{name:'Start your collection'}).click()
@@ -111,6 +111,10 @@ test('Public information pages and contact form work without an account',async({
 })
 
 test('Public blog opens from the mobile header and links back from an article',async({page})=>{
+  const hydrationErrors:string[]=[]
+  page.on('console',event=>{
+    if (/hydration/i.test(event.text()) && ['error','warning'].includes(event.type())) hydrationErrors.push(event.text())
+  })
   await page.setViewportSize({width:320,height:720})
   await page.goto(server.url)
   await page.getByRole('navigation',{name:'Main',exact:true}).getByRole('link',{name:'Blog',exact:true}).click()
@@ -121,4 +125,5 @@ test('Public blog opens from the mobile header and links back from an article',a
   await expect(page.getByRole('heading',{name:'Review before you save',exact:true})).toBeVisible()
   await page.getByRole('link',{name:'NumiAgent blog'}).click()
   await expect(page.getByRole('link',{name:'Subscribe via RSS'})).toHaveAttribute('href','/blog/rss.xml')
+  expect(hydrationErrors).toEqual([])
 })

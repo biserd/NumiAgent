@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
-import Landing from './Landing.vue'
 import Catalog from './Catalog.vue'
 import ImportView from './ImportView.vue'
 import GoalsMarket from './GoalsMarket.vue'
 import Settings from './Settings.vue'
 import Developer from './Developer.vue'
 import Overview from './Overview.vue'
-import PublicPage from './PublicPage.vue'
-import { siteLinks, sitePages } from './sitePages'
+import { siteLinks } from './sitePages'
 import { mountChallenge } from './challenge'
 import { message, request } from './api'
 const path=location.pathname.replace(/\/$/,'') || '/'
-const onLanding=path==='/'
 const onApp=path==='/app'
-const sitePage=sitePages[path]
 const routes = ['Overview','Collection','Imports','Themes','Marketplace','Developer','Settings'] as const
 type Page = typeof routes[number]
 const readPage = ():Page => routes.find(r=>r.toLowerCase()===location.hash.slice(1)) ?? 'Overview'
@@ -115,9 +111,7 @@ onUnmounted(()=>{
 </script>
 
 <template>
-  <Landing v-if="onLanding"/>
-  <PublicPage v-else-if="sitePage" :page="sitePage" :path="path"/>
-  <main v-else-if="!onApp" class="signin">
+  <main v-if="!onApp" class="signin">
     <div class="panel"><h1>Page unavailable</h1><a href="/">Return to NumiAgent</a></div>
   </main>
   <div v-else-if="checking" class="signin"><p role="status">Opening your catalog…</p></div>

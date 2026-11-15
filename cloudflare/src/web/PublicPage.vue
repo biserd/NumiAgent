@@ -38,9 +38,17 @@ defineProps<{page:SitePage;path:string}>()
             <a v-for="link in section.links" :key="link.href" :href="link.href">{{link.label}} <span aria-hidden="true">↗</span></a>
           </div>
         </section>
+        <aside v-if="page.article" class="related-guides" aria-labelledby="related-guides-title">
+          <h2 id="related-guides-title">Related collector guides</h2>
+          <ul>
+            <template v-for="post in blogPosts" :key="post.path">
+              <li v-if="path!==post.path"><a :href="post.path">{{post.guideLabel}}</a></li>
+            </template>
+          </ul>
+        </aside>
         <ContactForm v-if="path==='/contact'"/>
       </div>
     </main>
-    <SiteNav footer/>
+    <SiteNav footer :path="path"/>
   </div>
 </template>

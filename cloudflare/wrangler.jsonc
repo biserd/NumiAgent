@@ -8,7 +8,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/mcp", "/oauth/*", "/.well-known/*"]
+    "run_worker_first": ["/", "/about*", "/features*", "/terms*", "/privacy*", "/help*", "/contact*", "/developers*", "/blog*", "/api/*", "/mcp", "/oauth/*", "/.well-known/*"]
   },
   "vars": {
     "APP_MODE": "local",

@@ -42,6 +42,11 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
   }
   try {
     const sitemap=await (await fetch(base+'/sitemap.xml')).text()
+    const landing=await (await fetch(base+'/')).text()
+    assert.match(landing,/id="app" data-rendered="server"/)
+    assert.match(landing,/class="hero-art"/)
+    assert.match(landing,/aria-label="Collector guides"/)
+    assert.match(landing,/Coin &amp; Banknote Collection Software/)
     for(const [path,heading] of [['/about','About NumiAgent'],['/features','NumiAgent features'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent'],
       ['/developers','NumiAgent for developers'],['/developers/access','API and MCP access'],['/developers/api','REST API guide'],['/developers/mcp','MCP connection guide']]){
       const response=await fetch(base+path)
@@ -67,8 +72,16 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
       assert.ok(rss.includes('<guid>https://numiagent.com'+path+'</guid>'))
       const article=await fetch(base+path)
       assert.equal(article.status,200)
-      assert.match(await article.text(),/<time datetime="2026-11-14">November 14, 2026<\/time>/)
+      const markup=await article.text()
+      assert.match(markup,/<time datetime="2026-11-14">November 14, 2026<\/time>/)
+      assert.match(markup,/id="app" data-rendered="server"/)
+      assert.match(markup,/"@type":"BlogPosting"/)
+      assert.match(markup,/"@type":"BreadcrumbList"/)
+      for(const peer of new Set(posts)) assert.ok(markup.includes('href="'+peer+'"'))
     }
+    const normalized=await fetch(base+'/blog/?source=test',{redirect:'manual'})
+    assert.equal(normalized.status,308)
+    assert.equal(normalized.headers.get('Location'),base+'/blog?source=test')
     const robots=await (await fetch(base+'/robots.txt')).text()
     assert.match(robots,/Sitemap: https:\/\/numiagent\.com\/sitemap\.xml/)
     assert.match(robots,/Disallow: \/app/)

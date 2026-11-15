@@ -1,0 +1,159 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 60;
+    objects = {
+        A00000000000000000000001 = {
+            isa = PBXProject;
+            attributes = {
+                BuildIndependentTargetsInParallel = YES;
+                LastSwiftUpdateCheck = 2600;
+                LastUpgradeCheck = 2600;
+                TargetAttributes = {
+                    A00000000000000000000002 = { CreatedOnToolsVersion = 26.0; };
+                };
+            };
+            buildConfigurationList = A0000000000000000000000A;
+            compatibilityVersion = "Xcode 15.0";
+            developmentRegion = en;
+            hasScannedForEncodings = 0;
+            knownRegions = (en, Base);
+            mainGroup = A00000000000000000000004;
+            productRefGroup = A00000000000000000000006;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (A00000000000000000000002);
+        };
+        A00000000000000000000002 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = A0000000000000000000000B;
+            buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009);
+            buildRules = ();
+            dependencies = ();
+            name = NumiAgent;
+            productName = NumiAgent;
+            productReference = A00000000000000000000003;
+            productType = "com.apple.product-type.application";
+        };
+        A00000000000000000000003 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NumiAgent.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        A00000000000000000000004 = { isa = PBXGroup; children = (A00000000000000000000005, A00000000000000000000006); sourceTree = "<group>"; };
+        A00000000000000000000005 = {
+            isa = PBXGroup;
+            children = (
+                B00000000000000000000001,
+                B00000000000000000000002,
+                B00000000000000000000003,
+                B00000000000000000000004,
+                B00000000000000000000005,
+                B00000000000000000000006,
+                B00000000000000000000007,
+            );
+            path = NumiAgent;
+            sourceTree = "<group>";
+        };
+        A00000000000000000000006 = { isa = PBXGroup; children = (A00000000000000000000003); name = Products; sourceTree = "<group>"; };
+        A00000000000000000000007 = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (C00000000000000000000001, C00000000000000000000002, C00000000000000000000003, C00000000000000000000004, C00000000000000000000005);
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (C00000000000000000000006); runOnlyForDeploymentPostprocessing = 0; };
+        A0000000000000000000000A = {
+            isa = XCConfigurationList;
+            buildConfigurations = (A0000000000000000000000C, A0000000000000000000000D);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        A0000000000000000000000B = {
+            isa = XCConfigurationList;
+            buildConfigurations = (A0000000000000000000000E, A0000000000000000000000F);
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        A0000000000000000000000C = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+                SDKROOT = iphoneos;
+                ENABLE_TESTABILITY = YES;
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+                SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+            };
+            name = Debug;
+        };
+        A0000000000000000000000D = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+                SDKROOT = iphoneos;
+                SWIFT_COMPILATION_MODE = wholemodule;
+            };
+            name = Release;
+        };
+        A0000000000000000000000E = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CODE_SIGN_ENTITLEMENTS = NumiAgent/NumiAgent.entitlements;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                DEVELOPMENT_TEAM = DB5JRGGB6A;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_KEY_CFBundleDisplayName = NumiAgent;
+                INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
+                INFOPLIST_KEY_NSCameraUsageDescription = "Photograph coins and banknotes for your private NumiAgent catalog.";
+                INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+                INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+                INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = com.numiagent.ios;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = 1;
+            };
+            name = Debug;
+        };
+        A0000000000000000000000F = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CODE_SIGN_ENTITLEMENTS = NumiAgent/NumiAgent.entitlements;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                DEVELOPMENT_TEAM = DB5JRGGB6A;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_KEY_CFBundleDisplayName = NumiAgent;
+                INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
+                INFOPLIST_KEY_NSCameraUsageDescription = "Photograph coins and banknotes for your private NumiAgent catalog.";
+                INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+                INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+                INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                MARKETING_VERSION = 1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = com.numiagent.ios;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = 1;
+            };
+            name = Release;
+        };
+        B00000000000000000000001 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumiAgentApp.swift; sourceTree = "<group>"; };
+        B00000000000000000000002 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumiAPI.swift; sourceTree = "<group>"; };
+        B00000000000000000000003 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViews.swift; sourceTree = "<group>"; };
+        B00000000000000000000004 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureScreen.swift; sourceTree = "<group>"; };
+        B00000000000000000000005 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceWebView.swift; sourceTree = "<group>"; };
+        B00000000000000000000006 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+        B00000000000000000000007 = { isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NumiAgent.entitlements; sourceTree = "<group>"; };
+        C00000000000000000000001 = { isa = PBXBuildFile; fileRef = B00000000000000000000001; };
+        C00000000000000000000002 = { isa = PBXBuildFile; fileRef = B00000000000000000000002; };
+        C00000000000000000000003 = { isa = PBXBuildFile; fileRef = B00000000000000000000003; };
+        C00000000000000000000004 = { isa = PBXBuildFile; fileRef = B00000000000000000000004; };
+        C00000000000000000000005 = { isa = PBXBuildFile; fileRef = B00000000000000000000005; };
+        C00000000000000000000006 = { isa = PBXBuildFile; fileRef = B00000000000000000000006; };
+    };
+    rootObject = A00000000000000000000001;
+}

@@ -6,6 +6,8 @@ NumiAgent uses SwiftUI for the collection, auction valuation, checklists, and ca
 
 Open `NumiAgent.xcodeproj` in Xcode 26 or later. Select the shared NumiAgent scheme and an iPhone simulator. The minimum deployment target is iOS 17. Tap **Explore demo** to see sample records without an account. The demo uses sample valuations and identification results.
 
+The demo catalog displays two public-domain coin photographs from The Met. [Octavian](https://www.metmuseum.org/art/collection/search/248037) · [Marcus Antonius](https://www.metmuseum.org/art/collection/search/248031).
+
 The GitHub workflow compiles both simulator and device builds and captures four screenshots using the Debug demo. The device build in that workflow is unsigned.
 
 ## Sign and distribute

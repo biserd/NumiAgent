@@ -22,7 +22,7 @@ struct CatalogScreen: View {
                         SpecimenScreen(item: item, api: api, demo: demo, openWorkspace: openWorkspace)
                     } label: {
                         HStack(spacing: 12) {
-                            SpecimenImage(api: api, id: item.photo, demo: demo && item.type == "coin")
+                            SpecimenImage(api: api, id: item.photo, sampleAsset: demo ? DemoCollection.photo(for: item) : nil)
                                 .frame(width: 49, height: 49)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                             VStack(alignment: .leading, spacing: 4) {
@@ -107,7 +107,7 @@ struct CatalogScreen: View {
 private struct SpecimenImage: View {
     let api: NumiAPI
     let id: String?
-    let demo: Bool
+    let sampleAsset: String?
     @State private var image: UIImage?
 
     var body: some View {
@@ -115,8 +115,8 @@ private struct SpecimenImage: View {
             Rectangle().fill(Color.secondary.opacity(0.08))
             if let image {
                 Image(uiImage: image).resizable().scaledToFit()
-            } else if demo {
-                Image("DemoCoin").resizable().scaledToFit()
+            } else if let sampleAsset {
+                Image(sampleAsset).resizable().scaledToFit()
             } else {
                 Image(systemName: "photo").foregroundStyle(.secondary)
             }
@@ -139,23 +139,28 @@ private struct SpecimenScreen: View {
     @State private var valuation: Valuation?
     @State private var valuationError: String?
 
+    private var previewingValuation: Bool { demo && PreviewLaunch.screen == .valuation }
+
     var body: some View {
         List {
-            if item.photo != nil || (demo && item.type == "coin") {
-                SpecimenImage(api: api, id: item.photo, demo: demo)
-                    .frame(height: 200)
-                    .listRowInsets(EdgeInsets())
-            }
-            Section("Specimen") {
-                field("Issuer", item.issuer)
-                field("Ruler", item.ruler)
-                field("Denomination", item.denomination)
-                field("Date", item.year)
-                field("Reference", item.reference)
-                field("Grade", item.grade)
-                field("Metal", item.details?.metal ?? "")
-                field("Mint", item.details?.mint ?? "")
-                if !item.notes.isEmpty { Text(item.notes) }
+            if !previewingValuation {
+                let sample = demo ? DemoCollection.photo(for: item) : nil
+                if item.photo != nil || sample != nil {
+                    SpecimenImage(api: api, id: item.photo, sampleAsset: sample)
+                        .frame(height: 200)
+                        .listRowInsets(EdgeInsets())
+                }
+                Section("Specimen") {
+                    field("Issuer", item.issuer)
+                    field("Ruler", item.ruler)
+                    field("Denomination", item.denomination)
+                    field("Date", item.year)
+                    field("Reference", item.reference)
+                    field("Grade", item.grade)
+                    field("Metal", item.details?.metal ?? "")
+                    field("Mint", item.details?.mint ?? "")
+                    if !item.notes.isEmpty { Text(item.notes) }
+                }
             }
             Section("Auction valuation") {
                 if let valuation {
@@ -306,27 +311,35 @@ private struct ThemeScreen: View {
 
 enum DemoCollection {
     static let specimens: [Specimen] = [
-        .init(id: "demo-1", title: "Augustus denarius", type: "coin", ruler: "Augustus",
-              issuer: "Roman Empire", denomination: "Denarius", year: "27 BCE–14 CE",
-              reference: "RIC I", grade: "VF", notes: "Example record for exploring the catalog.", photo: nil,
-              details: .init(metal: "Silver", mint: "Rome")),
-        .init(id: "demo-2", title: "Tiberius denarius", type: "coin", ruler: "Tiberius",
-              issuer: "Roman Empire", denomination: "Denarius", year: "14–37 CE",
-              reference: "RIC I", grade: "VF", notes: "Example record for exploring the catalog.", photo: nil,
-              details: .init(metal: "Silver", mint: "Lugdunum")),
+        .init(id: "demo-1", title: "Octavian denarius", type: "coin", ruler: "Octavian",
+              issuer: "Roman Republic", denomination: "Denarius", year: "29–27 BCE",
+              reference: "The Met 08.170.89", grade: "", notes: "Example record for exploring the catalog.", photo: nil,
+              details: .init(metal: "Silver")),
+        .init(id: "demo-2", title: "Mark Antony legionary denarius", type: "coin", ruler: "Mark Antony",
+              issuer: "Roman Republic", denomination: "Denarius", year: "32–31 BCE",
+              reference: "The Met 08.170.69", grade: "", notes: "Example record for exploring the catalog.", photo: nil,
+              details: .init(metal: "Silver")),
         .init(id: "demo-3", title: "Bank of Canada one-dollar note", type: "banknote", ruler: "",
               issuer: "Bank of Canada", denomination: "1 dollar", year: "1935",
               reference: "", grade: "", notes: "Example banknote record.", photo: nil, details: nil)
     ]
 
-    static let theme = ThemeSummary(id: "demo-theme", name: "Early Roman emperors")
+    static let theme = ThemeSummary(id: "demo-theme", name: "Late Republican denarii")
     static let checklist = ThemeDetails(
         name: theme.name,
         slots: specimens.prefix(2).map { item in
             ThemeDetails.Slot(label: item.ruler, owned: [.init(id: item.id, title: item.title, hasReference: true)])
-        } + [.init(label: "Caligula", owned: [])],
+        } + [.init(label: "Sextus Pompey", owned: [])],
         owned: 2, percent: 67, missingReferences: 0
     )
+
+    static func photo(for item: Specimen) -> String? {
+        switch item.id {
+        case "demo-1": return "DemoOctavian"
+        case "demo-2": return "DemoAntony"
+        default: return nil
+        }
+    }
 
     static func value(for item: Specimen) -> Valuation {
         guard item.id == "demo-1" else { return .init(currency: "USD", range: nil, evidence: [], used: []) }

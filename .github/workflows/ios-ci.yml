@@ -19,6 +19,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: ios
+      - name: Start an iPhone simulator
+        run: |
+          set -euo pipefail
+          device="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          phones = [device for runtime in json.load(sys.stdin)["devices"].values()
+                    for device in runtime if device["name"].startswith("iPhone")]
+          assert phones, "No iPhone simulator is installed"
+          print(next((p for p in phones if "Pro Max" in p["name"]), phones[0])["udid"])
+          ')"
+          xcrun simctl boot "$device"
+          echo "NUMIAGENT_SIMULATOR=$device" >> "$GITHUB_ENV"
       - name: Build the simulator app
         run: |
           set -euo pipefail
@@ -34,14 +46,7 @@ jobs:
       - name: Launch the demo and capture screenshots
         run: |
           set -euo pipefail
-          device="$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          phones = [device for runtime in json.load(sys.stdin)["devices"].values()
-                    for device in runtime if device["name"].startswith("iPhone")]
-          assert phones, "No iPhone simulator is installed"
-          print(next((p for p in phones if "Pro Max" in p["name"]), phones[0])["udid"])
-          ')"
-          xcrun simctl boot "$device"
+          device="$NUMIAGENT_SIMULATOR"
           xcrun simctl bootstatus "$device" -b
           xcrun simctl status_bar "$device" override --time "9:41" --batteryLevel 100 --batteryState discharging
           xcrun simctl install "$device" "$RUNNER_TEMP/numiagent/Build/Products/Debug-iphonesimulator/NumiAgent.app"

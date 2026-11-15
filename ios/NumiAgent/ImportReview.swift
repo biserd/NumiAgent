@@ -57,45 +57,14 @@ struct ImportReview: View {
     var body: some View {
         List {
             if let batch {
-                Section {
-                    let done = batch.photos.filter { !$0.isPending }.count
-                    LabeledContent("Processed", value: "\(done) of \(batch.photos.count)")
-                    if done < batch.photos.count {
-                        ProgressView(value: Double(done), total: Double(batch.photos.count))
-                        Button("Cancel pending analysis", role: .destructive) { confirmCancel = true }
-                            .disabled(working)
-                    }
-                } footer: {
-                    if batch.cancelled != 0 { Text("Pending work was canceled.") }
-                }
-                ForEach(Array(batch.photos.enumerated()), id: \.element.id) { index, photo in
-                    Section("Photo \(index + 1)") {
-                        SpecimenImage(api: api, id: photo.id, sampleAsset: nil)
-                            .frame(height: 220)
-                            .accessibilityLabel("Uploaded photo \(index + 1)")
-                        Label(photo.statusLabel, systemImage: photo.isPending ? "clock" : "photo")
-                        if let message = photo.error { Text(message).font(.footnote).foregroundStyle(.secondary) }
-                        if photo.canCatalog {
-                            ForEach(Array(photo.candidates.enumerated()), id: \.offset) { _, suggestion in
-                                Button {
-                                    editPhoto(photo, suggestion: suggestion)
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(suggestion.title)
-                                        Text([suggestion.issuer, suggestion.denomination, suggestion.year].compactMap { $0 }
-                                            .filter { !$0.isBlank }.joined(separator: " · "))
-                                            .font(.footnote).foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                            Button(photo.state == "saved" ? "Catalog another specimen" : "Catalog manually") {
-                                editPhoto(photo, suggestion: nil)
-                            }
-                        }
-                        if photo.state == "failed" && batch.analyze != 0 && batch.cancelled == 0 {
-                            Button("Retry analysis") { Task { await update("/photos/" + photo.id + "/retry") } }
-                                .disabled(working)
-                        }
+                progressSection(batch)
+                ForEach(batch.photos.indices, id: \.self) { index in
+                    let photo = batch.photos[index]
+                    ImportPhotoSection(api: api, photo: photo, number: index + 1,
+                                       canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice in
+                        editPhoto(photo, suggestion: choice)
+                    } retry: {
+                        Task { await update("/photos/" + photo.id + "/retry") }
                     }
                 }
             } else if error == nil {
@@ -121,6 +90,20 @@ struct ImportReview: View {
             Button("Cancel pending analysis", role: .destructive) {
                 Task { await update("/imports/" + batchID + "/cancel") }
             }
+        }
+    }
+
+    private func progressSection(_ batch: PhotoImport) -> some View {
+        let done = batch.photos.filter { !$0.isPending }.count
+        return Section {
+            LabeledContent("Processed", value: "\(done) of \(batch.photos.count)")
+            if done < batch.photos.count {
+                ProgressView(value: Double(done), total: Double(batch.photos.count))
+                Button("Cancel pending analysis", role: .destructive) { confirmCancel = true }
+                    .disabled(working)
+            }
+        } footer: {
+            if batch.cancelled != 0 { Text("Pending work was canceled.") }
         }
     }
 
@@ -151,5 +134,45 @@ struct ImportReview: View {
             try await api.write(path, method: "POST")
             poll = UUID()
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+private struct ImportPhotoSection: View {
+    let api: NumiAPI
+    let photo: ImportedPhoto
+    let number: Int
+    let canRetry: Bool
+    let working: Bool
+    let edit: (PhotoCandidate?) -> Void
+    let retry: () -> Void
+
+    var body: some View {
+        Section("Photo \(number)") {
+            SpecimenImage(api: api, id: photo.id, sampleAsset: nil).frame(height: 220)
+            Label(photo.statusLabel, systemImage: photo.isPending ? "clock" : "photo")
+            if let message = photo.error { Text(message).font(.footnote).foregroundStyle(.secondary) }
+            if photo.canCatalog {
+                ForEach(photo.candidates.indices, id: \.self) { index in
+                    suggestionButton(photo.candidates[index])
+                }
+                Button(photo.state == "saved" ? "Catalog another specimen" : "Catalog manually") { edit(nil) }
+            }
+            if photo.state == "failed" && canRetry {
+                Button("Retry analysis", action: retry).disabled(working)
+            }
+        }
+    }
+
+    private func suggestionButton(_ suggestion: PhotoCandidate) -> some View {
+        let subtitle = [suggestion.issuer, suggestion.denomination, suggestion.year]
+            .compactMap { $0 }.filter { !$0.isBlank }.joined(separator: " · ")
+        return Button {
+            edit(suggestion)
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(suggestion.title)
+                if !subtitle.isEmpty { Text(subtitle).font(.footnote).foregroundStyle(.secondary) }
+            }
+        }
     }
 }

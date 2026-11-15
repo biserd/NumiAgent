@@ -260,10 +260,12 @@ struct ChecklistEditor: View {
         NavigationStack {
             Form {
                 if checklistID == nil && draft.slots.isEmpty {
-                    Section("Suggest a checklist") {
+                    Section {
                         TextField("Example: 1935 Canadian banknotes", text: $goal, axis: .vertical)
                         Button("Preview suggestions") { Task { await suggest() } }
                             .disabled(goal.isBlank || busy || goal.count > 400)
+                    } header: {
+                        Text("Suggest a checklist")
                     } footer: {
                         Text("Review the suggested matching rules before saving.")
                     }

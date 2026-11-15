@@ -9,6 +9,7 @@ const html = (text:string) => text.replace(/[&<>"']/g,char=>({
 function pageBody(page:SitePage,contact:boolean) {
   const sections=page.sections.map(section=>'<section><h2>'+html(section.title)+'</h2>'+
     section.paragraphs.map(paragraph=>'<p>'+html(paragraph)+'</p>').join('')+
+    (section.code?'<pre class="docs-code"><code>'+html(section.code)+'</code></pre>':'')+
     (section.links?.map(link=>'<p><a href="'+html(link.href)+'">'+html(link.label)+'</a></p>').join('') ?? '')+
     '</section>').join('')
   return '<div class="public-page"><header class="site-header wrap"><a class="brand" href="/">'+brand+

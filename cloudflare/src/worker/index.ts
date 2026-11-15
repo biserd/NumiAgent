@@ -7,6 +7,7 @@ import { contactRetentionDays, submitContact } from './contact'
 import { collections, items, themes, valuations } from './collection'
 import { all, fail, limit, now, router, run, sameOrigin, usageWindow } from './core'
 import type { Env, Job } from './core'
+import { authorizeDeveloper, developerKeys } from './developer'
 import { imports, photos, processQueue, reconcileImports } from './ingest'
 import { market, refreshWatchlists, watchlists } from './market'
 export { PhotoWorkflow } from './ingest'
@@ -16,6 +17,8 @@ api.get('/health',c=>c.json({ok:true}))
 api.route('/auth',auth)
 api.post('/contact',submitContact)
 api.use('*',async(c,next)=>{
+  const authorization = c.req.header('Authorization')
+  if (authorization !== undefined) return authorizeDeveloper(c,authorization,next)
   const user = await currentUser(c)
   if (!user) return fail(401,'Sign in to continue')
   c.set('user',user)
@@ -26,6 +29,7 @@ api.use('*',async(c,next)=>{
   await next()
 })
 profile.route('/grants',grants)
+profile.route('/developer-keys',developerKeys)
 api.route('/me',profile)
 api.route('/items',items)
 api.route('/collections',collections)
@@ -80,6 +84,7 @@ async function maintenance(env:Env) {
   await env.DB.batch([
     env.DB.prepare('DELETE FROM login_links WHERE expires<?').bind(now()),
     env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(now()),
+    env.DB.prepare('DELETE FROM developer_keys WHERE expires<=?').bind(now()),
     env.DB.prepare('DELETE FROM limits WHERE window<?').bind(now()-8*86400),
     env.DB.prepare('DELETE FROM contact_messages WHERE created<?').bind(now()-contactRetentionDays*86400)
   ])

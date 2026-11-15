@@ -3,7 +3,7 @@
   "info": {
     "title": "NumiAgent REST API",
     "version": "1.0.0",
-    "description": "Browser mutations require an Origin header equal to APP_ORIGIN. Remote MCP uses separate OAuth and Streamable HTTP at /mcp."
+    "description": "Create a read-only developer key at /app#developer. Use it with Bearer authentication on operations marked developerKey. Browser mutations require the configured same Origin. MCP uses OAuth and Streamable HTTP at /mcp."
   },
   "servers": [
     {
@@ -677,6 +677,217 @@
         }
       }
     },
+    "/me/developer-keys": {
+      "get": {
+        "summary": "List active API keys without their secrets",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "scope": {
+                        "const": "collection:read"
+                      },
+                      "created": {
+                        "type": "number"
+                      },
+                      "expires": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "scope",
+                      "created",
+                      "expires"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a read-only API key and return its secret once",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "scope": {
+                      "const": "collection:read"
+                    },
+                    "created": {
+                      "type": "number"
+                    },
+                    "expires": {
+                      "type": "number"
+                    },
+                    "secret": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "scope",
+                    "created",
+                    "expires",
+                    "secret"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "label"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/developer-keys/{id}": {
+      "delete": {
+        "summary": "Revoke an API key",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
     "/me/export": {
       "get": {
         "summary": "Export account metadata",
@@ -727,6 +938,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "responses": {
@@ -946,6 +1160,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -1383,6 +1600,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "responses": {
@@ -1471,6 +1691,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -1628,6 +1851,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "responses": {
@@ -1748,6 +1974,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -1917,6 +2146,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -1973,6 +2205,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -2083,6 +2318,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "responses": {
@@ -2259,6 +2497,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -2431,6 +2672,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -2561,6 +2805,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -2619,6 +2866,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -2672,6 +2922,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "parameters": [
@@ -2774,6 +3027,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "developerKey": []
           }
         ],
         "responses": {
@@ -3556,6 +3812,11 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "__Host-numis_session"
+      },
+      "developerKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A revocable NumiAgent API key with collection:read scope."
       }
     }
   }

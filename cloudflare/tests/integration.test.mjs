@@ -41,7 +41,8 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     return verified.headers.get('set-cookie').split(';')[0]
   }
   try {
-    for(const [path,heading] of [['/about','About NumiAgent'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent']]){
+    for(const [path,heading] of [['/about','About NumiAgent'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent'],
+      ['/developers','NumiAgent for developers'],['/developers/api','REST API guide'],['/developers/mcp','MCP connection guide']]){
       const response=await fetch(base+path)
       assert.equal(response.status,200)
       const markup=await response.text()
@@ -57,6 +58,25 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await api('/items')).status,401)
     const a=await login('collector@example.test')
     const b=await login('another@example.test')
+    const openapi=await json(await fetch(base+'/openapi.json'))
+    assert.ok(openapi.paths['/items'].get.security.some(entry=>entry.developerKey))
+    assert.deepEqual(openapi.paths['/items'].post.security,[{session:[]}])
+    const key=await json(await api('/me/developer-keys',a,'POST',{label:'Catalog integration'}),201)
+    const otherKey=await json(await api('/me/developer-keys',b,'POST',{label:'Other account'}),201)
+    assert.match(key.secret,/^na_live_[0-9a-f]{64}$/)
+    assert.ok(key.expires>key.created)
+    assert.deepEqual(await json(await api('/me/developer-keys',a)),[{
+      id:key.id,label:key.label,scope:'collection:read',created:key.created,expires:key.expires
+    }])
+    const usingKey=(path,secret=key.secret,method='GET',headers={})=>fetch(base+'/api/v1'+path,{
+      method,headers:{Authorization:'Bearer '+secret,...headers}
+    })
+    assert.equal((await usingKey('/items','bad', 'GET',{Cookie:a})).status,401)
+    assert.equal((await usingKey('/items',key.secret,'POST',{Cookie:a,Origin:base})).status,403)
+    assert.equal((await usingKey('/me/developer-keys')).status,403)
+    assert.equal((await usingKey('/items/export.csv')).status,403)
+    assert.equal((await api('/me/developer-keys/'+key.id,b,'DELETE')).status,204)
+    assert.equal((await usingKey('/items')).status,200)
     const invalid=await fetch(base+'/api/v1/items',{method:'POST',headers:{Cookie:a,Origin:'https://different.example'},body:'{}'})
     assert.equal(invalid.status,403)
     const id=randomUUID()
@@ -86,6 +106,12 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
       photos:[{photoId:ids[0],side:'obverse'},{photoId:ids[1],side:'reverse'}]}),201)
     assert.equal((await api('/items/'+saved.id,b)).status,404)
     assert.equal((await json(await api('/items?q=trajan',a))).items.length,1)
+    assert.equal((await json(await usingKey('/items?q=trajan'))).items[0].id,saved.id)
+    assert.equal((await usingKey('/items/'+saved.id,otherKey.secret)).status,404)
+    assert.equal((await usingKey('/photos/'+ids[0],otherKey.secret)).status,404)
+    assert.equal((await usingKey('/photos/'+ids[0])).status,200)
+    assert.equal((await api('/me/developer-keys/'+key.id,a,'DELETE')).status,204)
+    assert.equal((await usingKey('/items')).status,401)
     assert.equal((await json(await api('/valuations/'+saved.id,a))).status,'insufficient_market_evidence')
     const synthetic=Array.from({length:3},(_,index)=>({
       url:'https://example.test/synthetic/lot'+index,date:new Date().toISOString().slice(0,10),currency:'USD',amount:100+index*10,
@@ -184,6 +210,8 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await fetch(base+'/mcp',{headers:{Authorization:'Bearer '+token.access_token}})).status,403)
     assert.equal((await api('/me',a,'DELETE',{confirm:'DELETE'})).status,202)
     assert.equal((await api('/me',a)).status,401)
+    assert.equal((await api('/me',b,'DELETE',{confirm:'DELETE'})).status,202)
+    assert.equal((await usingKey('/items',otherKey.secret)).status,401)
     const cron=await fetch(base+'/cdn-cgi/local/scheduled')
     assert.equal(cron.status,200,await cron.text())
   } catch(error) {

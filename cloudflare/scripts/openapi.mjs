@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { contactInput, id, item, photoLink, sale, slot } from '../src/shared/domain.ts'
 import { legacyBatch } from '../src/shared/legacy.ts'
+import { developerReadPaths } from '../src/shared/developerAccess.ts'
 
 const json = schema => ({'application/json':{schema}})
 const type = value => ({type:value})
@@ -28,7 +29,9 @@ const definitions = {
 const paths={}
 const endpoint = (method,path,summary,{input,output=type('object'),status=200,publicRoute=false,queries=[],media='application/json',responseMedia='application/json'}={})=>{
   const keys=[...path.matchAll(/\{([^}]+)\}/g)].map(match=>match[1])
-  const operation={summary,security:publicRoute ? []:[{session:[]}],
+  const security=publicRoute ? []:[{session:[]}]
+  if (method==='get' && developerReadPaths.includes(path)) security.push({developerKey:[]})
+  const operation={summary,security,
     parameters:[...keys.map(name=>({name,in:'path',required:true,schema:uuid})),...queries.map(name=>({name,in:'query',schema:name==='page'?{type:'integer',minimum:0}:string}))],
     responses:{[status]:{description:status===204?'Completed':'Success',...status!==204?{content:{[responseMedia]:{schema:output}}}:{}},
       '400':{description:'Invalid input',content:json(ref('Error'))},'401':{description:'Sign-in required'},'403':{description:'Authorization or origin check failed'},
@@ -56,6 +59,12 @@ endpoint('delete','/me/sessions/{id}','Revoke a session',empty)
 endpoint('post','/me/signout','Sign out of the current session',empty)
 endpoint('get','/me/grants','List connected agents',{output:array(type('object'))})
 endpoint('delete','/me/grants/{id}','Revoke an agent grant',empty)
+const developerKey=object({id:uuid,label:string,scope:{const:'collection:read'},created:number,expires:number})
+endpoint('get','/me/developer-keys','List active API keys without their secrets',{output:array(developerKey)})
+endpoint('post','/me/developer-keys','Create a read-only API key and return its secret once',{
+  input:object({label:{type:'string',minLength:1,maxLength:80}}),status:201,
+  output:object({...developerKey.properties,secret:string})})
+endpoint('delete','/me/developer-keys/{id}','Revoke an API key',empty)
 endpoint('get','/me/export','Export account metadata')
 endpoint('get','/collections','List collection folders',{output:array(type('object'))})
 endpoint('post','/collections','Create a folder',{...idOut,input:name})
@@ -99,6 +108,9 @@ endpoint('post','/watchlists','Upsert a watch with optional email opt-in',{statu
 endpoint('delete','/watchlists/{id}','Remove a watch',empty)
 
 const spec={openapi:'3.1.0',info:{title:'NumiAgent REST API',version:'1.0.0',
-  description:'Browser mutations require an Origin header equal to APP_ORIGIN. Remote MCP uses separate OAuth and Streamable HTTP at /mcp.'},
-  servers:[{url:'/api/v1'}],paths,components:{schemas:definitions,securitySchemes:{session:{type:'apiKey',in:'cookie',name:'__Host-numis_session'}}}}
+  description:'Create a read-only developer key at /app#developer. Use it with Bearer authentication on operations marked developerKey. Browser mutations require the configured same Origin. MCP uses OAuth and Streamable HTTP at /mcp.'},
+  servers:[{url:'/api/v1'}],paths,components:{schemas:definitions,securitySchemes:{
+    session:{type:'apiKey',in:'cookie',name:'__Host-numis_session'},
+    developerKey:{type:'http',scheme:'bearer',description:'A revocable NumiAgent API key with collection:read scope.'}
+  }}}
 await writeFile('public/openapi.json',JSON.stringify(spec,null,2)+'\n')

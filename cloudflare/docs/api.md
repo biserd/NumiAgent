@@ -2,11 +2,13 @@
 
 The OpenAPI 3.1 document is at [public/openapi.json](../public/openapi.json) and is served by the Worker. REST browser calls use an HttpOnly session cookie. Send the exact configured Origin on browser writes. List specimens with `GET /api/v1/items?q=Trajan&type=coin&page=0`. Import files via a client-generated batch UUID, then PUT raw JPEG, PNG or WebP bytes to `/api/v1/imports/{id}/photos`. Repeating the same bytes in the same batch reuses the photo UUID.
 
+Sign in and open Developer to create a named read-only API key. Use `Authorization: Bearer <key>` on operations marked with `developerKey` in OpenAPI. These include catalog, photo and import reads, themes, valuations, watchlists, references and marketplace search. Keys expire after 90 days. Each account has a shared limit of 120 developer REST requests per minute. Only the creation response shows the secret. Revoke access in Developer.
+
 Transfer an authenticated legacy portfolio export with `POST /api/v1/items/import/numisgraph`. Send the original `/api/coins` rows as `coins` (up to 25 per call) and an optional `collectionId` owned by the current collector. The response counts imported and already-present rows and reports legacy photo references to reconcile. Use `GET /api/v1/references?q=caligula&kind=ruler` for Nomisma names, aliases, citations, and attribution.
 
 ## MCP
 
-Configure a Streamable HTTP client with the exact public Worker origin and `/mcp`. It discovers the authorization server from the 401 resource metadata, registers a client, and initiates OAuth authorization code with S256 PKCE. The collector signs in, reviews the client name and destination, and approves the single `collection:read` scope. Authorizations can be revoked in Settings. Tool results include a JSON object in `structuredContent.data`. OAuth access tokens expire in 15 minutes. The OAuth provider manages refresh tokens and authorization codes.
+Configure a Streamable HTTP client with the exact public Worker origin and `/mcp`. It discovers the authorization server from the 401 resource metadata, registers a client, and initiates OAuth authorization code with S256 PKCE. The collector signs in, reviews the client name and destination, and approves the single `collection:read` scope. Authorizations can be revoked in Developer. Tool results include a JSON object in `structuredContent.data`. OAuth access tokens expire in 15 minutes. The OAuth provider manages refresh tokens and authorization codes.
 
 | Tool | Input | Result |
 | --- | --- | --- |

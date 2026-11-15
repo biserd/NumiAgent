@@ -5,6 +5,7 @@ import Catalog from './Catalog.vue'
 import ImportView from './ImportView.vue'
 import GoalsMarket from './GoalsMarket.vue'
 import Settings from './Settings.vue'
+import Developer from './Developer.vue'
 import Overview from './Overview.vue'
 import PublicPage from './PublicPage.vue'
 import { siteLinks, sitePages } from './sitePages'
@@ -14,7 +15,7 @@ const path=location.pathname.replace(/\/$/,'') || '/'
 const onLanding=path==='/'
 const onApp=path==='/app'
 const sitePage=sitePages[path]
-const routes = ['Overview','Collection','Imports','Themes','Marketplace','Settings'] as const
+const routes = ['Overview','Collection','Imports','Themes','Marketplace','Developer','Settings'] as const
 type Page = typeof routes[number]
 const readPage = ():Page => routes.find(r=>r.toLowerCase()===location.hash.slice(1)) ?? 'Overview'
 const page = ref<Page>(readPage())
@@ -52,6 +53,8 @@ async function signIn() {
   busy.value=true; error.value=''; status.value=''; developmentLink.value=''
   try {
     const result = await request<{developmentLink?:string}>('/auth/request','POST',{email:email.value,challenge:challenge.value || undefined})
+    if (page.value==='Developer') sessionStorage.setItem('numiagent-after-signin','developer')
+    else sessionStorage.removeItem('numiagent-after-signin')
     status.value='Check your email for the sign-in link.'
     developmentLink.value=result.developmentLink ?? ''
   } catch (e) { error.value=message(e) }
@@ -65,7 +68,13 @@ async function verifyLink() {
   if (location.hash.startsWith('#signin=')) {
     const token = location.hash.slice(8)
     history.replaceState(null,'','/app')
-    try { await request('/auth/verify','POST',{token}) } catch(e) { error.value=message(e) }
+    try {
+      await request('/auth/verify','POST',{token})
+      if (sessionStorage.getItem('numiagent-after-signin')==='developer') {
+        sessionStorage.removeItem('numiagent-after-signin')
+        go('Developer')
+      }
+    } catch(e) { error.value=message(e) }
   }
 }
 async function hashChanged() {
@@ -116,7 +125,7 @@ onUnmounted(()=>{
     <a class="brand" href="/"><img src="/mark.svg" alt="" width="42" height="42">Numi<span>Agent</span></a>
     <main class="panel">
       <h1>Sign in to NumiAgent</h1>
-      <p>Enter your email to create an account or sign in.</p>
+      <p>{{page==='Developer'?'Sign in or create an account to manage your API keys and MCP connections.':'Enter your email to create an account or sign in.'}}</p>
       <form @submit.prevent="signIn">
         <label>Email address<input v-model="email" required type="email" autocomplete="email" placeholder="collector@example.com"></label>
         <div ref="challengeRoot"></div>
@@ -138,6 +147,7 @@ onUnmounted(()=>{
       <Catalog v-else-if="page==='Collection'" :start-with-new="startWithNew"/>
       <ImportView v-else-if="page==='Imports'"/>
       <GoalsMarket v-else-if="page==='Themes' || page==='Marketplace'" :mode="page" :initial-query="marketQuery" @search="search"/>
+      <Developer v-else-if="page==='Developer'"/>
       <Settings v-else :email="user.email"/>
       <nav class="app-links" aria-label="Site information"><a v-for="link in siteLinks" :key="link.href" :href="link.href">{{link.label}}</a></nav>
     </main>

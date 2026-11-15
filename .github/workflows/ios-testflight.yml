@@ -1,0 +1,84 @@
+name: Upload NumiAgent to TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: numiagent-testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    environment: app-store
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: ios
+      - name: Archive, sign, and upload
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          IOS_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          : "${IOS_CERTIFICATE_BASE64:?Configure IOS_CERTIFICATE_BASE64 in the app-store environment}"
+          : "${IOS_CERTIFICATE_PASSWORD:?Configure IOS_CERTIFICATE_PASSWORD in the app-store environment}"
+          : "${IOS_PROFILE_BASE64:?Configure IOS_PROFILE_BASE64 in the app-store environment}"
+          : "${ASC_KEY_ID:?Configure ASC_KEY_ID in the app-store environment}"
+          : "${ASC_ISSUER_ID:?Configure ASC_ISSUER_ID in the app-store environment}"
+          : "${ASC_PRIVATE_KEY:?Configure ASC_PRIVATE_KEY in the app-store environment}"
+          [[ "$ASC_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]
+          [[ "$ASC_ISSUER_ID" =~ ^[0-9a-fA-F-]{36}$ ]]
+          umask 077
+          signing="$(mktemp -d "$RUNNER_TEMP/numiagent-signing.XXXXXX")"
+          keychain="$signing/distribution.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+          printf '%s' "$IOS_CERTIFICATE_BASE64" | base64 -D > "$signing/distribution.p12"
+          printf '%s' "$IOS_PROFILE_BASE64" | base64 -D > "$signing/NumiAgent.mobileprovision"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$signing/AuthKey_$ASC_KEY_ID.p8"
+          security cms -D -i "$signing/NumiAgent.mobileprovision" > "$signing/profile.plist"
+          app_id="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$signing/profile.plist")"
+          [[ "$app_id" == 'DB5JRGGB6A.com.numiagent.ios' ]]
+          [[ "$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' "$signing/profile.plist")" == 'false' ]]
+          profile_uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$signing/profile.plist")"
+          [[ "$profile_uuid" =~ ^[0-9a-fA-F-]{36}$ ]]
+          profiles="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          mkdir -p "$profiles"
+          cp "$signing/NumiAgent.mobileprovision" "$profiles/$profile_uuid.mobileprovision"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$signing/distribution.p12" -k "$keychain" -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain"
+          xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NumiAgent.xcarchive" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER="$profile_uuid" \
+            CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" archive
+          python3 - "$signing/ExportOptions.plist" "$profile_uuid" <<'PY'
+          import plistlib, sys
+          with open(sys.argv[1], "wb") as file:
+              plistlib.dump({
+                  "method": "app-store-connect",
+                  "destination": "upload",
+                  "signingStyle": "manual",
+                  "teamID": "DB5JRGGB6A",
+                  "signingCertificate": "Apple Distribution",
+                  "provisioningProfiles": {"com.numiagent.ios": sys.argv[2]},
+                  "manageAppVersionAndBuildNumber": False,
+              }, file)
+          PY
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NumiAgent.xcarchive" \
+            -exportOptionsPlist "$signing/ExportOptions.plist" -exportPath "$RUNNER_TEMP/numiagent-export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$signing/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"

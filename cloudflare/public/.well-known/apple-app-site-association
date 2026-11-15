@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["DB5JRGGB6A.com.numiagent.ios"],
+        "components": [{"/": "/app", "#": "signin=*"}]
+      }
+    ]
+  }
+}

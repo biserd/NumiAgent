@@ -6,9 +6,9 @@ Keep both sides of each piece, the attribution you settled on, and the auction r
 
 **[Start your catalog](https://numiagent.com/app)** · [Explore the features](https://numiagent.com/features) · [Read the collector guides](https://numiagent.com/blog)
 
-<p align="center">
-  <img src="cloudflare/public/roman-bronze.jpg" width="280" alt="Illustration of a weathered Roman bronze coin">
-</p>
+![NumiAgent’s catalog showing six Roman coins in a searchable collection grid](docs/screenshots/catalog.jpg)
+
+These screenshots show the running app with a demo collection. Identification scores and sale records are illustrative. [Coin photographs from The Met’s Open Access collection](https://www.metmuseum.org/hubs/open-access).
 
 ## From the camera roll to the next coin
 
@@ -20,13 +20,19 @@ Upload a batch from your phone or computer and pick up where you left off. Pair 
 
 Opt in to AI-assisted identification for a batch and review suggested attributions, confidence scores, and crops. Check the visible evidence, correct the details, or enter the record by hand. For Roman imperial coins, look up an OCRE type and attach the reference to your specimen. [See how to identify a Roman coin](https://numiagent.com/blog/identify-roman-coins).
 
+![NumiAgent photo imports showing three coin photographs with suggested identifications, confidence scores, and review controls](docs/screenshots/photo-identification.jpg)
+
 ### See what comparable pieces sold for
 
 Record realized auction prices alongside the original lot link, date, condition, and currency. Keep the hammer price and buyer’s premium distinct, and look up dated ECB exchange rates when comparing currencies. NumiAgent shows a valuation range when the comparable evidence supports one. [Read the guide to comparing sold lots](https://numiagent.com/blog/compare-coin-auction-prices).
 
+![NumiAgent auction valuation showing an example price range and three comparable sales](docs/screenshots/valuations.jpg)
+
 ### Know what’s missing from your set
 
 Start with a sourced Roman emperor or Canadian banknote checklist, or define a theme of your own. See which pieces match, which need better references, and which slots remain open. Save auction searches for gaps you want to revisit. Live results and alerts require a configured auction provider. [Build a Roman emperor coin checklist](https://numiagent.com/blog/build-a-roman-emperor-coin-checklist).
+
+![NumiAgent checklist showing three of four Roman coin slots filled and one missing specimen](docs/screenshots/checklists.jpg)
 
 ## Keep your collection organized and portable
 

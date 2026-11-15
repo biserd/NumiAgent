@@ -1,24 +1,28 @@
-# NumisGraph
+# NumiAgent
 
-NumiAgent is a private catalog for coins and banknotes. This repository contains its Cloudflare application and the original NumisGraph research application. NumiAgent lives under [cloudflare/](cloudflare/README.md).
+NumiAgent helps coin and banknote collectors turn a photo backlog into a private catalog, identify unfamiliar pieces, compare realized auction prices, and see what’s missing from a set.
 
-## Cloudflare pilot
+Visit [numiagent.com](https://numiagent.com) or read the [developer documentation](https://numiagent.com/developers) for the REST API and MCP server.
 
-Use Node 24.11 or newer. Install and run the Worker from the repository root.
+## Run NumiAgent locally
+
+Use Node.js 24.11 or newer. The web app, Worker, and tests are in [`cloudflare/`](cloudflare/README.md).
 
 ```sh
+git clone https://github.com/biserd/NumiAgent.git
+cd NumiAgent
 npm --prefix cloudflare ci
 npm run cloudflare:build
 npm run cloudflare:db:local
 npm run cloudflare:dev
 ```
 
-Open http://127.0.0.1:8787 and use the local sign-in link. Staging and production use separate Cloudflare resources and a manual deployment workflow.
+Open [the local app](http://127.0.0.1:8787) and use the sign-in link it displays. Deployment setup and Cloudflare bindings are documented separately.
 
-- [Repository review and migration plan](docs/cloudflare-integration.md)
-- [Cloudflare deployment](cloudflare/docs/deploy.md)
-- [REST and MCP](cloudflare/docs/api.md)
+- [Cloudflare deployment guide](cloudflare/docs/deploy.md)
+- [REST API and MCP integration](cloudflare/docs/api.md)
+- [Architecture](cloudflare/docs/architecture.md)
 
-## Existing application
+## NumisGraph research app
 
-The [original architecture and setup](replit.md) describe the React UI, Express APIs, PostgreSQL schema, museum corpus, and Nomisma graph. The original root scripts continue to run that application. Refreshing the Cloudflare reference data uses the repository's existing RDF parser and dependencies.
+This repository also contains the original NumisGraph research app, which uses React, Express, PostgreSQL, and Nomisma linked data. Its setup is in [`replit.md`](replit.md). The [integration notes](docs/cloudflare-integration.md) cover migration to NumiAgent.

@@ -320,5 +320,5 @@ private struct SessionKeychain {
         guard result == errSecSuccess || result == errSecItemNotFound else { throw failure }
     }
 
-    private var failure: NumiError { .request(0, "NumiAgent couldn’t access this iPhone’s secure sign-in storage.") }
+    private var failure: NumiError { .request(0, "NumiAgent couldn’t access this device’s secure sign-in storage.") }
 }

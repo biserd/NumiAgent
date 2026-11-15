@@ -53,6 +53,7 @@
                 B0000000000000000000000A,
                 B0000000000000000000000B,
                 B0000000000000000000000C,
+                B0000000000000000000000D,
             );
             path = NumiAgent;
             sourceTree = "<group>";
@@ -61,7 +62,7 @@
         A00000000000000000000007 = {
             isa = PBXSourcesBuildPhase;
             buildActionMask = 2147483647;
-            files = (C00000000000000000000001, C00000000000000000000002, C00000000000000000000003, C00000000000000000000004, C00000000000000000000005, C00000000000000000000008, C00000000000000000000009, C0000000000000000000000A, C0000000000000000000000B);
+            files = (C00000000000000000000001, C00000000000000000000002, C00000000000000000000003, C00000000000000000000004, C00000000000000000000005, C00000000000000000000008, C00000000000000000000009, C0000000000000000000000A, C0000000000000000000000B, C0000000000000000000000D);
             runOnlyForDeploymentPostprocessing = 0;
         };
         A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
@@ -119,7 +120,7 @@
                 PRODUCT_NAME = "$(TARGET_NAME)";
                 SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
                 SWIFT_VERSION = 5.0;
-                TARGETED_DEVICE_FAMILY = 1;
+                TARGETED_DEVICE_FAMILY = "1,2";
             };
             name = Debug;
         };
@@ -144,7 +145,7 @@
                 PRODUCT_NAME = "$(TARGET_NAME)";
                 SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
                 SWIFT_VERSION = 5.0;
-                TARGETED_DEVICE_FAMILY = 1;
+                TARGETED_DEVICE_FAMILY = "1,2";
             };
             name = Release;
         };
@@ -160,6 +161,7 @@
         B0000000000000000000000A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeEditing.swift; sourceTree = "<group>"; };
         B0000000000000000000000B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSales.swift; sourceTree = "<group>"; };
         B0000000000000000000000C = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        B0000000000000000000000D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabletWorkspace.swift; sourceTree = "<group>"; };
         C00000000000000000000001 = { isa = PBXBuildFile; fileRef = B00000000000000000000001; };
         C00000000000000000000002 = { isa = PBXBuildFile; fileRef = B00000000000000000000002; };
         C00000000000000000000003 = { isa = PBXBuildFile; fileRef = B00000000000000000000003; };
@@ -170,6 +172,7 @@
         C00000000000000000000009 = { isa = PBXBuildFile; fileRef = B00000000000000000000009; };
         C0000000000000000000000A = { isa = PBXBuildFile; fileRef = B0000000000000000000000A; };
         C0000000000000000000000B = { isa = PBXBuildFile; fileRef = B0000000000000000000000B; };
+        C0000000000000000000000D = { isa = PBXBuildFile; fileRef = B0000000000000000000000D; };
     };
     rootObject = A00000000000000000000001;
 }

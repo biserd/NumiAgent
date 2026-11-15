@@ -142,7 +142,7 @@ private enum CaptureError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .storage: return "NumiAgent couldn’t access the local photo draft."
+        case .storage: return "NumiAgent couldn’t access the photo draft on this device."
         case .unsupported: return "This photo could not be imported. Choose a different image."
         case .tooMany: return "Finish the current batch before adding more photos."
         }
@@ -152,10 +152,11 @@ private enum CaptureError: LocalizedError {
 struct CaptureScreen: View {
     let api: NumiAPI
     let account: Account?
+    let onUpload: ((String) -> Void)?
     @StateObject private var store: CaptureDraftStore
     @State private var selection: [PhotosPickerItem] = []
     @State private var camera = false
-    @State private var name = "iPhone photo batch"
+    @State private var name: String
     @State private var analyze = false
     @State private var busy = false
     @State private var error: String?
@@ -163,106 +164,116 @@ struct CaptureScreen: View {
     @State private var demoPhoto = PreviewLaunch.screen == .capture
     @State private var demoResult = PreviewLaunch.screen == .capture
 
-    init(api: NumiAPI, account: Account?) {
+    init(api: NumiAPI, account: Account?, onUpload: ((String) -> Void)? = nil) {
         self.api = api
         self.account = account
+        self.onUpload = onUpload
+        _name = State(initialValue: onUpload == nil ? "iPhone photo batch" : "iPad photo batch")
         _store = StateObject(wrappedValue: CaptureDraftStore(account: account))
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                if account == nil {
-                    Section("Demo photo review") {
-                        Button("Add sample photo") { demoPhoto = true }
-                        if demoPhoto {
-                            Image("DemoCoin").resizable().scaledToFit().frame(maxHeight: 210)
-                                .accessibilityLabel("Illustrative Roman coin")
-                            Button("Preview identification") { demoResult = true }
-                        }
-                        if demoResult {
-                            LabeledContent("Example candidate", value: "Roman bronze coin")
-                            Text("Review the image and catalog reference before accepting a suggestion.")
-                                .font(.footnote).foregroundStyle(.secondary)
+        if onUpload != nil { captureForm }
+        else {
+            NavigationStack {
+                captureForm.navigationDestination(item: $uploadedBatch) { id in
+                    ImportReview(api: api, batchID: id)
+                }
+            }
+        }
+    }
+
+    private var captureForm: some View {
+        List {
+            if account == nil {
+                Section("Demo photo review") {
+                    Button("Add sample photo") { demoPhoto = true }
+                    if demoPhoto {
+                        Image("DemoCoin").resizable().scaledToFit().frame(maxHeight: onUpload == nil ? 210 : 330)
+                            .accessibilityLabel("Illustrative Roman coin")
+                        Button("Preview identification") { demoResult = true }
+                    }
+                    if demoResult {
+                        LabeledContent("Example candidate", value: "Roman bronze coin")
+                        Text("Review the image and catalog reference before accepting a suggestion.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+            } else {
+                Section {
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                        Button { camera = true } label: { Label("Take a photo", systemImage: "camera") }
+                            .disabled(busy || store.draft.submittedName != nil)
+                    }
+                    PhotosPicker(selection: $selection, maxSelectionCount: CaptureDraftStore.maximumPhotos, matching: .images) {
+                        Label("Choose photos", systemImage: "photo.on.rectangle")
+                    }
+                    .disabled(busy || store.draft.submittedName != nil)
+                } footer: {
+                    Text("Draft photos stay on this device until you upload them.")
+                }
+                if !store.draft.photos.isEmpty {
+                    Section("On this device") {
+                        ForEach(store.draft.photos, id: \.self) { id in
+                            HStack {
+                                if let url = store.photo(id), let image = UIImage(contentsOfFile: url.path) {
+                                    Image(uiImage: image).resizable().scaledToFill()
+                                        .frame(width: 64, height: 56).clipped().accessibilityHidden(true)
+                                }
+                                Text(store.draft.uploaded.contains(id) ? "Uploaded" : "Ready to upload")
+                                Spacer()
+                                if store.draft.submittedName == nil {
+                                    Button("Remove photo", systemImage: "trash", role: .destructive) {
+                                        record { try store.removePhoto(id) }
+                                    }
+                                    .labelStyle(.iconOnly)
+                                    .buttonStyle(.borderless)
+                                    .disabled(busy)
+                                }
+                            }
                         }
                     }
-                } else {
                     Section {
-                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                            Button { camera = true } label: { Label("Take a photo", systemImage: "camera") }
-                                .disabled(busy || store.draft.submittedName != nil)
+                        if let submittedName = store.draft.submittedName {
+                            Text(submittedName)
+                            Text("\(store.draft.uploaded.count) of \(store.draft.photos.count) uploaded")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            TextField("Batch name", text: $name)
+                            Toggle("Ask AI for identification suggestions", isOn: $analyze)
+                            if analyze {
+                                Text("Uploading with this option sends these photos to Cloudflare Workers AI for analysis.")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                            }
                         }
-                        PhotosPicker(selection: $selection, maxSelectionCount: CaptureDraftStore.maximumPhotos, matching: .images) {
-                            Label("Choose photos", systemImage: "photo.on.rectangle")
+                        Button(store.draft.submittedName == nil ? "Upload batch" : "Resume upload") {
+                            Task { await upload() }
                         }
-                        .disabled(busy || store.draft.submittedName != nil)
-                    } footer: {
-                        Text("Draft photos stay on this iPhone until you upload them.")
+                        .disabled(busy || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.utf16.count > 100)
+                    } header: {
+                        Text("Upload")
                     }
-                    if !store.draft.photos.isEmpty {
-                        Section("On this iPhone") {
-                            ForEach(store.draft.photos, id: \.self) { id in
-                                HStack {
-                                    if let url = store.photo(id), let image = UIImage(contentsOfFile: url.path) {
-                                        Image(uiImage: image).resizable().scaledToFill()
-                                            .frame(width: 64, height: 56).clipped().accessibilityHidden(true)
-                                    }
-                                    Text(store.draft.uploaded.contains(id) ? "Uploaded" : "Ready to upload")
-                                    Spacer()
-                                    if store.draft.submittedName == nil {
-                                        Button("Remove photo", systemImage: "trash", role: .destructive) {
-                                            record { try store.removePhoto(id) }
-                                        }
-                                        .labelStyle(.iconOnly)
-                                        .buttonStyle(.borderless)
-                                        .disabled(busy)
-                                    }
-                                }
-                            }
-                        }
-                        Section {
-                            if let submittedName = store.draft.submittedName {
-                                Text(submittedName)
-                                Text("\(store.draft.uploaded.count) of \(store.draft.photos.count) uploaded")
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                TextField("Batch name", text: $name)
-                                Toggle("Ask AI for identification suggestions", isOn: $analyze)
-                                if analyze {
-                                    Text("Uploading with this option sends these photos to Cloudflare Workers AI for analysis.")
-                                        .font(.footnote).foregroundStyle(.secondary)
-                                }
-                            }
-                            Button(store.draft.submittedName == nil ? "Upload batch" : "Resume upload") {
-                                Task { await upload() }
-                            }
-                            .disabled(busy || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.utf16.count > 100)
-                        } header: {
-                            Text("Upload")
-                        }
-                    }
+                }
+                if onUpload == nil {
                     Section {
                         NavigationLink("Review uploaded photos") { ImportHistory(api: api) }.disabled(busy)
                     }
                 }
-                if busy { ProgressView() }
-                if let message = error ?? store.error { Text(message).foregroundStyle(.red) }
             }
-            .navigationTitle("Capture")
-            .navigationDestination(item: $uploadedBatch) { id in
-                ImportReview(api: api, batchID: id)
+            if busy { ProgressView() }
+            if let message = error ?? store.error { Text(message).foregroundStyle(.red) }
+        }
+        .navigationTitle(onUpload == nil ? "Capture" : "New photo import")
+        .fullScreenCover(isPresented: $camera) {
+            CameraPicker { image in
+                camera = false
+                if let image { record { try store.append(image) } }
             }
-            .fullScreenCover(isPresented: $camera) {
-                CameraPicker { image in
-                    camera = false
-                    if let image { record { try store.append(image) } }
-                }
-                .ignoresSafeArea()
-            }
-            .onChange(of: selection) { _, picks in
-                guard !picks.isEmpty else { return }
-                Task { await addPhotos(picks) }
-            }
+            .ignoresSafeArea()
+        }
+        .onChange(of: selection) { _, picks in
+            guard !picks.isEmpty else { return }
+            Task { await addPhotos(picks) }
         }
     }
 
@@ -294,7 +305,9 @@ struct CaptureScreen: View {
         error = nil
         defer { busy = false }
         do {
-            uploadedBatch = try await store.upload(api: api, name: name, analyze: analyze)
+            let id = try await store.upload(api: api, name: name, analyze: analyze)
+            if let onUpload { onUpload(id) }
+            else { uploadedBatch = id }
         } catch { self.error = error.localizedDescription }
     }
 }

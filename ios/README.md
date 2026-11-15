@@ -1,19 +1,21 @@
-# NumiAgent for iPhone
+# NumiAgent for iPhone and iPad
 
 NumiAgent uses SwiftUI for sign-in, catalog editing, photo import and review, auction valuations, checklists, and data exports. It uses the same account and Cloudflare API as [numiagent.com](https://numiagent.com). Draft photos stay on the device until upload, and users can choose whether to request identification. iOS presents Cloudflare’s security check in a system authentication sheet when requesting an email link. The app stores its session in the iOS Keychain.
 
 ## Build
 
-Open `NumiAgent.xcodeproj` in Xcode 26 or later. Select the shared NumiAgent scheme and an iPhone simulator. The minimum deployment target is iOS 17. Tap **Explore demo** to see sample records without an account. The demo uses sample valuations and identification results.
+Open `NumiAgent.xcodeproj` in Xcode 26 or later. Select the shared NumiAgent scheme and an iPhone or iPad simulator. The minimum deployment target is iOS and iPadOS 17. Tap **Explore demo** to see sample records without an account. The demo uses sample valuations and identification results.
+
+iPad uses a native sidebar with a list and detail view for the catalog, photo imports, and checklists. The layout adapts when the window narrows. Specimen photos can appear side by side where the detail column has room.
 
 The demo catalog displays two public-domain coin photographs from The Met. [Octavian](https://www.metmuseum.org/art/collection/search/248037) · [Marcus Antonius](https://www.metmuseum.org/art/collection/search/248031).
 
-The GitHub workflow compiles both simulator and device builds and captures four screenshots using the Debug demo. The device build in that workflow is unsigned.
+The GitHub workflow verifies the universal device build and launches the Debug demo on iPhone and iPad simulators. The run includes iPhone screenshots and iPad screenshots in portrait and landscape. The device build in that workflow is unsigned.
 
 ## Sign and distribute
 
 1. Register the explicit App ID `com.numiagent.ios` under the Apple Developer team used by the Xcode project. Enable Associated Domains. Create the iOS app record in App Store Connect with that bundle ID.
-2. Select the team in Xcode’s Signing & Capabilities tab. On a signed iPhone, test the email sign-in link, the paste fallback, camera permission, upload retries, photo review, valuations, and deletion using a dedicated test account.
+2. Select the team in Xcode’s Signing & Capabilities tab. On signed iPhone and iPad devices, test the email sign-in link, the paste fallback, camera permission, upload retries, photo review, valuations, and deletion using a dedicated test account.
 3. Archive the Release scheme for a generic iOS device. Use **Distribute App** in Xcode Organizer to upload the signed archive to App Store Connect. Verify the build on TestFlight before submitting it.
 4. Complete age rating, availability, privacy disclosures, export compliance, support information, and App Review access in App Store Connect. Use a dedicated review account that gives Apple access to the signed-in features.
 

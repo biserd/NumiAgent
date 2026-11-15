@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import UIKit
 
 @MainActor
 final class AppSession: ObservableObject {
@@ -82,9 +83,18 @@ struct NumiAgentApp: App {
         case .signedOut, .unavailable:
             SignInScreen(session: session)
         case .signedIn(let account):
-            CollectorTabs(session: session, account: account).id(account.id)
+            workspace(account: account).id(account.id)
         case .demo:
-            CollectorTabs(session: session, account: nil).id("demo")
+            workspace(account: nil).id("demo")
+        }
+    }
+
+    @ViewBuilder
+    private func workspace(account: Account?) -> some View {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            TabletWorkspace(session: session, account: account)
+        } else {
+            CollectorTabs(session: session, account: account)
         }
     }
 
@@ -97,8 +107,26 @@ struct NumiAgentApp: App {
     }
 }
 
-enum CollectorTab: Hashable {
+enum CollectorTab: Hashable, CaseIterable, Identifiable {
     case collection, capture, checklists, settings
+
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .collection: return "Collection"
+        case .capture: return "Capture"
+        case .checklists: return "Checklists"
+        case .settings: return "Settings"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .collection: return "square.grid.2x2"
+        case .capture: return "camera"
+        case .checklists: return "checklist"
+        case .settings: return "gearshape"
+        }
+    }
 }
 
 enum PreviewLaunch {
@@ -158,7 +186,7 @@ private struct SignInScreen: View {
                         .buttonStyle(.borderedProminent)
                         .disabled(busy || email.isBlank || !email.contains("@"))
                     if requested {
-                        Text("Check your email for a sign-in link. Open it on this iPhone or paste it below.")
+                        Text("Check your email for a sign-in link. Open it on this device or paste it below.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
 
@@ -224,58 +252,64 @@ private struct CollectorTabs: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             CatalogScreen(api: session.api, demo: demo)
-                .tabItem { Label("Collection", systemImage: "square.grid.2x2") }
+                .tabItem { Label(CollectorTab.collection.title, systemImage: CollectorTab.collection.icon) }
                 .tag(CollectorTab.collection)
             CaptureScreen(api: session.api, account: account)
-                .tabItem { Label("Capture", systemImage: "camera") }
+                .tabItem { Label(CollectorTab.capture.title, systemImage: CollectorTab.capture.icon) }
                 .tag(CollectorTab.capture)
             ThemesScreen(api: session.api, demo: demo)
-                .tabItem { Label("Checklists", systemImage: "checklist") }
+                .tabItem { Label(CollectorTab.checklists.title, systemImage: CollectorTab.checklists.icon) }
                 .tag(CollectorTab.checklists)
             AccountScreen(session: session, account: account)
-                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tabItem { Label(CollectorTab.settings.title, systemImage: CollectorTab.settings.icon) }
                 .tag(CollectorTab.settings)
         }
     }
 }
 
-private struct AccountScreen: View {
+struct AccountScreen: View {
     @ObservedObject var session: AppSession
     let account: Account?
+    var inWorkspace = false
     @State private var delete = false
     @State private var busy = false
     @State private var error: String?
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Account") {
-                    if let account {
-                        Text(account.email)
+        if inWorkspace { form }
+        else { NavigationStack { form } }
+    }
+
+    private var form: some View {
+        Form {
+            Section("Account") {
+                if let account {
+                    Text(account.email)
+                    if !inWorkspace {
                         NavigationLink("Account and exports") { NativeAccountTools(api: session.api) }
-                        Button("Sign out") { Task { await endSession(deleteAccount: false) } }
-                            .disabled(busy)
-                        Button("Delete account", role: .destructive) { delete = true }.disabled(busy)
-                    } else {
-                        Text("Demo collection")
-                        Button("Leave demo") { Task { await session.closeDemo() } }
                     }
-                    if let error { Text(error).font(.footnote).foregroundStyle(.red) }
+                    Button("Sign out") { Task { await endSession(deleteAccount: false) } }
+                        .disabled(busy)
+                    Button("Delete account", role: .destructive) { delete = true }.disabled(busy)
+                } else {
+                    Text("Demo collection")
+                    Button("Leave demo") { Task { await session.closeDemo() } }
                 }
-                Section("Help") {
-                    Link("Contact NumiAgent", destination: NumiAPI.url("/contact"))
-                    Link("Privacy policy", destination: NumiAPI.url("/privacy"))
-                    Link("Terms of service", destination: NumiAPI.url("/terms"))
-                }
+                if let error { Text(error).font(.footnote).foregroundStyle(.red) }
             }
-            .navigationTitle("Settings")
-            .confirmationDialog("Delete your NumiAgent account?", isPresented: $delete, titleVisibility: .visible) {
-                Button("Delete account permanently", role: .destructive) {
-                    Task { await endSession(deleteAccount: true) }
-                }
-            } message: {
-                Text("Your online catalog and photos will be scheduled for deletion. This cannot be undone.")
+            Section("Help") {
+                Link("Contact NumiAgent", destination: NumiAPI.url("/contact"))
+                Link("Privacy policy", destination: NumiAPI.url("/privacy"))
+                Link("Terms of service", destination: NumiAPI.url("/terms"))
             }
+        }
+        .navigationTitle("Settings")
+        .confirmationDialog("Delete your NumiAgent account?", isPresented: $delete, titleVisibility: .visible) {
+            Button("Delete account permanently", role: .destructive) {
+                Task { await endSession(deleteAccount: true) }
+            }
+        } message: {
+            Text("Your online catalog and photos will be scheduled for deletion. This cannot be undone.")
         }
     }
 

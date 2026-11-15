@@ -35,9 +35,13 @@ final class TabletWorkspaceTests: XCTestCase {
         XCTAssertTrue(nextSpecimen.isHittable, "Selecting a specimen should keep the list visible.")
 
         sidebar.tap()
-        XCTAssertTrue(app.staticTexts["Late Republican denarii"].firstMatch.waitForExistence(timeout: 10))
-        app.staticTexts["Late Republican denarii"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["2 of 3 slots filled"].firstMatch.waitForExistence(timeout: 10))
+        let checklist = app.buttons["Late Republican denarii"].firstMatch
+        XCTAssertTrue(checklist.waitForExistence(timeout: 10))
+        checklist.tap()
+        XCTAssertTrue(app.navigationBars["Late Republican denarii"].firstMatch.waitForExistence(timeout: 10))
+        let missingSlot = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "Sextus Pompey")).firstMatch
+        XCTAssertTrue(missingSlot.waitForExistence(timeout: 10))
         capture("checklists-landscape")
     }
 

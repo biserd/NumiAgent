@@ -1,5 +1,5 @@
 import Foundation
-import WebKit
+import Security
 
 struct Account: Decodable, Equatable {
     let id: String
@@ -7,10 +7,15 @@ struct Account: Decodable, Equatable {
 }
 
 struct Specimen: Decodable, Identifiable {
-    struct Details: Decodable {
+    struct Details: Codable {
         var metal: String? = nil
         var mint: String? = nil
         var weightG: Double? = nil
+        var serial, signatures, obverse, reverse, inscriptions, mintMark, series, variant: String?
+        var provenance, certification, referenceUrl, purchaseSource, purchaseDate, description: String?
+        var obverseLegend, reverseLegend, currency: String?
+        var dateFrom, dateTo, dieAxis: Int?
+        var diameterMm, purchasePrice, fees: Double?
     }
 
     let id: String
@@ -25,6 +30,9 @@ struct Specimen: Decodable, Identifiable {
     let notes: String
     let photo: String?
     let details: Details?
+    var tags: String?
+    var collection_id: String?
+    var photos: [PhotoLink]?
 
     var subtitle: String {
         [ruler.isEmpty ? issuer : ruler, year].filter { !$0.isEmpty }.joined(separator: " · ")
@@ -77,6 +85,20 @@ struct ThemeDetails: Decodable {
 
         let label: String
         let owned: [Match]
+        var rule: ChecklistRule?
+
+        init(label: String, owned: [Match]) {
+            self.label = label
+            self.owned = owned
+        }
+
+        init(from decoder: Decoder) throws {
+            rule = try ChecklistRule(from: decoder)
+            label = rule?.label ?? ""
+            owned = try decoder.container(keyedBy: CodingKeys.self).decode([Match].self, forKey: .owned)
+        }
+
+        private enum CodingKeys: String, CodingKey { case owned }
     }
 
     let name: String
@@ -124,8 +146,8 @@ private final class APIRedirectDelegate: NSObject, URLSessionTaskDelegate, @unch
 final class NumiAPI {
     nonisolated static let origin = "https://numiagent.com"
     private static let cookieName = "__Host-numis_session"
-    let webData = WKWebsiteDataStore.default()
     private let network: URLSession
+    private let sessionStore = SessionKeychain()
 
     init() {
         let configuration = URLSessionConfiguration.ephemeral
@@ -160,14 +182,6 @@ final class NumiAPI {
         return token
     }
 
-    private func cookies() async -> [HTTPCookie] {
-        let all: [HTTPCookie] = await withCheckedContinuation { continuation in
-            webData.httpCookieStore.getAllCookies { continuation.resume(returning: $0) }
-        }
-        return all.filter { $0.name == Self.cookieName && $0.domain == "numiagent.com" &&
-            $0.path == "/" && $0.isSecure && ($0.expiresDate ?? .distantFuture) > Date() }
-    }
-
     private func send(
         _ path: String,
         method: String = "GET",
@@ -184,10 +198,11 @@ final class NumiAPI {
         request.httpBody = body
         request.setValue(Self.origin, forHTTPHeaderField: "Origin")
         if body != nil { request.setValue(type, forHTTPHeaderField: "Content-Type") }
-        if let cookie = await cookies().first {
-            request.setValue(HTTPCookie.requestHeaderFields(with: [cookie])["Cookie"], forHTTPHeaderField: "Cookie")
-        } else if authenticated {
-            throw NumiError.request(401, "Sign in to continue.")
+        if authenticated {
+            guard let value = try sessionStore.load() else {
+                throw NumiError.request(401, "Sign in to continue.")
+            }
+            request.setValue(Self.cookieName + "=" + value, forHTTPHeaderField: "Cookie")
         }
         let (data, response) = try await network.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw NumiError.invalidResponse }
@@ -204,6 +219,26 @@ final class NumiAPI {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    func post<T: Decodable>(_ path: String, payload: some Encodable) async throws -> T {
+        let (data, _) = try await send(path, method: "POST", body: JSONEncoder().encode(payload))
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    func write(_ path: String, method: String, payload: (any Encodable)? = nil) async throws {
+        let body = try payload.map { try JSONEncoder().encode($0) }
+        _ = try await send(path, method: method, body: body)
+    }
+
+    func download(_ path: String) async throws -> Data {
+        let (data, _) = try await send(path)
+        return data
+    }
+
+    func requestSignIn(email: String, challenge: String) async throws {
+        let body = try JSONEncoder().encode(["email": email, "challenge": challenge])
+        _ = try await send("/auth/request", method: "POST", body: body, authenticated: false)
+    }
+
     func verify(_ link: URL) async throws {
         let token = try Self.signInToken(from: link)
         let body = try JSONEncoder().encode(["token": token])
@@ -215,9 +250,7 @@ final class NumiAPI {
             .first(where: { $0.name == Self.cookieName && $0.domain == "numiagent.com" && $0.isSecure && $0.path == "/" }) else {
             throw NumiError.invalidResponse
         }
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            webData.httpCookieStore.setCookie(cookie) { continuation.resume() }
-        }
+        try sessionStore.store(cookie.value)
     }
 
     func signOut(deleteAccount: Bool) async throws {
@@ -227,11 +260,7 @@ final class NumiAPI {
             do { _ = try await send("/me/signout", method: "POST") }
             catch let error as NumiError where error.isUnauthorized {}
         }
-        for cookie in await cookies() {
-            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                webData.httpCookieStore.delete(cookie) { continuation.resume() }
-            }
-        }
+        try sessionStore.remove()
     }
 
     func photo(_ id: String) async throws -> Data {
@@ -254,4 +283,42 @@ final class NumiAPI {
         _ = try await send("/imports/" + batch.uuidString.lowercased() + "/photos",
                            method: "PUT", body: photo, type: "image/jpeg")
     }
+}
+
+private struct SessionKeychain {
+    private let query: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "com.numiagent.ios",
+        kSecAttrAccount as String: "collection-session"
+    ]
+
+    func load() throws -> String? {
+        var request = query
+        request[kSecReturnData as String] = true
+        request[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(request as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data,
+              let value = String(data: data, encoding: .utf8) else { throw failure }
+        return value
+    }
+
+    func store(_ value: String) throws {
+        let data = Data(value.utf8)
+        let result = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if result == errSecSuccess { return }
+        guard result == errSecItemNotFound else { throw failure }
+        var entry = query
+        entry[kSecValueData as String] = data
+        entry[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        guard SecItemAdd(entry as CFDictionary, nil) == errSecSuccess else { throw failure }
+    }
+
+    func remove() throws {
+        let result = SecItemDelete(query as CFDictionary)
+        guard result == errSecSuccess || result == errSecItemNotFound else { throw failure }
+    }
+
+    private var failure: NumiError { .request(0, "NumiAgent couldn’t access this iPhone’s secure sign-in storage.") }
 }

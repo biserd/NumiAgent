@@ -95,7 +95,7 @@ private final class CaptureDraftStore: ObservableObject {
         if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
     }
 
-    func upload(api: NumiAPI, name: String, analyze: Bool) async throws {
+    func upload(api: NumiAPI, name: String, analyze: Bool) async throws -> String {
         var updated = draft
         if updated.submittedName == nil {
             updated.submittedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -116,6 +116,7 @@ private final class CaptureDraftStore: ObservableObject {
         for id in updated.photos {
             if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
         }
+        return updated.id.uuidString.lowercased()
     }
 
     private static func jpeg(_ image: UIImage) throws -> Data {
@@ -151,7 +152,6 @@ private enum CaptureError: LocalizedError {
 struct CaptureScreen: View {
     let api: NumiAPI
     let account: Account?
-    let openReview: () -> Void
     @StateObject private var store: CaptureDraftStore
     @State private var selection: [PhotosPickerItem] = []
     @State private var camera = false
@@ -159,14 +159,13 @@ struct CaptureScreen: View {
     @State private var analyze = false
     @State private var busy = false
     @State private var error: String?
-    @State private var notice: String?
+    @State private var uploadedBatch: String?
     @State private var demoPhoto = PreviewLaunch.screen == .capture
     @State private var demoResult = PreviewLaunch.screen == .capture
 
-    init(api: NumiAPI, account: Account?, openReview: @escaping () -> Void) {
+    init(api: NumiAPI, account: Account?) {
         self.api = api
         self.account = account
-        self.openReview = openReview
         _store = StateObject(wrappedValue: CaptureDraftStore(account: account))
     }
 
@@ -243,14 +242,16 @@ struct CaptureScreen: View {
                         }
                     }
                     Section {
-                        Button("Review uploaded photos", action: openReview).disabled(busy)
+                        NavigationLink("Review uploaded photos") { ImportHistory(api: api) }.disabled(busy)
                     }
                 }
                 if busy { ProgressView() }
                 if let message = error ?? store.error { Text(message).foregroundStyle(.red) }
-                if let notice { Text(notice).foregroundStyle(.secondary) }
             }
             .navigationTitle("Capture")
+            .navigationDestination(item: $uploadedBatch) { id in
+                ImportReview(api: api, batchID: id)
+            }
             .fullScreenCover(isPresented: $camera) {
                 CameraPicker { image in
                     camera = false
@@ -291,11 +292,9 @@ struct CaptureScreen: View {
     private func upload() async {
         busy = true
         error = nil
-        notice = nil
         defer { busy = false }
         do {
-            try await store.upload(api: api, name: name, analyze: analyze)
-            notice = "Batch uploaded. Open photo review to check the results."
+            uploadedBatch = try await store.upload(api: api, name: name, analyze: analyze)
         } catch { self.error = error.localizedDescription }
     }
 }

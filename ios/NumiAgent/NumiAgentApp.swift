@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 @MainActor
 final class AppSession: ObservableObject {
@@ -8,6 +9,7 @@ final class AppSession: ObservableObject {
 
     let api = NumiAPI()
     @Published private(set) var phase: Phase = .checking
+    private var verifying = false
 
     func refresh() async {
         guard phase != .demo else { return }
@@ -22,6 +24,9 @@ final class AppSession: ObservableObject {
     }
 
     func signIn(_ url: URL) async throws {
+        guard !verifying else { return }
+        verifying = true
+        defer { verifying = false }
         try await api.verify(url)
         let account: Account = try await api.get("/me")
         phase = .signedIn(account)
@@ -120,7 +125,9 @@ enum PreviewLaunch {
 
 private struct SignInScreen: View {
     @ObservedObject var session: AppSession
-    @State private var showRequest = false
+    @StateObject private var challenge = SignInChallenge()
+    @State private var email = ""
+    @State private var requested = false
     @State private var pastedLink = ""
     @State private var busy = false
     @State private var error: String?
@@ -141,8 +148,19 @@ private struct SignInScreen: View {
                     if session.phase == .unavailable {
                         Button("Retry connection") { Task { await session.refresh() } }
                     }
-                    Button("Email me a sign-in link") { showRequest = true }
+                    TextField("Email address", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textFieldStyle(.roundedBorder)
+                    Button("Email me a sign-in link") { Task { await requestLink() } }
                         .buttonStyle(.borderedProminent)
+                        .disabled(busy || email.isBlank || !email.contains("@"))
+                    if requested {
+                        Text("Check your email for a sign-in link. Open it on this iPhone or paste it below.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Already have a link?").font(.headline)
@@ -165,10 +183,21 @@ private struct SignInScreen: View {
                 .frame(maxWidth: .infinity)
             }
             .navigationTitle("NumiAgent")
-            .sheet(isPresented: $showRequest) {
-                WorkspaceSheet(route: .signIn, api: session.api) { Task { await session.refresh() } }
-            }
         }
+    }
+
+    private func requestLink() async {
+        let address = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        busy = true
+        error = nil
+        requested = false
+        defer { busy = false }
+        do {
+            let response = try await challenge.verify()
+            try await session.api.requestSignIn(email: address, challenge: response)
+            requested = true
+        } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {
+        } catch { self.error = error.localizedDescription }
     }
 
     private func signIn() async {
@@ -188,28 +217,24 @@ private struct SignInScreen: View {
 private struct CollectorTabs: View {
     @ObservedObject var session: AppSession
     let account: Account?
-    @State private var workspace: WorkspaceRoute?
     @State private var selectedTab = PreviewLaunch.tab
 
     private var demo: Bool { account == nil }
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            CatalogScreen(api: session.api, demo: demo) { workspace = .collection }
+            CatalogScreen(api: session.api, demo: demo)
                 .tabItem { Label("Collection", systemImage: "square.grid.2x2") }
                 .tag(CollectorTab.collection)
-            CaptureScreen(api: session.api, account: account) { workspace = .imports }
+            CaptureScreen(api: session.api, account: account)
                 .tabItem { Label("Capture", systemImage: "camera") }
                 .tag(CollectorTab.capture)
-            ThemesScreen(api: session.api, demo: demo) { workspace = .themes }
+            ThemesScreen(api: session.api, demo: demo)
                 .tabItem { Label("Checklists", systemImage: "checklist") }
                 .tag(CollectorTab.checklists)
-            AccountScreen(session: session, account: account) { workspace = .settings }
+            AccountScreen(session: session, account: account)
                 .tabItem { Label("Settings", systemImage: "gearshape") }
                 .tag(CollectorTab.settings)
-        }
-        .sheet(item: $workspace) { route in
-            WorkspaceSheet(route: route, api: session.api) { Task { await session.refresh() } }
         }
     }
 }
@@ -217,7 +242,6 @@ private struct CollectorTabs: View {
 private struct AccountScreen: View {
     @ObservedObject var session: AppSession
     let account: Account?
-    let openWorkspace: () -> Void
     @State private var delete = false
     @State private var busy = false
     @State private var error: String?
@@ -228,7 +252,7 @@ private struct AccountScreen: View {
                 Section("Account") {
                     if let account {
                         Text(account.email)
-                        Button("Manage account and exports", action: openWorkspace)
+                        NavigationLink("Account and exports") { NativeAccountTools(api: session.api) }
                         Button("Sign out") { Task { await endSession(deleteAccount: false) } }
                             .disabled(busy)
                         Button("Delete account", role: .destructive) { delete = true }.disabled(busy)

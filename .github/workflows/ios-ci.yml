@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           xcodebuild -version
           xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/numiagent" \
+            -destination "platform=iOS Simulator,id=$NUMIAGENT_SIMULATOR" -derivedDataPath "$RUNNER_TEMP/numiagent" \
             CODE_SIGNING_ALLOWED=NO build
       - name: Build for iPhone
         run: |

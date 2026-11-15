@@ -3,8 +3,9 @@ import SwiftUI
 struct CatalogScreen: View {
     let api: NumiAPI
     let demo: Bool
-    let openWorkspace: () -> Void
     @State private var query = ""
+    @State private var adding = false
+    @State private var managingFolders = false
     @State private var items: [Specimen] = []
     @State private var next: Int?
     @State private var loading = false
@@ -19,7 +20,7 @@ struct CatalogScreen: View {
                 }
                 ForEach(items) { item in
                     NavigationLink {
-                        SpecimenScreen(item: item, api: api, demo: demo, openWorkspace: openWorkspace)
+                        SpecimenScreen(item: item, api: api, demo: demo) { reload() }
                     } label: {
                         HStack(spacing: 12) {
                             SpecimenImage(api: api, id: item.photo, sampleAsset: demo ? DemoCollection.photo(for: item) : nil)
@@ -50,17 +51,22 @@ struct CatalogScreen: View {
             .navigationTitle("Collection")
             .navigationDestination(item: $preview) { id in
                 if let item = DemoCollection.specimens.first(where: { $0.id == id }) {
-                    SpecimenScreen(item: item, api: api, demo: demo, openWorkspace: openWorkspace)
+                    SpecimenScreen(item: item, api: api, demo: demo) {}
                 }
             }
             .searchable(text: $query, prompt: "Name, ruler, or reference")
             .toolbar {
                 if !demo {
                     ToolbarItem(placement: .primaryAction) {
-                        Button("Manage", action: openWorkspace)
+                        Button("Add specimen", systemImage: "plus") { adding = true }
+                    }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Manage collections", systemImage: "folder") { managingFolders = true }
                     }
                 }
             }
+            .sheet(isPresented: $adding) { ItemEditor(api: api) { reload() } }
+            .sheet(isPresented: $managingFolders, onDismiss: reload) { CollectionFoldersScreen(api: api) }
             .refreshable { await load(page: 0, query: query) }
             .task(id: query) {
                 let requestedQuery = query
@@ -72,6 +78,10 @@ struct CatalogScreen: View {
                 if demo && PreviewLaunch.screen == .valuation { preview = DemoCollection.specimens.first?.id }
             }
         }
+    }
+
+    private func reload() {
+        Task { await load(page: 0, query: query) }
     }
 
     private func load(page: Int, query requestedQuery: String) async {
@@ -104,7 +114,7 @@ struct CatalogScreen: View {
     }
 }
 
-private struct SpecimenImage: View {
+struct SpecimenImage: View {
     let api: NumiAPI
     let id: String?
     let sampleAsset: String?
@@ -132,20 +142,40 @@ private struct SpecimenImage: View {
 }
 
 private struct SpecimenScreen: View {
-    let item: Specimen
+    @State private var item: Specimen
     let api: NumiAPI
     let demo: Bool
-    let openWorkspace: () -> Void
+    let onChange: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var editing = false
+    @State private var deleting = false
+    @State private var saleEditor = false
+    @State private var detailError: String?
+    @State private var loaded = false
     @State private var valuation: Valuation?
     @State private var valuationError: String?
 
     private var previewingValuation: Bool { demo && PreviewLaunch.screen == .valuation }
 
+    init(item: Specimen, api: NumiAPI, demo: Bool, onChange: @escaping () -> Void) {
+        _item = State(initialValue: item)
+        self.api = api
+        self.demo = demo
+        self.onChange = onChange
+    }
+
     var body: some View {
         List {
             if !previewingValuation {
                 let sample = demo ? DemoCollection.photo(for: item) : nil
-                if item.photo != nil || sample != nil {
+                if let photos = item.photos, !photos.isEmpty {
+                    ForEach(photos) { photo in
+                        VStack(alignment: .leading, spacing: 5) {
+                            SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil).frame(height: 180)
+                            Text(photo.side.capitalized).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                } else if item.photo != nil || sample != nil {
                     SpecimenImage(api: api, id: item.photo, sampleAsset: sample)
                         .frame(height: 200)
                         .listRowInsets(EdgeInsets())
@@ -191,12 +221,58 @@ private struct SpecimenScreen: View {
                 }
             }
             if !demo {
-                Button("Manage records and sale evidence", action: openWorkspace)
+                Section("Sale evidence") {
+                    Button("Add realized sale") { saleEditor = true }
+                    NavigationLink("Find comparable sales") {
+                        SaleResearchScreen(api: api, itemID: item.id) { Task { await loadValuation() } }
+                    }
+                }
             }
+            if let detailError { Text(detailError).foregroundStyle(.red) }
         }
         .navigationTitle(item.title)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadValuation() }
+        .toolbar {
+            if !demo {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu("Specimen actions", systemImage: "ellipsis.circle") {
+                        Button("Edit specimen") { editing = true }.disabled(!loaded)
+                        Button("Delete specimen", role: .destructive) { deleting = true }
+                    }
+                }
+            }
+        }
+        .task {
+            await loadDetail()
+            await loadValuation()
+        }
+        .refreshable {
+            await loadDetail()
+            await loadValuation()
+        }
+        .sheet(isPresented: $editing) {
+            ItemEditor(api: api, itemID: item.id, draft: ItemDraft(item: item)) {
+                onChange()
+                Task {
+                    await loadDetail()
+                    await loadValuation()
+                }
+            }
+        }
+        .sheet(isPresented: $saleEditor) {
+            SaleEditor(api: api, itemID: item.id) { Task { await loadValuation() } }
+        }
+        .confirmationDialog("Delete this specimen?", isPresented: $deleting, titleVisibility: .visible) {
+            Button("Delete specimen", role: .destructive) {
+                Task {
+                    do {
+                        try await api.write("/items/" + item.id, method: "DELETE")
+                        onChange()
+                        dismiss()
+                    } catch { detailError = error.localizedDescription }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -210,12 +286,21 @@ private struct SpecimenScreen: View {
         do { valuation = try await api.get("/valuations/" + item.id) }
         catch { valuationError = error.localizedDescription }
     }
+
+    private func loadDetail() async {
+        guard !demo else { return }
+        detailError = nil
+        do {
+            item = try await api.get("/items/" + item.id)
+            loaded = true
+        } catch { if !Task.isCancelled { detailError = error.localizedDescription } }
+    }
 }
 
 struct ThemesScreen: View {
     let api: NumiAPI
     let demo: Bool
-    let openWorkspace: () -> Void
+    @State private var adding = false
     @State private var themes: [ThemeSummary] = []
     @State private var loading = true
     @State private var error: String?
@@ -225,7 +310,9 @@ struct ThemesScreen: View {
         NavigationStack {
             List {
                 ForEach(themes) { theme in
-                    NavigationLink(theme.name) { ThemeScreen(api: api, theme: theme, demo: demo) }
+                    NavigationLink(theme.name) {
+                        ThemeScreen(api: api, theme: theme, demo: demo) { Task { await load() } }
+                    }
                 }
                 if loading { ProgressView() }
                 if let error { Text(error).foregroundStyle(.red) }
@@ -236,11 +323,14 @@ struct ThemesScreen: View {
             }
             .navigationTitle("Checklists")
             .navigationDestination(item: $preview) { _ in
-                ThemeScreen(api: api, theme: DemoCollection.theme, demo: demo)
+                ThemeScreen(api: api, theme: DemoCollection.theme, demo: demo) {}
             }
             .toolbar {
-                if !demo { ToolbarItem(placement: .primaryAction) { Button("Manage", action: openWorkspace) } }
+                if !demo {
+                    ToolbarItem(placement: .primaryAction) { Button("New checklist", systemImage: "plus") { adding = true } }
+                }
             }
+            .sheet(isPresented: $adding) { ChecklistEditor(api: api) { Task { await load() } } }
             .refreshable { await load() }
             .task {
                 await load()
@@ -262,6 +352,10 @@ private struct ThemeScreen: View {
     let api: NumiAPI
     let theme: ThemeSummary
     let demo: Bool
+    let onChange: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var editing = false
+    @State private var deleting = false
     @State private var details: ThemeDetails?
     @State private var error: String?
 
@@ -293,19 +387,52 @@ private struct ThemeScreen: View {
                         }
                     }
                 }
-            } else if let error {
-                Text(error).foregroundStyle(.red)
-            } else {
+            } else if error == nil {
                 ProgressView()
             }
+            if let error { Text(error).foregroundStyle(.red) }
         }
-        .navigationTitle(theme.name)
+        .navigationTitle(details?.name ?? theme.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            if demo { details = DemoCollection.checklist; return }
-            do { details = try await api.get("/themes/" + theme.id) }
-            catch { self.error = error.localizedDescription }
+        .task { await load() }
+        .refreshable { await load() }
+        .toolbar {
+            if !demo, details != nil {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu("Checklist actions", systemImage: "ellipsis.circle") {
+                        Button("Edit checklist") { editing = true }
+                        Button("Delete checklist", role: .destructive) { deleting = true }
+                    }
+                }
+            }
         }
+        .sheet(isPresented: $editing) {
+            if let details {
+                ChecklistEditor(api: api, checklistID: theme.id,
+                                draft: .init(name: details.name, slots: details.slots.compactMap(\.rule))) {
+                    onChange()
+                    Task { await load() }
+                }
+            }
+        }
+        .confirmationDialog("Delete this checklist?", isPresented: $deleting, titleVisibility: .visible) {
+            Button("Delete checklist", role: .destructive) {
+                Task {
+                    do {
+                        try await api.write("/themes/" + theme.id, method: "DELETE")
+                        onChange()
+                        dismiss()
+                    } catch { self.error = error.localizedDescription }
+                }
+            }
+        }
+    }
+
+    private func load() async {
+        if demo { details = DemoCollection.checklist; return }
+        error = nil
+        do { details = try await api.get("/themes/" + theme.id) }
+        catch { if !Task.isCancelled { self.error = error.localizedDescription } }
     }
 }
 

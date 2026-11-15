@@ -48,6 +48,11 @@
                 B00000000000000000000005,
                 B00000000000000000000006,
                 B00000000000000000000007,
+                B00000000000000000000008,
+                B00000000000000000000009,
+                B0000000000000000000000A,
+                B0000000000000000000000B,
+                B0000000000000000000000C,
             );
             path = NumiAgent;
             sourceTree = "<group>";
@@ -56,7 +61,7 @@
         A00000000000000000000007 = {
             isa = PBXSourcesBuildPhase;
             buildActionMask = 2147483647;
-            files = (C00000000000000000000001, C00000000000000000000002, C00000000000000000000003, C00000000000000000000004, C00000000000000000000005);
+            files = (C00000000000000000000001, C00000000000000000000002, C00000000000000000000003, C00000000000000000000004, C00000000000000000000005, C00000000000000000000008, C00000000000000000000009, C0000000000000000000000A, C0000000000000000000000B);
             runOnlyForDeploymentPostprocessing = 0;
         };
         A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
@@ -102,6 +107,7 @@
                 CURRENT_PROJECT_VERSION = 1;
                 DEVELOPMENT_TEAM = DB5JRGGB6A;
                 GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = NumiAgent/Info.plist;
                 INFOPLIST_KEY_CFBundleDisplayName = NumiAgent;
                 INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
                 INFOPLIST_KEY_NSCameraUsageDescription = "Photograph coins and banknotes for your private NumiAgent catalog.";
@@ -126,6 +132,7 @@
                 CURRENT_PROJECT_VERSION = 1;
                 DEVELOPMENT_TEAM = DB5JRGGB6A;
                 GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_FILE = NumiAgent/Info.plist;
                 INFOPLIST_KEY_CFBundleDisplayName = NumiAgent;
                 INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.reference";
                 INFOPLIST_KEY_NSCameraUsageDescription = "Photograph coins and banknotes for your private NumiAgent catalog.";
@@ -145,15 +152,24 @@
         B00000000000000000000002 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumiAPI.swift; sourceTree = "<group>"; };
         B00000000000000000000003 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionViews.swift; sourceTree = "<group>"; };
         B00000000000000000000004 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureScreen.swift; sourceTree = "<group>"; };
-        B00000000000000000000005 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceWebView.swift; sourceTree = "<group>"; };
+        B00000000000000000000005 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAccount.swift; sourceTree = "<group>"; };
         B00000000000000000000006 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
         B00000000000000000000007 = { isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NumiAgent.entitlements; sourceTree = "<group>"; };
+        B00000000000000000000008 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeModels.swift; sourceTree = "<group>"; };
+        B00000000000000000000009 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportReview.swift; sourceTree = "<group>"; };
+        B0000000000000000000000A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeEditing.swift; sourceTree = "<group>"; };
+        B0000000000000000000000B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSales.swift; sourceTree = "<group>"; };
+        B0000000000000000000000C = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
         C00000000000000000000001 = { isa = PBXBuildFile; fileRef = B00000000000000000000001; };
         C00000000000000000000002 = { isa = PBXBuildFile; fileRef = B00000000000000000000002; };
         C00000000000000000000003 = { isa = PBXBuildFile; fileRef = B00000000000000000000003; };
         C00000000000000000000004 = { isa = PBXBuildFile; fileRef = B00000000000000000000004; };
         C00000000000000000000005 = { isa = PBXBuildFile; fileRef = B00000000000000000000005; };
         C00000000000000000000006 = { isa = PBXBuildFile; fileRef = B00000000000000000000006; };
+        C00000000000000000000008 = { isa = PBXBuildFile; fileRef = B00000000000000000000008; };
+        C00000000000000000000009 = { isa = PBXBuildFile; fileRef = B00000000000000000000009; };
+        C0000000000000000000000A = { isa = PBXBuildFile; fileRef = B0000000000000000000000A; };
+        C0000000000000000000000B = { isa = PBXBuildFile; fileRef = B0000000000000000000000B; };
     };
     rootObject = A00000000000000000000001;
 }

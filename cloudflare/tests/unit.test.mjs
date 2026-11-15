@@ -9,7 +9,7 @@ import { parseThemeDraft } from '../src/worker/themePlanning.ts'
 
 test('Theme drafts accept string years and strip unsourced references and URLs',()=>{
   const draft=JSON.stringify({name:'Test draft',slots:[
-    {label:'Solidus from 501–600',type:'coin',denomination:'Solidus',dateFrom:'501',dateTo:'600',reference:'Made-up reference',source:'https://example.test/'},
+    {label:'Solidus from 501–600',type:'coin',denomination:'Solidus',dateFrom:'501',dateTo:'600',ruler:null,series:'',reference:'Made-up reference',source:'https://example.test/'},
     {label:'Invalid range',type:'coin',dateFrom:'800',dateTo:'700'}
   ]})
   const parsed=parseThemeDraft(draft,'One solidus per century')

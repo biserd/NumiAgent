@@ -10,14 +10,18 @@ const banknoteSeries={
   '1954':{title:'Canadian Landscape Series',values:[1,2,5,10,20,50,100,1000]}
 } as const
 const plan=z.object({name:z.string().trim().min(1).max(100),slots:z.array(z.record(z.string(),z.unknown())).min(1).max(40)})
-const modelYear=(value:unknown)=> typeof value==='string' && /^-?\d{1,4}$/.test(value.trim()) ? Number(value) : value
+const modelYear=(value:unknown)=>{
+  if(value==null || value==='') return undefined
+  return typeof value==='string' && /^-?\d{1,4}$/.test(value.trim()) ? Number(value) : value
+}
 
 export function parseThemeDraft(raw:string,goal:string){
   const data=plan.parse(JSON.parse(raw.slice(raw.indexOf('{'),raw.lastIndexOf('}')+1)))
   const slots=data.slots.flatMap(proposed=>{
     const {source:_source,reference,aliases:_aliases,denominationAliases:_denominationAliases,...fields}=proposed
     const suppliedReference=typeof reference==='string' && goal.includes(reference) ? reference : ''
-    const draft=slot.safeParse({...fields,reference:suppliedReference,
+    const filled=Object.fromEntries(Object.entries(fields).filter(([,value])=>value!==null && value!==''))
+    const draft=slot.safeParse({...filled,reference:suppliedReference,
       dateFrom:modelYear(fields.dateFrom),dateTo:modelYear(fields.dateTo)})
     if(!draft.success) return []
     const rule=draft.data

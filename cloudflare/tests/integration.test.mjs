@@ -41,14 +41,26 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     return verified.headers.get('set-cookie').split(';')[0]
   }
   try {
-    for(const [path,heading] of [['/about','About NumiAgent'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent'],
-      ['/developers','NumiAgent for developers'],['/developers/api','REST API guide'],['/developers/mcp','MCP connection guide']]){
+    const sitemap=await (await fetch(base+'/sitemap.xml')).text()
+    for(const [path,heading] of [['/about','About NumiAgent'],['/features','NumiAgent features'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent'],
+      ['/developers','NumiAgent for developers'],['/developers/access','API and MCP access'],['/developers/api','REST API guide'],['/developers/mcp','MCP connection guide']]){
       const response=await fetch(base+path)
       assert.equal(response.status,200)
       const markup=await response.text()
       assert.ok(markup.includes('<h1>'+heading+'</h1>'))
       assert.ok(markup.includes('https://numiagent.com'+path))
+      assert.ok(sitemap.includes('<loc>https://numiagent.com'+path+'</loc>'))
     }
+    assert.ok(!sitemap.includes('<loc>https://numiagent.com/app'))
+    const robots=await (await fetch(base+'/robots.txt')).text()
+    assert.match(robots,/Sitemap: https:\/\/numiagent\.com\/sitemap\.xml/)
+    assert.match(robots,/Disallow: \/app/)
+    const manifest=await json(await fetch(base+'/developers/mcp/server.json'))
+    assert.equal(manifest.name,'com.numiagent/numiagent')
+    assert.deepEqual(manifest.remotes,[{type:'streamable-http',url:'https://numiagent.com/mcp'}])
+    const proof=await fetch(base+'/.well-known/mcp-registry-auth',{redirect:'manual'})
+    assert.equal(proof.status,200)
+    assert.match(await proof.text(),/^v=MCPv1; k=ed25519; p=/)
     assert.equal((await fetch(base+'/nonexistent-numiagent-page')).status,404)
     const contact={email:'integration-contact@example.test',topic:'Report an issue',message:'Test message from an anonymous visitor.'}
     assert.equal((await api('/contact',null,'POST',{...contact,email:'invalid-address'})).status,400)

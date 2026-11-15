@@ -57,7 +57,8 @@ export default {
     const url = new URL(request.url)
     if (url.origin!==env.APP_ORIGIN) return new Response('Unrecognized origin',{status:421})
     const isApi = url.pathname.startsWith('/api/')
-    const isAgent = url.pathname==='/mcp' || url.pathname.startsWith('/oauth/') || url.pathname.startsWith('/.well-known/')
+    const isAgent = url.pathname==='/mcp' || url.pathname.startsWith('/oauth/') ||
+      url.pathname==='/.well-known/oauth-authorization-server' || url.pathname.startsWith('/.well-known/oauth-protected-resource')
     const origin = request.headers.get('Origin')
     if (url.pathname==='/mcp' && origin && origin!==env.APP_ORIGIN) return new Response('Origin rejected',{status:403})
     let response: Response

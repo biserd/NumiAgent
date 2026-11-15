@@ -116,7 +116,7 @@ onUnmounted(()=>{
 
 <template>
   <Landing v-if="onLanding"/>
-  <PublicPage v-else-if="sitePage" :page="sitePage" :contact="path==='/contact'"/>
+  <PublicPage v-else-if="sitePage" :page="sitePage" :path="path"/>
   <main v-else-if="!onApp" class="signin">
     <div class="panel"><h1>Page unavailable</h1><a href="/">Return to NumiAgent</a></div>
   </main>

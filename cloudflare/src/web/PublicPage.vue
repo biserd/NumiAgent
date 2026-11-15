@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import type { SitePage } from './sitePages'
+import { developerLinks, type SitePage } from './sitePages'
 import SiteNav from './SiteNav.vue'
 import ContactForm from './ContactForm.vue'
-defineProps<{page:SitePage;contact:boolean}>()
+defineProps<{page:SitePage;path:string}>()
 </script>
 <template>
   <div class="public-page">
     <SiteNav/>
     <main class="information">
       <div class="information-header wrap">
+        <nav v-if="path==='/developers' || path.startsWith('/developers/')" class="developer-nav" aria-label="Developer documentation">
+          <a v-for="link in developerLinks" :key="link.href" :href="link.href" :aria-current="path===link.href?'page':undefined">{{link.label}}</a>
+        </nav>
         <h1>{{page.title}}</h1>
         <p>{{page.description}}</p>
         <small v-if="page.effective">Effective {{page.effective}}</small>
@@ -22,7 +25,7 @@ defineProps<{page:SitePage;contact:boolean}>()
             <a v-for="link in section.links" :key="link.href" :href="link.href">{{link.label}} <span aria-hidden="true">↗</span></a>
           </div>
         </section>
-        <ContactForm v-if="contact"/>
+        <ContactForm v-if="path==='/contact'"/>
       </div>
     </main>
     <SiteNav footer/>

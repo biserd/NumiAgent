@@ -14,6 +14,7 @@ const active = location.pathname.replace(/\/$/,'') || '/'
     <a class="brand" href="/"><img src="/mark.svg" alt="" width="36" height="36">Numi<span>Agent</span></a>
     <nav aria-label="Main">
       <a :href="landing?'#workflow':'/#workflow'">How it works</a>
+      <a class="nav-features" href="/features">Features</a>
       <a href="/about">About</a>
       <a href="/developers">Developers</a>
       <a class="header-button" href="/app">Sign in <span aria-hidden="true">↗</span></a>

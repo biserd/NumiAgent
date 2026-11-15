@@ -1,23 +1,26 @@
 import type { Plugin } from 'vite'
-import { brand, canonicalOrigin, siteLinks, sitePages } from '../src/web/sitePages'
+import { brand, canonicalOrigin, developerLinks, siteLinks, sitePages } from '../src/web/sitePages'
 import type { SitePage } from '../src/web/sitePages'
 
 const html = (text:string) => text.replace(/[&<>"']/g,char=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 })[char]!)
 
-function pageBody(page:SitePage,contact:boolean) {
+function pageBody(page:SitePage,path:string) {
   const sections=page.sections.map(section=>'<section><h2>'+html(section.title)+'</h2>'+
     section.paragraphs.map(paragraph=>'<p>'+html(paragraph)+'</p>').join('')+
     (section.code?'<pre class="docs-code" tabindex="0"><code>'+html(section.code)+'</code></pre>':'')+
     (section.links?.map(link=>'<p><a href="'+html(link.href)+'">'+html(link.label)+'</a></p>').join('') ?? '')+
     '</section>').join('')
+  const docs=path==='/developers' || path.startsWith('/developers/')
+  const navigation=docs?'<nav class="developer-nav" aria-label="Developer documentation">'+developerLinks.map(link=>
+    '<a href="'+html(link.href)+'"'+(path===link.href?' aria-current="page"':'')+'>'+html(link.label)+'</a>').join('')+'</nav>':''
   return '<div class="public-page"><header class="site-header wrap"><a class="brand" href="/">'+brand+
-    '</a><a href="/app">Sign in</a></header><main class="information"><div class="information-header wrap"><h1>'+
+    '</a><a href="/app">Sign in</a></header><main class="information"><div class="information-header wrap">'+navigation+'<h1>'+
     html(page.title)+'</h1><p>'+html(page.description)+'</p>'+
     (page.effective?'<small>Effective '+html(page.effective)+'</small>':'')+
     '</div><div class="information-content wrap">'+
-    (contact?'<noscript><p>Enable JavaScript to send a message.</p></noscript>':'')+sections+
+    (path==='/contact'?'<noscript><p>Enable JavaScript to send a message.</p></noscript>':'')+sections+
     '</div></main><footer class="site-footer wrap"><nav aria-label="Site information">'+
     siteLinks.map(link=>'<a href="'+html(link.href)+'">'+html(link.label)+'</a>').join('')+
     '</nav></footer></div>'
@@ -43,7 +46,7 @@ export function publicPages():Plugin {
       const template=typeof asset.source==='string'?asset.source:new TextDecoder().decode(asset.source)
       for(const [path,page] of Object.entries(sitePages)){
         const title=page.title.includes(brand)?page.title:page.title+' · '+brand
-        this.emitFile({type:'asset',fileName:path.slice(1)+'.html',source:document(template,title,page.description,path,pageBody(page,path==='/contact'))})
+        this.emitFile({type:'asset',fileName:path.slice(1)+'.html',source:document(template,title,page.description,path,pageBody(page,path))})
       }
       this.emitFile({type:'asset',fileName:'app.html',source:document(template,'Your collection · '+brand,
         'Open your private coin and banknote collection.','/app','<main><h1>Sign in to '+brand+'</h1><p>Opening your collection…</p></main>',false)})

@@ -16,28 +16,70 @@ export type SitePage = {
 const contact = {href:'/contact',label:'Contact NumiAgent'}
 const help = {href:'/help',label:'Read the collector guide'}
 const app = {href:'/app',label:'Open your collection'}
+const features = {href:'/features',label:'Explore NumiAgent features'}
 const developerAccess = {href:'/app#developer',label:'Open developer access'}
+const accessGuide = {href:'/developers/access',label:'API and MCP access'}
 const apiGuide = {href:'/developers/api',label:'REST API guide'}
 const mcpGuide = {href:'/developers/mcp',label:'MCP connection guide'}
 const openApi = {href:'/openapi.json',label:'OpenAPI 3.1 specification'}
+export const developerLinks = [
+  {href:'/developers',label:'Overview'},
+  {href:accessGuide.href,label:'Access'},
+  {href:apiGuide.href,label:'REST API'},
+  {href:mcpGuide.href,label:'MCP'}
+]
 
 export const sitePages:Record<string,SitePage> = {
   '/about':{
     label:'About',title:'About NumiAgent',
-    description:'NumiAgent is a private workspace for collecting coins and banknotes, from the first photograph to a source-linked catalog.',
+    description:'Why I’m building a private catalog that keeps coins, banknotes, and the research behind them together.',
     sections:[
-      {title:'From the tray to the catalog',paragraphs:[
-        'Bring photographs of coins and banknotes into one catalog. Import a batch, pair the two sides, and review candidate identifications before saving a specimen.'
+      {title:'Why I’m building NumiAgent',paragraphs:[
+        'A coin can fit in the palm of your hand. The work of figuring out what it is can take up a tray, a spreadsheet, and half a browser window. I wanted one place to keep the photographs, the attribution I settled on, and the sources I’d want to check again later.',
+        'I also wanted the catalog to be useful on an ordinary evening. You should be able to photograph a batch on your phone, set it aside, and pick up the review when you have time. If you already know what you have, you should be able to enter it by hand and move on.'
       ]},
-      {title:'Keep the evidence with the piece',paragraphs:[
-        'Record attributions, catalog references, provenance, and realized auction sales. A valuation range appears when there are enough comparable records. Each sale can be traced to its original lot.'
+      {title:'Leave room to be unsure',paragraphs:[
+        'The interesting part of identification is often the doubt. A worn legend can change the reading. A banknote may look familiar until you turn it over and notice a different signature. NumiAgent offers suggestions for you to review, with space to correct the crop, pair the two sides, and record your own attribution.',
+        'I take the same approach to prices. When you record a comparable sale, the date, grade, price basis, and original lot link stay with it. If the evidence is too thin for a range, I want the catalog to say so plainly.'
       ]},
-      {title:'Collect toward a goal',paragraphs:[
-        'Build a checklist for an emperor, a series, or a theme of your own. See what you already have and search configured auction sources for missing pieces.'
-      ],links:[help,app]},
-      {title:'Reference data',paragraphs:[
-        'Selected ruler, mint, denomination, and metal terms link to Nomisma.org. Individual reference results retain their source and attribution.'
-      ],links:[{href:'https://www.nomisma.org/',label:'Nomisma.org'}]}
+      {title:'Keep it yours',paragraphs:[
+        'A collection can have personal notes, purchase details, or photographs you only want to keep for yourself. I’ve built the catalog to be private. You decide which photo batches to send for AI analysis and which tools can read your records. You can export your catalog and revoke access from your account.',
+        'Collectors should also be able to check the sources behind the software. Aurearia informed some of the collecting workflows. Public Nomisma records give selected rulers, mints, denominations, and materials a link back to a numismatic reference.'
+      ],links:[{href:'https://github.com/briandenicola/Aurearia',label:'Aurearia'},{href:'https://nomisma.org/',label:'Nomisma'}]},
+      {title:'Tell me what your catalog is missing',paragraphs:[
+        'If you use NumiAgent and hit a point where you reach for your spreadsheet or notebook, I’d like to hear what you were trying to record. The same goes for an attribution that was hard to correct or a checklist that didn’t match the way you collect.'
+      ],links:[contact,features,app]}
+    ]
+  },
+  '/features':{
+    label:'Features',title:'NumiAgent features',
+    description:'See how NumiAgent imports and identifies coins and banknotes, manages private collections, tracks auction evidence, and connects to your tools.',
+    sections:[
+      {title:'Photograph and import a batch',paragraphs:[
+        'Choose images from your phone or computer, or take a photo from a supported mobile browser. Name each batch, follow upload and processing progress, and return to review it later. You can keep compatible originals up to 6 MB or let the browser resize supported formats.'
+      ],links:[{href:'/app#imports',label:'Open photo imports'}]},
+      {title:'Review AI identification and pair both sides',paragraphs:[
+        'Choose whether to run AI analysis for each batch. Review candidate attributions, confidence scores and suggested crop areas, then correct the details before saving. Pair obverse and reverse images, crop a specimen from a tray photo, or skip AI and catalog manually.'
+      ],links:[help]},
+      {title:'Build and search a private catalog',paragraphs:[
+        'Save coins and banknotes in named collection folders. Record issuer, denomination, date, grade, references, notes, measurements, inscriptions, and type-specific details. Find pieces with text search and filters, inspect potential duplicates that share a reference, and see collection and import counts on the overview.',
+        'Transfer a supported NumisGraph portfolio export when you choose. Export collection records as CSV or download account data as JSON.'
+      ],links:[{href:'/app#collection',label:'Open the collection'}]},
+      {title:'Track auction evidence and valuation history',paragraphs:[
+        'Record realized sale prices with the auction house, lot link, date, currency, and grade. Distinguish hammer prices from prices including buyer’s premium. NumiAgent estimates a range when there are enough comparable records and shows insufficient market evidence when there aren’t. Recorded valuations build a history for the specimen.'
+      ]},
+      {title:'Build checklists and track missing pieces',paragraphs:[
+        'Start with the reference-linked first-century Roman emperor checklist or build your own theme. Use attributes such as ruler, denomination, or catalog reference to match pieces you already own. The checklist shows what’s accounted for and which entries are still missing.'
+      ],links:[{href:'/app#themes',label:'Open themes'}]},
+      {title:'Search auctions and save watches',paragraphs:[
+        'Keep a set of searches for pieces you’re looking for and revisit them from Marketplace. When an auction source is configured, results show their source and verification status. Saved watches can send alerts for verified active lots through an approved feed. Live auction coverage is currently unavailable.'
+      ],links:[{href:'/app#marketplace',label:'Open marketplace'}]},
+      {title:'Connect your own software',paragraphs:[
+        'Create a revocable REST API key for scripts, or approve an OAuth connection for a compatible MCP client. Both use read-only permissions for your account. Use them to query your catalog, check themes, or pull valuation evidence for research.'
+      ],links:[{href:'/developers',label:'Developer documentation'},accessGuide]},
+      {title:'Control your account and data',paragraphs:[
+        'Sign in with an email link. Manage active sessions, check your usage, export records, or request deletion from Settings. Uploaded photographs and catalog records stay private, and you can revoke API keys and MCP connections in Developer.'
+      ],links:[{href:'/privacy',label:'Privacy Policy'},app]}
     ]
   },
   '/terms':{
@@ -124,7 +166,7 @@ export const sitePages:Record<string,SitePage> = {
     sections:[
       {title:'Developer access',paragraphs:[
         'Sign in with your NumiAgent email and open Developer. From there you can issue read-only API keys and review or revoke MCP connections. Your integrations use the same collection you see in the web app.'
-      ],links:[developerAccess]},
+      ],links:[accessGuide,developerAccess]},
       {title:'REST API',paragraphs:[
         'Query your catalog, inspect photo imports, read valuation evidence and view collecting goals. Use the REST guide to send your first authenticated request.'
       ],links:[apiGuide,openApi]},
@@ -139,7 +181,7 @@ export const sitePages:Record<string,SitePage> = {
     sections:[
       {title:'Create an API key',paragraphs:[
         `Open Developer, name your integration and choose Create read-only key. Copy the key when it appears and store it as a secret. A key expires after ${developerKeyLifespanDays} days and can be revoked from the same screen.`
-      ],links:[developerAccess]},
+      ],links:[accessGuide,developerAccess]},
       {title:'Make your first request',paragraphs:[
         'Set NUMIAGENT_API_KEY in your environment. Send it in the Authorization header with the Bearer scheme. For an unauthenticated health check, use GET /api/v1/health.'
       ],code:'curl -fsS -H "Authorization: Bearer $NUMIAGENT_API_KEY" "https://numiagent.com/api/v1/items?q=Trajan&page=0"'},
@@ -147,6 +189,9 @@ export const sitePages:Record<string,SitePage> = {
         'API keys can read collection folders, specimens and counts, import status, private photos and identification candidates, themes and missing slots, saved watchlists, valuations and their history, references, and marketplace search coverage.',
         'OpenAPI marks key-enabled operations with developerKey. Account management, bulk exports and changes to the catalog use the signed-in browser session.'
       ],links:[openApi]},
+      {title:'Page through results',paragraphs:[
+        'GET /api/v1/items accepts q, page, type, collection, and sort. Start at page 0 and use next from each response until it is null. Use the item id to request a specimen or its valuation. Photo endpoints stream the original stored image or return identification status as JSON, depending on the path.'
+      ]},
       {title:'Handle errors and limits',paragraphs:[
         `A 401 means the key is missing, invalid, expired, or revoked. A 403 means the operation requires a browser session. A 404 means the resource is unavailable to this account. API keys share ${developerRequestLimit} requests per minute per account. Wait before retrying a 429 response. Marketplace queries also count toward the account’s marketplace quota.`
       ],links:[{href:'/developers',label:'Developer overview'},contact]}
@@ -160,10 +205,15 @@ export const sitePages:Record<string,SitePage> = {
         'Add a remote Streamable HTTP server in a client that supports browser OAuth and dynamic client registration. Enter the URL below. Start the connection, sign in to NumiAgent, review the client and its redirect destination, then approve collection access.',
         'The client discovers OAuth settings automatically and uses authorization code with S256 PKCE. If the email sign-in opens in another browser, reopen the client’s authorization link in the browser where you signed in.'
       ],code:'https://numiagent.com/mcp',links:[{href:'/.well-known/oauth-protected-resource/mcp',label:'OAuth discovery metadata'}]},
+      {title:'MCP protocol reference',paragraphs:[
+        'NumiAgent serves MCP over stateless Streamable HTTP at /mcp. After OAuth, the client sends the access token in the Authorization header, sends initialize, and calls tools/list to retrieve the current tool input schemas. Call tools/call with a tool name and its arguments. Tools return structuredContent.data alongside a text representation. Entries such as unavailable marketplace coverage and insufficient valuation evidence appear in the returned data.',
+        'The OAuth server publishes its issuer, authorization and token endpoints, registration endpoint, and PKCE support in its discovery document. Use an MCP OAuth token for this endpoint and a NumiAgent API key for supported REST operations.'
+      ],links:[{href:'/developers/mcp/server.json',label:'MCP server manifest'},{href:'/.well-known/oauth-authorization-server',label:'OAuth server metadata'},
+        {href:'https://modelcontextprotocol.io/specification/2025-11-25/basic/transports',label:'Streamable HTTP specification'}]},
       {title:'Tools and results',paragraphs:[
         'Tools return structured results. Try search_my_collection with a name such as Trajan or get_collection_statistics for specimen and photo counts. identify_coin_or_banknote reads candidate results for an existing upload. Marketplace tools report unavailable coverage when a source cannot provide current lots.'
       ],code:[
-        'search_my_collection          query, type?, page?',
+        'search_my_collection          query?, type?, page?',
         'get_collection_item           itemId',
         'get_collection_statistics     {}',
         'list_my_themes                {}',
@@ -177,6 +227,24 @@ export const sitePages:Record<string,SitePage> = {
       {title:'Review and revoke access',paragraphs:[
         'The collection:read scope lets an authorized agent read your collection, notes, valuation evidence and themes. Marketplace tools send query terms to configured providers. To disconnect a client, open Developer and choose Revoke client.'
       ],links:[developerAccess,{href:'/developers',label:'Developer overview'},apiGuide]}
+    ]
+  },
+  '/developers/access':{
+    label:'API access',title:'API and MCP access',
+    description:'Sign in to NumiAgent to create and manage REST API keys or approve and revoke MCP connections for your private collection.',
+    sections:[
+      {title:'Open your developer workspace',paragraphs:[
+        'Sign in with your NumiAgent email. Your account opens the Developer workspace, where you manage access to the same collection you see in the catalog. New users can create an account through the email sign-in flow.'
+      ],links:[developerAccess]},
+      {title:'Create a key for a script or service',paragraphs:[
+        `In Developer, give the integration a name and choose Create read-only key. Copy the secret as soon as it appears and store it in your application's secret store. Send it as a Bearer token for supported REST reads. The key expires after ${developerKeyLifespanDays} days. To rotate a key, create its replacement, update your integration, then revoke the old key.`
+      ],links:[apiGuide,openApi]},
+      {title:'Authorize an MCP client',paragraphs:[
+        'Add https://numiagent.com/mcp in your MCP client. Begin its OAuth flow, sign in, and review the client name, destination, and requested access before approving. Manage or revoke connected clients from Developer at any time.'
+      ],links:[mcpGuide]},
+      {title:'Know what you are granting',paragraphs:[
+        'Use read-only access with integrations you trust. API keys can read your catalog and private photographs. MCP clients can read records covered by collection:read and query configured marketplaces. Keep credentials out of public repositories, frontend code, and support messages.'
+      ],links:[contact]}
     ]
   }
 }

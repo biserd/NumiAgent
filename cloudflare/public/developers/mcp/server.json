@@ -1,0 +1,14 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.numiagent/numiagent",
+  "title": "NumiAgent",
+  "description": "Read your private coin and banknote catalog, collecting themes, and valuation evidence with OAuth.",
+  "websiteUrl": "https://numiagent.com/developers/mcp",
+  "version": "0.1.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://numiagent.com/mcp"
+    }
+  ]
+}

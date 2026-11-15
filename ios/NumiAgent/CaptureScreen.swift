@@ -8,6 +8,7 @@ private struct CaptureDraft: Codable {
     var uploaded: Set<UUID> = []
     var submittedName: String?
     var submittedAnalysis: Bool?
+    var lastUploadedBatch: String?
 }
 
 @MainActor
@@ -112,11 +113,12 @@ private final class CaptureDraftStore: ObservableObject {
             updated.uploaded.insert(id)
             try save(updated)
         }
-        try save(CaptureDraft())
+        let batchID = updated.id.uuidString.lowercased()
+        try save(CaptureDraft(lastUploadedBatch: batchID))
         for id in updated.photos {
             if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
         }
-        return updated.id.uuidString.lowercased()
+        return batchID
     }
 
     private static func jpeg(_ image: UIImage) throws -> Data {
@@ -157,7 +159,6 @@ struct CaptureScreen: View {
     @State private var selection: [PhotosPickerItem] = []
     @State private var camera = false
     @State private var name: String
-    @State private var analyze = false
     @State private var busy = false
     @State private var error: String?
     @State private var uploadedBatch: String?
@@ -186,6 +187,11 @@ struct CaptureScreen: View {
     private var captureForm: some View {
         List {
             if account == nil {
+                if PreviewLaunch.screen == .photoReview {
+                    NavigationLink("Open example photo batch") {
+                        ImportReview(api: api, batchID: "demo-photo-batch", previewBatch: PhotoImport.demoManual)
+                    }
+                }
                 Section("Demo photo review") {
                     Button("Add sample photo") { demoPhoto = true }
                     if demoPhoto {
@@ -240,23 +246,25 @@ struct CaptureScreen: View {
                                 .foregroundStyle(.secondary)
                         } else {
                             TextField("Batch name", text: $name)
-                            Toggle("Ask AI for identification suggestions", isOn: $analyze)
-                            if analyze {
-                                Text("Uploading with this option sends these photos to Cloudflare Workers AI for analysis.")
-                                    .font(.footnote).foregroundStyle(.secondary)
-                            }
                         }
-                        Button(store.draft.submittedName == nil ? "Upload batch" : "Resume upload") {
-                            Task { await upload() }
-                        }
-                        .disabled(busy || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.utf16.count > 100)
+                        uploadActions
                     } header: {
-                        Text("Upload")
+                        Text("What would you like to do?")
+                    } footer: {
+                        Text("Identify photos sends this batch to AI for suggestions. Save without AI opens manual cataloging.")
                     }
                 }
                 if onUpload == nil {
                     Section {
-                        NavigationLink("Review uploaded photos") { ImportHistory(api: api) }.disabled(busy)
+                        if let last = store.draft.lastUploadedBatch {
+                            NavigationLink {
+                                ImportReview(api: api, batchID: last)
+                            } label: {
+                                Label("Continue latest photo review", systemImage: "arrow.right.circle.fill")
+                            }
+                            .disabled(busy)
+                        }
+                        NavigationLink("All photo imports") { ImportHistory(api: api) }.disabled(busy)
                     }
                 }
             }
@@ -274,6 +282,32 @@ struct CaptureScreen: View {
         .onChange(of: selection) { _, picks in
             guard !picks.isEmpty else { return }
             Task { await addPhotos(picks) }
+        }
+    }
+
+    @ViewBuilder
+    private var uploadActions: some View {
+        if busy, store.draft.submittedName != nil {
+            ProgressView(value: Double(store.draft.uploaded.count), total: Double(store.draft.photos.count)) {
+                Text("Uploading \(store.draft.uploaded.count) of \(store.draft.photos.count) photos")
+            }
+        } else if store.draft.submittedName != nil {
+            Button("Resume upload", systemImage: "arrow.clockwise") {
+                Task { await upload(analyze: store.draft.submittedAnalysis == true) }
+            }
+            .buttonStyle(.borderedProminent)
+        } else {
+            let invalidName = name.isBlank || name.utf16.count > 100
+            Button {
+                Task { await upload(analyze: true) }
+            } label: {
+                Label("Identify photos", systemImage: "sparkles").frame(maxWidth: .infinity, minHeight: 28)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(busy || invalidName)
+            Button("Save without AI") { Task { await upload(analyze: false) } }
+                .buttonStyle(.bordered)
+                .disabled(busy || invalidName)
         }
     }
 
@@ -300,7 +334,8 @@ struct CaptureScreen: View {
         }
     }
 
-    private func upload() async {
+    private func upload(analyze: Bool) async {
+        guard !busy else { return }
         busy = true
         error = nil
         defer { busy = false }

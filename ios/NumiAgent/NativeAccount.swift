@@ -1,49 +1,5 @@
-import AuthenticationServices
 import SwiftUI
 import UniformTypeIdentifiers
-
-@MainActor
-final class SignInChallenge: NSObject, ObservableObject, ASWebAuthenticationPresentationContextProviding {
-    private var session: ASWebAuthenticationSession?
-
-    func verify() async throws -> String {
-        let state = UUID().uuidString.lowercased()
-        var target = URLComponents(url: NumiAPI.url("/api/v1/auth/native-challenge"), resolvingAgainstBaseURL: false)!
-        target.queryItems = [URLQueryItem(name: "state", value: state)]
-        return try await withCheckedThrowingContinuation { continuation in
-            let next = ASWebAuthenticationSession(url: target.url!, callbackURLScheme: "numiagent-auth") { url, error in
-                Task { @MainActor in
-                    self.session = nil
-                    if let error {
-                        continuation.resume(throwing: error)
-                        return
-                    }
-                    guard let url, url.scheme == "numiagent-auth", url.host == "challenge",
-                          let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
-                          query.first(where: { $0.name == "state" })?.value == state,
-                          let response = query.first(where: { $0.name == "challenge" })?.value,
-                          !response.isEmpty, response.utf8.count <= 2048 else {
-                        continuation.resume(throwing: NumiError.invalidResponse)
-                        return
-                    }
-                    continuation.resume(returning: response)
-                }
-            }
-            next.presentationContextProvider = self
-            next.prefersEphemeralWebBrowserSession = true
-            session = next
-            if !next.start() {
-                session = nil
-                continuation.resume(throwing: NumiError.request(0, "The security check couldn’t open. Please try again."))
-            }
-        }
-    }
-
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-            .first(where: { $0.activationState == .foregroundActive })?.keyWindow ?? ASPresentationAnchor()
-    }
-}
 
 struct NativeAccountTools: View {
     let api: NumiAPI

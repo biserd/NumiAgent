@@ -53,3 +53,34 @@ final class TabletWorkspaceTests: XCTestCase {
         add(attachment)
     }
 }
+
+final class PhoneSignInAndReviewTests: XCTestCase {
+    @MainActor
+    func testSignInAndSavedPhotoActionsAreVisible() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--preview-sign-in"]
+        app.launch()
+
+        let request = app.buttons["Send sign-in link"].firstMatch
+        XCTAssertTrue(request.waitForExistence(timeout: 15))
+        XCTAssertTrue(request.isHittable)
+        XCTAssertTrue(app.buttons["Explore the demo"].firstMatch.isHittable)
+        app.buttons["I already have a link"].firstMatch.tap()
+        XCTAssertTrue(app.secureTextFields["Paste sign-in link"].firstMatch.waitForExistence(timeout: 10))
+
+        app.terminate()
+        app.launchArguments = ["--preview-photo-review"]
+        app.launch()
+        let openBatch = app.buttons["Open example photo batch"].firstMatch
+        XCTAssertTrue(openBatch.waitForExistence(timeout: 15))
+        openBatch.tap()
+        let identify = app.buttons["Identify photos"].firstMatch
+        XCTAssertTrue(identify.waitForExistence(timeout: 10))
+        XCTAssertTrue(identify.isHittable)
+        identify.tap()
+        let consent = app.alerts["Identify these photos?"].firstMatch
+        XCTAssertTrue(consent.waitForExistence(timeout: 10))
+        consent.buttons["Cancel"].tap()
+    }
+}

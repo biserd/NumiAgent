@@ -234,9 +234,9 @@ final class NumiAPI {
         return data
     }
 
-    func requestSignIn(email: String, challenge: String) async throws {
-        let body = try JSONEncoder().encode(["email": email, "challenge": challenge])
-        _ = try await send("/auth/request", method: "POST", body: body, authenticated: false)
+    func requestSignIn(email: String) async throws {
+        let body = try JSONEncoder().encode(["email": email])
+        _ = try await send("/auth/native/request", method: "POST", body: body, authenticated: false)
     }
 
     func verify(_ link: URL) async throws {

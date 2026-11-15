@@ -28,7 +28,11 @@ async function enqueue(env:Env,job:Job) {
 
 export const imports = router()
 imports.get('/',async c=>c.json(await all(c.env,`SELECT b.id,b.label,b.created,b.cancelled,COUNT(p.id) AS total,
-  SUM(CASE WHEN p.state IN ('queued','running','uploading') THEN 1 ELSE 0 END) AS pending
+  SUM(CASE WHEN p.state IN ('queued','running','uploading') THEN 1 ELSE 0 END) AS pending,
+  SUM(CASE WHEN p.state='review' AND COALESCE(p.candidates,'[]')<>'[]' THEN 1 ELSE 0 END) AS suggestions,
+  SUM(CASE WHEN p.state='manual' OR (p.state='review' AND COALESCE(p.candidates,'[]')='[]') THEN 1 ELSE 0 END) AS manual,
+  SUM(CASE WHEN p.state='failed' THEN 1 ELSE 0 END) AS failed,
+  SUM(CASE WHEN p.state='saved' THEN 1 ELSE 0 END) AS saved
   FROM imports b LEFT JOIN photos p ON p.batch_id=b.id WHERE b.user_id=? GROUP BY b.id ORDER BY b.created DESC LIMIT 60`,c.get('user').id)))
 imports.post('/',async c=>{
   const input = await body(c,z.object({id,label:z.string().trim().min(1).max(100),analyze:z.boolean(),consent:z.boolean()}))
@@ -47,6 +51,33 @@ imports.get('/:id',async c=>{
   if (!batch) return fail(404,'Import unavailable')
   const photos = await all<Photo>(c.env,'SELECT * FROM photos WHERE user_id=? AND batch_id=? ORDER BY created,id',user,batch.id)
   return c.json({...batch,photos:photos.map(({id,state,candidates,error})=>({id,state,candidates:candidates ? JSON.parse(candidates):[],error}))})
+})
+imports.post('/:id/analyze',async c=>{
+  await body(c,z.object({consent:z.literal(true)}))
+  const user = c.get('user').id
+  const key = c.req.param('id')
+  const batch = await readBatch(c.env,user,key)
+  if (!batch || batch.cancelled) return fail(404,'Import unavailable')
+  if (!c.env.AI && !(c.env.APP_MODE==='test' && isLocal(c.env))) return fail(503,'Photo identification is unavailable right now')
+  await limit(c.env,'import_analyze',user,60)
+  const [, pending] = await c.env.DB.batch<Job>([
+    c.env.DB.prepare(`UPDATE imports SET analyze=1 WHERE id=? AND user_id=? AND cancelled=0
+      AND EXISTS (SELECT 1 FROM users WHERE id=? AND deleting=0)
+      AND EXISTS (SELECT 1 FROM photos WHERE batch_id=imports.id AND user_id=imports.user_id AND state='manual' AND attempt<5)
+      AND NOT EXISTS (SELECT 1 FROM photos WHERE batch_id=imports.id AND user_id=imports.user_id AND state='uploading')`).bind(key,user,user),
+    c.env.DB.prepare(`UPDATE photos SET state='queued',error=NULL,attempt=attempt+1,updated=?
+      WHERE batch_id=? AND user_id=? AND state='manual' AND attempt<5
+      AND EXISTS (SELECT 1 FROM imports WHERE id=photos.batch_id AND user_id=photos.user_id AND cancelled=0 AND analyze=1)
+      AND EXISTS (SELECT 1 FROM users WHERE id=photos.user_id AND deleting=0)
+      AND NOT EXISTS (SELECT 1 FROM photos AS upload WHERE upload.batch_id=photos.batch_id AND upload.state='uploading')
+      RETURNING id,attempt`).bind(now(),key,user),
+  ])
+  const jobs = pending.results
+  for (let i=0; i<jobs.length; i+=100) {
+    try { await c.env.IDENTIFY.sendBatch(jobs.slice(i,i+100).map(job=>({body:job}))) }
+    catch { console.warn('Queue send failed. Pending jobs will be recovered by the scheduler.') }
+  }
+  return c.json({queued:jobs.length},202)
 })
 imports.post('/:id/cancel',async c=>{
   const user = c.get('user').id

@@ -1,6 +1,6 @@
 # NumiAgent for iPhone and iPad
 
-NumiAgent uses SwiftUI for sign-in, catalog editing, photo import and review, auction valuations, checklists, and data exports. It uses the same account and Cloudflare API as [numiagent.com](https://numiagent.com). Draft photos stay on the device until upload, and users can choose whether to request identification. iOS presents Cloudflare’s security check in a system authentication sheet when requesting an email link. The app stores its session in the iOS Keychain.
+NumiAgent uses SwiftUI for sign-in, catalog editing, photo import and review, auction valuations, checklists, and data exports. It uses the same account and Cloudflare API as [numiagent.com](https://numiagent.com). The native app requests a rate-limited email link and stores its session in the iOS Keychain. Draft photos stay on the device until upload. Users can choose **Identify photos** or **Save without AI**. They can request identification later from a saved batch.
 
 ## Build
 

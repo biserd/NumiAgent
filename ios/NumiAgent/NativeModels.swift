@@ -61,6 +61,11 @@ struct ImportSummary: Decodable, Identifiable {
     let created: TimeInterval
     let total: Int
     let pending: Int?
+    let suggestions: Int?
+    let manual: Int?
+    let failed: Int?
+    let saved: Int?
+    let cancelled: Int?
 }
 
 struct PhotoImport: Decodable {
@@ -68,6 +73,11 @@ struct PhotoImport: Decodable {
     let cancelled: Int
     let analyze: Int
     let photos: [ImportedPhoto]
+
+    static let demoManual = PhotoImport(label: "Example photo batch", cancelled: 0, analyze: 0, photos: [
+        .init(id: "demo-photo-1", state: "manual", candidates: [], error: nil),
+        .init(id: "demo-photo-2", state: "manual", candidates: [], error: nil)
+    ])
 }
 
 struct ImportedPhoto: Decodable, Identifiable {

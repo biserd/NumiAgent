@@ -61,20 +61,34 @@ window.addEventListener('error', function (event) {
 </script>
 <script id="turnstile" nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=loadChallenge&render=explicit" defer></script></html>`)
 })
+const emailLink = z.object({email:z.email().max(250)})
 auth.post('/request', async c => {
   sameOrigin(c)
-  const input = await body(c,z.object({email:z.email().max(250),challenge:z.string().max(2048).optional()}))
-  const email = input.email.trim().toLowerCase()
-  const local = isLocal(c.env)
-  const ip = c.req.header('CF-Connecting-IP') ?? 'local'
-  await limit(c.env,'login_ip', await digest(ip), 15, 3600)
-  if (!local && (!c.env.EMAIL || !c.env.EMAIL_FROM)) fail(503,'Sign-in service is unavailable')
+  const input = await body(c,emailLink.extend({challenge:z.string().max(2048).optional()}))
+  await limit(c.env,'login_ip',await loginIP(c),15,3600)
   await requireChallenge(c,'login',input.challenge)
+  return sendLoginLink(c,input.email,false)
+})
+auth.post('/native/request', async c => {
+  sameOrigin(c)
+  const input = await body(c,emailLink)
+  // The native request endpoint is public. Bound mail volume across addresses,
+  // even if a caller rotates both IP addresses and recipients.
+  await limit(c.env,'login_native_ip',await loginIP(c),8,3600)
+  return sendLoginLink(c,input.email,true)
+})
+
+const loginIP = (c:WebContext) => digest(c.req.header('CF-Connecting-IP') ?? 'local')
+async function sendLoginLink(c:WebContext,address:string,native:boolean) {
+  const email = address.trim().toLowerCase()
+  const local = isLocal(c.env)
+  if (!local && (!c.env.EMAIL || !c.env.EMAIL_FROM)) fail(503,'Sign-in service is unavailable')
   try { await limit(c.env,'login_email',await digest(email), 5, 3600) }
   catch (error) {
     if (error instanceof Error && 'status' in error && error.status === 429) return c.json({accepted:true},202)
     throw error
   }
+  if (native) await limit(c.env,'login_native_global','global',60,3600)
   const raw = token()
   const key = await digest(raw)
   await run(c.env,'INSERT INTO login_links VALUES(?,?,?)',key,email,now()+600)
@@ -86,7 +100,7 @@ auth.post('/request', async c => {
     await run(c.env,'DELETE FROM login_links WHERE token=?',key)
   }))
   return c.json({accepted:true},202)
-})
+}
 auth.post('/verify', async c => {
   sameOrigin(c)
   const input = await body(c,z.object({token:z.string().regex(/^[0-9a-f]{64}$/)}))

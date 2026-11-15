@@ -1,5 +1,4 @@
 import SwiftUI
-import AuthenticationServices
 import UIKit
 
 @MainActor
@@ -77,6 +76,15 @@ struct NumiAgentApp: App {
 
     @ViewBuilder
     private var root: some View {
+        if PreviewLaunch.screen == .signIn {
+            SignInScreen(session: session)
+        } else {
+            sessionScreen
+        }
+    }
+
+    @ViewBuilder
+    private var sessionScreen: some View {
         switch session.phase {
         case .checking:
             ProgressView("Opening NumiAgent")
@@ -130,7 +138,11 @@ enum CollectorTab: Hashable, CaseIterable, Identifiable {
 }
 
 enum PreviewLaunch {
-    enum Screen: String { case collection, capture, valuation, checklists }
+    enum Screen: String {
+        case collection, capture, valuation, checklists
+        case signIn = "sign-in"
+        case photoReview = "photo-review"
+    }
 
     static var screen: Screen? {
         #if DEBUG
@@ -144,7 +156,7 @@ enum PreviewLaunch {
 
     static var tab: CollectorTab {
         switch screen {
-        case .capture: return .capture
+        case .capture, .photoReview: return .capture
         case .checklists: return .checklists
         default: return .collection
         }
@@ -153,9 +165,10 @@ enum PreviewLaunch {
 
 private struct SignInScreen: View {
     @ObservedObject var session: AppSession
-    @StateObject private var challenge = SignInChallenge()
+    @FocusState private var emailFocused: Bool
     @State private var email = ""
     @State private var requested = false
+    @State private var showLinkEntry = false
     @State private var pastedLink = ""
     @State private var busy = false
     @State private var error: String?
@@ -163,68 +176,133 @@ private struct SignInScreen: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    Image(systemName: "circle.hexagongrid.fill")
-                        .font(.system(size: 38))
-                        .foregroundStyle(.tint)
-                        .accessibilityHidden(true)
-                    Text("Know what’s in your collection.")
-                        .font(.system(.largeTitle, design: .serif, weight: .semibold))
-                        .accessibilityAddTraits(.isHeader)
-                    Text("Photograph coins and banknotes, research comparable sales, and track the missing pieces in your sets.")
-                        .foregroundStyle(.secondary)
-                    if session.phase == .unavailable {
-                        Button("Retry connection") { Task { await session.refresh() } }
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 24) {
+                        banner.frame(minWidth: 280, maxWidth: 370)
+                        signInCard.frame(minWidth: 320, maxWidth: 460)
                     }
-                    TextField("Email address", text: $email)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
-                    Button("Email me a sign-in link") { Task { await requestLink() } }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(busy || email.isBlank || !email.contains("@"))
-                    if requested {
-                        Text("Check your email for a sign-in link. Open it on this device or paste it below.")
-                            .font(.footnote).foregroundStyle(.secondary)
+                    VStack(spacing: 18) {
+                        banner
+                        signInCard
                     }
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Already have a link?").font(.headline)
-                        Text("Copy the sign-in link from your email and paste it here.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                        SecureField("Paste sign-in link", text: $pastedLink)
-                            .textContentType(.URL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .textFieldStyle(.roundedBorder)
-                        Button("Sign in with link") { Task { await signIn() } }
-                            .disabled(busy || pastedLink.isEmpty)
-                    }
-                    if let error { Text(error).foregroundStyle(.red).font(.footnote) }
-                    Button("Explore demo") { session.openDemo() }
-                    Link("Privacy policy", destination: NumiAPI.url("/privacy")).font(.footnote)
+                    .frame(maxWidth: 480)
                 }
-                .padding(24)
-                .frame(maxWidth: 550, alignment: .leading)
+                .padding(20)
+                .frame(maxWidth: 900)
                 .frame(maxWidth: .infinity)
             }
-            .navigationTitle("NumiAgent")
+            .background(Color(uiColor: .systemGroupedBackground))
+            .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    private var banner: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("NumiAgent", systemImage: "circle.hexagongrid.fill")
+                .font(.headline)
+                .foregroundStyle(Color(red: 1, green: 0.78, blue: 0.40))
+            Text("Your collection, in focus.")
+                .font(.system(.largeTitle, design: .serif, weight: .semibold))
+                .accessibilityAddTraits(.isHeader)
+            Text("Identify coins and banknotes, compare auction sales, and keep track of the pieces you’re missing.")
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.88))
+        }
+        .foregroundStyle(.white)
+        .padding(22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [
+            Color(red: 0.06, green: 0.24, blue: 0.20), Color(red: 0.12, green: 0.32, blue: 0.23)
+        ], startPoint: .topLeading, endPoint: .bottomTrailing), in: .rect(cornerRadius: 22))
+    }
+
+    private var signInCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Sign in").font(.title2.bold()).accessibilityAddTraits(.isHeader)
+            Text("Enter your email and we’ll send you a sign-in link.").foregroundStyle(.secondary)
+            if session.phase == .unavailable {
+                Button("Retry connection") { Task { await session.refresh() } }.buttonStyle(.bordered)
+            }
+            TextField("Email address", text: $email)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .focused($emailFocused)
+                .padding(12)
+                .background(Color(uiColor: .tertiarySystemFill), in: .rect(cornerRadius: 10))
+                .submitLabel(.go)
+                .onSubmit { if !busy { Task { await requestLink() } } }
+
+            Button {
+                Task { await requestLink() }
+            } label: {
+                Label(busy ? "Please wait…" : "Send sign-in link", systemImage: "envelope.fill")
+                    .frame(maxWidth: .infinity, minHeight: 32)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color(red: 0.08, green: 0.34, blue: 0.25))
+            .disabled(busy)
+
+            if requested {
+                Label("Check your inbox. Open the link on this device or paste it below. It expires in 10 minutes.",
+                      systemImage: "envelope.badge.shield.half.filled")
+                    .font(.subheadline)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.green.opacity(0.12), in: .rect(cornerRadius: 10))
+            }
+            if let error {
+                Label(error, systemImage: "exclamationmark.circle.fill")
+                    .font(.footnote).foregroundStyle(.red)
+            }
+
+            Button {
+                showLinkEntry.toggle()
+            } label: {
+                Label("I already have a link", systemImage: "link")
+                    .frame(maxWidth: .infinity, minHeight: 28)
+            }
+            .buttonStyle(.bordered)
+            if showLinkEntry {
+                SecureField("Paste sign-in link", text: $pastedLink)
+                    .textContentType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .textFieldStyle(.roundedBorder)
+                Button("Open sign-in link") { Task { await signIn() } }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(busy || pastedLink.isBlank)
+            }
+            Button {
+                session.openDemo()
+            } label: {
+                Label("Explore the demo", systemImage: "square.grid.2x2")
+                    .frame(maxWidth: .infinity, minHeight: 28)
+            }
+            .buttonStyle(.bordered)
+            Link("Privacy policy", destination: NumiAPI.url("/privacy")).font(.footnote)
+        }
+        .padding(20)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 22))
     }
 
     private func requestLink() async {
         let address = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !busy else { return }
+        guard address.contains("@"), address.count <= 250 else {
+            error = "Enter a valid email address."
+            emailFocused = true
+            return
+        }
+        emailFocused = false
         busy = true
         error = nil
         requested = false
         defer { busy = false }
         do {
-            let response = try await challenge.verify()
-            try await session.api.requestSignIn(email: address, challenge: response)
+            try await session.api.requestSignIn(email: address)
             requested = true
-        } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {
         } catch { self.error = error.localizedDescription }
     }
 

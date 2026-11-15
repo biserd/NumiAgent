@@ -1,8 +1,50 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { csv, item, matchesSlot, romanTheme, valueSales } from '../src/shared/domain.ts'
+import { csv, item, matchesSlot, romanTheme, slot, valueSales } from '../src/shared/domain.ts'
 import { convertLegacyCoin, legacyCoin } from '../src/shared/legacy.ts'
 import { matchReference } from '../src/shared/references.ts'
+import { ecbQuote, parseOcre } from '../src/worker/officialData.ts'
+import { normalizeEbay } from '../src/worker/ebay.ts'
+
+test('ECB cross-rates require both observations on the same eligible date',()=>{
+  const data='CURRENCY,TIME_PERIOD,OBS_VALUE\nUSD,2026-11-13,1.2\nGBP,2026-11-13,0.8\nUSD,2026-11-14,1.3\nGBP,2026-11-15,0.9'
+  assert.deepEqual(ecbQuote(data,'USD','GBP','2026-11-07','2026-11-14'),{currency:'GBP',date:'2026-11-13',rate:0.666666666667})
+  assert.deepEqual(ecbQuote(data,'EUR','USD','2026-11-07','2026-11-14'),{currency:'USD',date:'2026-11-14',rate:1.3})
+  assert.equal(ecbQuote(data,'USD','JPY','2026-11-07','2026-11-14'),null)
+})
+
+test('OCRE must return the exact type and only carries Nomisma resource links',()=>{
+  const identifier='ric.1(2).aug.208'
+  const source='http://numismatics.org/ocre/id/'+identifier
+  const record={'@graph':[{'@id':source,'skos:prefLabel':[{'@value':'Test Augustus type','@language':'en'}],
+    'nmo:hasAuthority':[{'@id':'http://nomisma.org/id/augustus'},{'@id':'https://example.test/invalid'}]},
+    {'@id':source+'#obverse','nmo:hasLegend':[{'@value':'AVGVSTVS'}]}]}
+  assert.equal(parseOcre(record,'ric.1(2).aug.209'),null)
+  const resolved=parseOcre(record,identifier)
+  assert.deepEqual(resolved.authority,['https://nomisma.org/id/augustus'])
+  assert.equal(resolved.obverse.legend,'AVGVSTVS')
+})
+
+test('eBay offers require an auction, approved item URL, and an end time to be active',()=>{
+  const common={itemWebUrl:'https://www.ebay.com/itm/123',title:'Synthetic auction',buyingOptions:['AUCTION']}
+  const checked='2026-11-14T10:00:00Z'
+  const payload={itemSummaries:[{...common,itemEndDate:'2026-11-15T10:00:00Z',currentBidPrice:{value:'12.60',currency:'USD'}},
+    {...common,itemWebUrl:'https://www.ebay.com/itm/124',itemEndDate:'2026-11-13T10:00:00Z'},
+    {...common,itemWebUrl:'https://www.ebay.com/itm/125'},
+    {...common,itemWebUrl:'https://ebay.com.example.test/itm/123'},{...common,buyingOptions:['FIXED_PRICE']}]}
+  const results=normalizeEbay(payload,checked)
+  assert.deepEqual(results.map(item=>item.state),['active','closed','unknown'])
+  assert.deepEqual(results[0].price,{kind:'current_bid',amount:12.6,currency:'USD'})
+})
+
+test('Theme period matches require the specimen dates to fit within the requested interval',()=>{
+  const period=slot.parse({label:'First-century coin',type:'coin',dateFrom:1,dateTo:100})
+  const coin=input=>item.parse({type:'coin',title:'Test',...input})
+  assert.equal(matchesSlot(period,coin({details:{dateFrom:98,dateTo:100}})),true)
+  assert.equal(matchesSlot(period,coin({details:{dateFrom:98,dateTo:117}})),false)
+  assert.equal(matchesSlot(period,coin({year:'98'})),true)
+  assert.equal(matchesSlot(period,coin({year:'Unknown'})),false)
+})
 
 test('Roman ruler aliases are exact and auditable', () => {
   const rule = romanTheme.find(s=>s.label==='Caligula')

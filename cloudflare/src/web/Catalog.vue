@@ -8,6 +8,10 @@ const props = defineProps<{startWithNew?:boolean}>()
 const rows=ref<Specimen[]>([])
 const folders=ref<Folder[]>([])
 const selected=ref<string[]>([])
+const bulkFields=[['tags','Tags'],['grade','Grade'],['issuer','Issuer'],['ruler','Ruler'],['denomination','Denomination'],
+  ['year','Year'],['reference','Reference'],['collection_id','Collection folder']] as const
+const bulkField=ref<typeof bulkFields[number][0]>('tags')
+const bulkValue=ref('')
 const active=ref<string|null>(null)
 const form=ref<RecordForm>(emptyItem())
 const detail=ref<Specimen|null>(null)
@@ -29,15 +33,24 @@ const error=ref('')
 const notice=ref('')
 const valCurrency=ref('USD')
 type Sale = {id:string;url:string;house:string;date:string;basis:string;amount:number;currency:string;premium:number|null;lot:string;auction:string;grade:string;verification:string;match:string}
+type SaleSuggestion = Omit<Sale,'id'|'verification'|'premium'> & {premium?:number|null;fx?:Fx}
 type Fx = {currency:string;rate:number;date:string;source:string}
 type Valuation = {range:{low:number;median:number;high:number}|null;status:string;used:string[];evidence:Sale[];currency:string;asOf:string;
   normalized:{id:string;amount:number;currency:string;fx?:Fx}[]}
 const estimate=ref<Valuation|null>(null)
 const newSale=()=>({url:'',date:'',currency:'USD',basis:'hammer',amount:0,premium:undefined as number|undefined,house:'',auction:'',lot:'',grade:'',match:'strong',sourceChecked:false})
 const sale=ref(newSale())
+const saleForm=ref<HTMLDetailsElement|null>(null)
 const price=(value:number,currency:string)=>new Intl.NumberFormat('en',{style:'currency',currency}).format(value)
 const rate=ref<Fx>({currency:'USD',rate:0,date:'',source:''})
+const ecbContext=ref('')
 const useRate=ref(false)
+type OcreType={id:string;label:string;source:string;attribution:string;license:string;obverse:{legend:string|null};reverse:{legend:string|null}}
+const ocreId=ref('')
+const ocreType=ref<OcreType|null>(null)
+const saleImport=ref<({url:string;amount:number;currency?:string} & Record<string,unknown>)[]>([])
+const attestImport=ref(false)
+const saleResearch=ref<{status:string;results:SaleSuggestion[]}|null>(null)
 async function action(fn:()=>Promise<unknown>){
   error.value='';notice.value=''
   try {await fn()}catch(e){error.value=message(e)}
@@ -57,12 +70,14 @@ async function load(page=0){
 async function open(id:string){
   const specimen=await request<Specimen>('/items/'+id)
   active.value=id;detail.value=specimen;form.value={...specimen,details:specimen.details ?? {}}
-  estimate.value=null;sale.value={...newSale(),grade:specimen.grade};useRate.value=false
+  estimate.value=null;sale.value={...newSale(),grade:specimen.grade};useRate.value=false;ecbContext.value=''
+  ocreId.value=specimen.details?.referenceUrl?.toString() ?? '';ocreType.value=null;saleImport.value=[];attestImport.value=false;saleResearch.value=null
   photosChanged.value=false;uploadBatch.value='';attachPhoto.value='';uploadPhotos.value=[]
   await refreshValue()
 }
 function create(){
   active.value='new';detail.value=null;form.value={...emptyItem(),collection_id:folders.value[0]?.id ?? null}
+  ocreId.value='';ocreType.value=null;saleImport.value=[];attestImport.value=false
   photosChanged.value=false
 }
 async function chooseBatch() {
@@ -100,11 +115,72 @@ async function refreshValue(){
   if(active.value && active.value!=='new') estimate.value=await request('/valuations/'+active.value+'?currency='+encodeURIComponent(valCurrency.value))
 }
 async function recordSale(){
+  if(useRate.value && ecbContext.value && ecbContext.value!==rateQuery().toString()){
+    throw new Error('Look up the ECB rate again after changing the sale date or currencies.')
+  }
   await request('/valuations/'+active.value+'/sales','POST',[{...sale.value,fx:useRate.value ? rate.value:undefined}])
   valCurrency.value=useRate.value ? rate.value.currency : sale.value.currency
-  useRate.value=false
+  useRate.value=false;ecbContext.value=''
   sale.value={...newSale(),grade:form.value.grade,currency:valCurrency.value}
   await refreshValue()
+}
+const rateQuery=()=>new URLSearchParams({from:sale.value.currency.toUpperCase(),to:rate.value.currency.toUpperCase(),date:sale.value.date})
+async function lookupRate(){
+  const query=rateQuery().toString()
+  const specimen=active.value
+  const result=await request<Fx>('/exchange-rates?'+query)
+  if(specimen!==active.value || query!==rateQuery().toString()) return
+  rate.value={currency:result.currency,rate:result.rate,date:result.date,source:result.source}
+  ecbContext.value=query
+  notice.value='ECB reference rate loaded for '+result.date+'.'
+}
+async function lookupOcre(){
+  ocreType.value=null
+  ocreType.value=await request('/references/ocre?id='+encodeURIComponent(ocreId.value))
+}
+function useOcre(){
+  if(!ocreType.value) return
+  form.value.reference=ocreType.value.id
+  form.value.details={...form.value.details,referenceUrl:ocreType.value.source}
+  notice.value='Reference attached. Save the specimen to keep it.'
+}
+async function previewSales(event:Event){
+  const input=event.target as HTMLInputElement
+  const file=input.files?.[0]
+  input.value='';saleImport.value=[];attestImport.value=false
+  if(!file) return
+  await action(async()=>{
+    if(file.size>256*1024) throw new Error('Choose an auction evidence file under 256 KB.')
+    const rows=JSON.parse(await file.text())
+    if(!Array.isArray(rows) || rows.length<1 || rows.length>30 ||
+      rows.some(row=>!row || typeof row!=='object' || typeof row.url!=='string' || !row.url.startsWith('https://') || typeof row.amount!=='number')) {
+      throw new Error('Use a JSON array of 1–30 sale records with original lot URLs and realized prices.')
+    }
+    saleImport.value=rows
+  })
+}
+async function importSales(){
+  if(!active.value || !attestImport.value) return
+  const rows=saleImport.value.map(row=>({...row,sourceChecked:true}))
+  await request('/valuations/'+active.value+'/sales','POST',rows)
+  saleImport.value=[];attestImport.value=false
+  await refreshValue()
+  notice.value='Sale evidence imported. Existing lot URLs were kept.'
+}
+async function findSales(){
+  if(!active.value || active.value==='new') return
+  saleResearch.value=await request('/valuations/'+active.value+'/research')
+}
+function reviewSale(entry:SaleSuggestion){
+  const {fx,...fields}=entry
+  useRate.value=!!fx;ecbContext.value=''
+  if(fx) rate.value=fx
+  sale.value={...fields,premium:entry.premium ?? undefined,sourceChecked:false}
+  if(saleForm.value){
+    saleForm.value.open=true
+    saleForm.value.querySelector('input')?.focus()
+  }
+  notice.value='Review the lot, grade, and price before saving the sale.'
 }
 async function addFolder(){
   const name=folderName.value.trim()
@@ -118,12 +194,13 @@ async function removeFolder(){
   await request('/collections/'+collection.value,'DELETE')
   collection.value='';folders.value=await request('/collections');await load()
 }
-async function bulkMove(){
-  for(let i=0;i<selected.value.length;i+=20){
-    const payload=rows.value.filter(row=>selected.value.slice(i,i+20).includes(row.id)).map(row=>cleanItem({...row,collection_id:collection.value || null}))
-    await request('/items/bulk','POST',payload)
-  }
-  await load();notice.value='Selected specimens moved.'
+async function bulkEdit(){
+  const value=bulkField.value==='collection_id' ? bulkValue.value || null : bulkValue.value.trim()
+  const {updated}=await request<{updated:number}>('/items/bulk','PATCH',{ids:selected.value,changes:{[bulkField.value]:value}})
+  if(active.value && selected.value.includes(active.value)) await open(active.value)
+  await load()
+  bulkValue.value=''
+  notice.value='Updated '+updated+' specimen'+(updated===1?'':'s')+'.'
 }
 async function importJson(event:Event) {
   const field=event.target as HTMLInputElement
@@ -190,6 +267,20 @@ async function importNumisGraph(event:Event) {
       <p v-if="photosChanged">Save the specimen to keep these photo links.</p>
     </details>
     <p v-if="detail?.duplicates?.length">Same catalog reference on {{detail.duplicates.length}} other specimen(s).</p>
+    <p v-if="form.details.referenceUrl"><a :href="String(form.details.referenceUrl)" target="_blank" rel="noopener noreferrer">Open the linked catalog reference ↗</a></p>
+    <details v-if="form.type==='coin'"><summary>Look up a Roman coin type in OCRE</summary>
+      <form class="inline" @submit.prevent="action(lookupOcre)">
+        <label>OCRE identifier or record URL<input v-model.trim="ocreId" maxlength="180" required placeholder="ric.1(2).aug.208"></label>
+        <button>Look up type</button>
+      </form>
+      <div v-if="ocreType">
+        <p><a :href="ocreType.source" target="_blank" rel="noopener noreferrer">{{ocreType.label}} ↗</a></p>
+        <p v-if="ocreType.obverse.legend">Obverse legend {{ocreType.obverse.legend}}</p>
+        <p v-if="ocreType.reverse.legend">Reverse legend {{ocreType.reverse.legend}}</p>
+        <small>{{ocreType.attribution}} · {{ocreType.license}}</small>
+        <button type="button" @click="useOcre">Attach this reference</button>
+      </div>
+    </details>
     <form @submit.prevent="action(save)"><ItemFields v-model="form" :folders="folders"/><div class="actions"><button class="primary">Save specimen</button><button v-if="active!=='new'" type="button" @click="action(remove)">Delete specimen</button></div></form>
     <div v-if="active!=='new'" class="valuation">
       <h2>Auction valuation</h2>
@@ -197,6 +288,20 @@ async function importNumisGraph(event:Event) {
       <p v-if="estimate?.range" class="value">{{price(estimate.range.low,estimate.currency)}} – {{price(estimate.range.high,estimate.currency)}}</p>
       <p v-else-if="estimate" class="status">Insufficient market evidence</p>
       <p v-if="estimate">As of {{estimate.asOf}}. A range requires three strong, recent matches on a comparable grade and premium basis. Conversions use recorded rates.</p>
+      <details><summary>Research comparable sales</summary>
+        <p>Search an approved realized-sale feed for the saved catalog reference. Check the original lot and condition before adding evidence.</p>
+        <button type="button" @click="action(findSales)">Look for sale records</button>
+        <p v-if="saleResearch?.status==='unavailable'">The realized-sale provider is unavailable.</p>
+        <p v-else-if="saleResearch?.status==='reference_required'">Save a catalog reference to search for the same type.</p>
+        <p v-else-if="saleResearch?.status==='no_matches'">No exact-reference sales were returned.</p>
+        <ul v-if="saleResearch?.results.length" class="record-list">
+          <li v-for="entry in saleResearch.results" :key="entry.url">
+            <a :href="entry.url" target="_blank" rel="noopener noreferrer">{{entry.house}} · {{entry.auction}} · Lot {{entry.lot}} ↗</a>
+            <span>{{entry.date}} · {{price(entry.amount,entry.currency)}} · {{entry.basis==='hammer'?'Hammer':'With premium'}}</span>
+            <button type="button" @click="reviewSale(entry)">Review this sale</button>
+          </li>
+        </ul>
+      </details>
       <ul class="record-list">
         <li v-for="entry in estimate?.evidence ?? []" :key="entry.id">
           <a :href="entry.url" target="_blank" rel="noopener noreferrer">{{entry.house}} · {{entry.auction}} · Lot {{entry.lot}} ↗</a>
@@ -208,7 +313,7 @@ async function importNumisGraph(event:Event) {
           </template>
         </li>
       </ul>
-      <details><summary>Record a realized sale</summary>
+      <details ref="saleForm"><summary>Record a realized sale</summary>
         <form @submit.prevent="action(recordSale)">
           <div class="form-grid">
             <label>Original lot URL<input type="url" required v-model="sale.url"></label>
@@ -229,10 +334,25 @@ async function importNumisGraph(event:Event) {
             <label>Target units per source unit<input v-model.number="rate.rate" type="number" min="0.000001" step="any" required></label>
             <label>Rate date<input v-model="rate.date" type="date" required></label>
             <label>Rate source URL<input v-model="rate.source" type="url" required></label>
+            <button type="button" :disabled="!sale.date || sale.currency.length!==3 || rate.currency.length!==3" @click="action(lookupRate)">Look up ECB reference rate</button>
           </div>
           <label class="check"><input v-model="sale.sourceChecked" required type="checkbox">I checked the lot source and confirmed the realized price.</label>
           <button class="primary">Add sale evidence</button>
         </form>
+      </details>
+      <details><summary>Import verified sale records</summary>
+        <p>Upload a JSON array of up to 30 sales. Follow the Sale schema, then confirm the realized price on each original lot page.</p>
+        <p><a href="/openapi.json">OpenAPI sale schema</a></p>
+        <label>Sale evidence JSON<input type="file" accept=".json,application/json" @change="previewSales"></label>
+        <template v-if="saleImport.length">
+          <p>{{saleImport.length}} records ready to import.</p>
+          <ul class="record-list"><li v-for="(row,index) in saleImport" :key="index">
+            <a :href="row.url" target="_blank" rel="noopener noreferrer">Open lot {{index+1}} ↗</a>
+            <span>{{row.currency || ''}} {{row.amount}}</span>
+          </li></ul>
+          <label class="check"><input type="checkbox" v-model="attestImport">I checked the original lot sources and realized prices.</label>
+          <button type="button" :disabled="!attestImport" @click="action(importSales)">Import sale evidence</button>
+        </template>
       </details>
     </div>
   </section>
@@ -251,8 +371,14 @@ async function importNumisGraph(event:Event) {
     <label>Import specimen JSON<input type="file" accept=".json,application/json" @change="importJson"></label>
     <details><summary>Transfer an existing portfolio</summary><label>Import portfolio JSON<input type="file" accept=".json,application/json" @change="importNumisGraph"></label></details>
     <a href="/api/v1/items/export.csv" download>Download collection CSV</a>
+    <a href="/api/v1/items/insurance.csv" download>Download insurance inventory CSV</a>
   </details>
-  <button v-if="selected.length" @click="action(bulkMove)">Move {{selected.length}} to {{folders.find(f=>f.id===collection)?.name ?? 'Unfiled'}}</button>
+  <form v-if="selected.length" class="panel inline" @submit.prevent="action(bulkEdit)">
+    <label>Field to edit<select v-model="bulkField" @change="bulkValue=''"><option v-for="[field,label] in bulkFields" :key="field" :value="field">{{label}}</option></select></label>
+    <label v-if="bulkField==='collection_id'">Destination folder<select v-model="bulkValue"><option value="">Unfiled</option><option v-for="folder in folders" :key="folder.id" :value="folder.id">{{folder.name}}</option></select></label>
+    <label v-else>New value (blank clears the field)<input v-model="bulkValue" maxlength="180"></label>
+    <button>Apply to {{selected.length}} selected</button>
+  </form>
   <p v-if="!rows.length" class="empty">No specimens match this view.</p>
   <div :class="['collection-results',layout]">
     <article v-for="row in rows" :key="row.id" class="photo-card">
@@ -261,7 +387,7 @@ async function importNumisGraph(event:Event) {
         <span v-else class="no-photo" aria-hidden="true">{{row.type==='coin'?'◉':'▤'}}</span>
         <span class="specimen-label"><strong>{{row.title}}</strong><small>{{[row.issuer,row.year,row.reference].filter(Boolean).join(' · ') || row.type}}</small></span>
       </button>
-      <label class="check"><input v-model="selected" type="checkbox" :value="row.id">Select {{row.title}}</label>
+      <label class="check"><input v-model="selected" type="checkbox" :value="row.id" :disabled="selected.length>=50 && !selected.includes(row.id)">Select {{row.title}}</label>
     </article>
   </div>
   <button v-if="next!==null" @click="action(()=>load(next!))">Load more specimens</button>

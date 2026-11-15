@@ -3,9 +3,10 @@ import { onMounted, ref } from 'vue'
 import { message, request } from './api'
 const props=defineProps<{mode:'Themes'|'Marketplace';initialQuery:string}>()
 const emit=defineEmits<{search:[query:string]}>()
-type Rule = {label:string;ruler:string;issuer:string;type?:string;reference:string;metal:string;year:string;denomination:string;source?:string;aliases:string[]}
+type Rule = {label:string;ruler:string;issuer:string;type?:string;reference:string;metal:string;year:string;denomination:string;source?:string;aliases:string[];series?:string;dateFrom?:number;dateTo?:number}
 type Slot=Rule & {owned:{id:string;title:string}[]}
-type Theme={id:string;name:string;owned:number;slots:Slot[];missing:Slot[];percent:number}
+type Theme={id:string;name:string;owned:number;slots:Slot[];missing:Slot[];percent:number;
+  priorities:{label:string;reason:string}[];missingReferences:number}
 type Listing={url:string;title:string;description?:string;state:string;closesAt?:string;verifiedAt?:string;price?:{kind:string;amount:number;currency:string;premium?:number}}
 const shells=ref<{id:string;name:string}[]>([])
 const active=ref<Theme|null>(null)
@@ -21,7 +22,7 @@ const alert=ref(false)
 const error=ref('')
 const note=ref('')
 const busy=ref(false)
-const ruleFields=[['label','Slot label'],['ruler','Ruler'],['issuer','Issuer'],['reference','Catalog reference'],['metal','Metal'],['denomination','Denomination'],['year','Year or range']] as const
+const ruleFields=[['label','Slot label'],['ruler','Ruler'],['issuer','Issuer'],['reference','Catalog reference'],['metal','Metal'],['denomination','Denomination'],['year','Exact year text'],['series','Series']] as const
 async function action(fn:()=>Promise<void>){
   error.value='';note.value='';busy.value=true
   try{await fn()}catch(e){error.value=message(e)}
@@ -33,6 +34,7 @@ async function preview(){
   const value=await request<{name:string;slots:Rule[];status:string}>('/themes/preview','POST',{goal:goal.value})
   active.value=null;name.value=value.name;rules.value=value.slots.length ? value.slots:[blank()];editing.value=true
   if(value.status==='manual_required') note.value='Add the matching rules for this goal.'
+  if(value.status==='suggested') note.value='AI drafted these rules. Check the names, dates, and coverage against your references before saving.'
 }
 function create(){
   active.value=null;name.value='';rules.value=[blank()];editing.value=true
@@ -42,7 +44,8 @@ function edit(){
   name.value=active.value.name;rules.value=active.value.slots.map(({owned:_owned,...rule})=>({...rule}));editing.value=true
 }
 async function save(){
-  const payload={name:name.value,slots:rules.value.map(rule=>({...rule,source:rule.source || undefined,type:rule.type || undefined}))}
+  const payload={name:name.value,slots:rules.value.map(rule=>({...rule,source:rule.source || undefined,type:rule.type || undefined,
+    dateFrom:typeof rule.dateFrom==='number'?rule.dateFrom:undefined,dateTo:typeof rule.dateTo==='number'?rule.dateTo:undefined}))}
   const id=active.value?.id
   if(id) {await request('/themes/'+id,'PUT',payload);await open(id)}
   else {const created=await request<{id:string}>('/themes','POST',payload);await open(created.id)}
@@ -74,12 +77,15 @@ onMounted(()=>action(async()=>{
       <label>Describe your goal<input required maxlength="400" v-model="goal" placeholder="A silver coin from each first-century Roman emperor"></label>
       <button class="primary" :disabled="busy">Preview checklist</button>
     </form>
+    <p>Try first-century Roman emperors or Bank of Canada 1935 banknotes for sourced templates. Other requests can use Workers AI to draft rules for review.</p>
     <div class="actions"><button v-for="theme in shells" :key="theme.id" @click="action(()=>open(theme.id))">{{theme.name}}</button></div>
     <form v-if="editing" class="panel" @submit.prevent="action(save)">
       <h2>Checklist rules</h2><label>Theme name<input v-model="name" required maxlength="100"></label>
       <fieldset v-for="(rule,index) in rules" :key="index"><legend>Slot {{index+1}}</legend>
         <div class="form-grid"><label v-for="[key,label] in ruleFields" :key="key">{{label}}<input v-model="rule[key]" :required="key==='label'"></label>
           <label>Type<select v-model="rule.type"><option :value="undefined">Any</option><option value="coin">Coin</option><option value="banknote">Banknote</option></select></label>
+          <label>Start year (negative for BCE)<input v-model.number="rule.dateFrom" type="number" min="-9999" max="9999"></label>
+          <label>End year (negative for BCE)<input v-model.number="rule.dateTo" type="number" min="-9999" max="9999"></label>
           <label>Source URL<input v-model="rule.source" type="url"></label></div>
         <button type="button" @click="rules.splice(index,1)" :disabled="rules.length<2">Remove slot</button>
       </fieldset>
@@ -88,13 +94,18 @@ onMounted(()=>action(async()=>{
     <section v-else-if="active" class="panel">
       <div class="section-heading"><div><h2>{{active.name}}</h2><p>{{active.owned}} of {{active.slots.length}} slots filled · {{active.percent}}%</p></div><div class="actions"><button @click="edit">Edit theme</button><button @click="action(remove)">Delete theme</button></div></div>
       <progress :value="active.owned" :max="active.slots.length" aria-label="Theme progress"></progress>
+      <p v-if="active.missingReferences">{{active.missingReferences}} matching specimens need a catalog reference.</p>
+      <section v-if="active.priorities.length">
+        <h3>Start with these gaps</h3>
+        <ul class="record-list"><li v-for="(entry,index) in active.priorities" :key="index"><strong>{{entry.label}}</strong><small>{{entry.reason}}</small></li></ul>
+      </section>
       <ul class="record-list">
         <li v-for="(slot,index) in [...active.missing,...active.slots.filter(s=>s.owned.length)]" :key="index">
           <strong>{{slot.label}}</strong>
           <span>{{slot.owned.length ? slot.owned.map(item=>item.title).join(', ') :'Missing'}}</span>
           <small v-if="slot.owned.length>1">{{slot.owned.length}} specimens match this slot</small>
           <a v-if="slot.source" :href="slot.source" target="_blank" rel="noopener noreferrer">Reference ↗</a>
-          <button v-if="!slot.owned.length" @click="emit('search',[slot.ruler || slot.label,slot.reference,slot.denomination,slot.metal].filter(Boolean).join(' ').slice(0,180))">Search auctions</button>
+          <button v-if="!slot.owned.length" @click="emit('search',[slot.ruler || slot.issuer || slot.label,slot.reference,slot.denomination,slot.metal,slot.year,slot.series].filter(Boolean).join(' ').slice(0,180))">Search auctions</button>
         </li>
       </ul>
     </section>

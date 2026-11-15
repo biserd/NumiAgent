@@ -1390,6 +1390,122 @@
             }
           }
         }
+      },
+      "patch": {
+        "summary": "Update selected fields on up to 50 owned specimens atomically",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updated": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "updated"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "changes": {
+                    "type": "object",
+                    "properties": {
+                      "issuer": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "ruler": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "denomination": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "year": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "reference": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "grade": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "tags": {
+                        "type": "string",
+                        "maxLength": 180
+                      },
+                      "collection_id": {
+                        "nullable": true,
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "ids",
+                  "changes"
+                ]
+              }
+            }
+          }
+        }
       }
     },
     "/items/import/numisgraph": {
@@ -1644,6 +1760,50 @@
     "/items/export.csv": {
       "get": {
         "summary": "Export specimen CSV",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/items/insurance.csv": {
+      "get": {
+        "summary": "Export an insurance inventory with comparable sales and private photo links",
         "security": [
           {
             "session": []
@@ -2731,6 +2891,64 @@
         }
       }
     },
+    "/valuations/{id}/research": {
+      "get": {
+        "summary": "Look up exact-reference sales from a configured approved provider",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "developerKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
     "/valuations/{id}/sales": {
       "post": {
         "summary": "Record collector-attested realized sale facts",
@@ -2992,6 +3210,160 @@
                       "license"
                     ]
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/references/ocre": {
+      "get": {
+        "summary": "Resolve an OCRE type identifier or official record URL",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "developerKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/exchange-rates": {
+      "get": {
+        "summary": "Find a dated ECB reference conversion for a currency pair",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "developerKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "rate": {
+                      "type": "number"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "basis": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "currency",
+                    "rate",
+                    "date",
+                    "source",
+                    "provider",
+                    "basis"
+                  ]
                 }
               }
             }
@@ -3309,6 +3681,11 @@
                 "type": "string",
                 "maxLength": 180
               },
+              "referenceUrl": {
+                "type": "string",
+                "maxLength": 1500,
+                "format": "uri"
+              },
               "purchaseSource": {
                 "default": "",
                 "type": "string",
@@ -3608,6 +3985,28 @@
               "type": "string",
               "maxLength": 180
             }
+          },
+          "denominationAliases": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          "series": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "dateFrom": {
+            "type": "integer",
+            "minimum": -9999,
+            "maximum": 9999
+          },
+          "dateTo": {
+            "type": "integer",
+            "minimum": -9999,
+            "maximum": 9999
           }
         },
         "required": [

@@ -11,6 +11,13 @@ export const contactInput = z.object({
   challenge:z.string().max(2048).optional()
 })
 export const text = z.string().trim().max(180)
+export const bulkItemPatch = z.object({
+  ids:z.array(id).min(1).max(50).refine(ids=>new Set(ids).size===ids.length,'Select distinct specimens'),
+  changes:z.strictObject({
+    issuer:text.optional(),ruler:text.optional(),denomination:text.optional(),year:text.optional(),
+    reference:text.optional(),grade:text.optional(),tags:text.optional(),collection_id:id.nullable().optional()
+  }).refine(changes=>Object.keys(changes).length>0,'Choose at least one field to change')
+})
 const short = text.default('')
 const long = z.string().trim().max(4000).default('')
 const date = z.iso.date()
@@ -32,7 +39,7 @@ export const item = z.object({
   details: z.object({
     metal: short, mint: short, serial: short, signatures: short, obverse: short, reverse: short,
     inscriptions: short, mintMark: short, series: short, variant: short, provenance: long,
-    certification: short, purchaseSource: short, purchaseDate: date.optional(),
+    certification: short, referenceUrl:https.optional(), purchaseSource: short, purchaseDate: date.optional(),
     description: long, obverseLegend: short, reverseLegend: short,
     dateFrom: z.number().int().optional(), dateTo: z.number().int().optional(),
     weightG: z.number().nonnegative().optional(), diameterMm: z.number().nonnegative().optional(),
@@ -97,17 +104,27 @@ export function valueSales(sales: Sale[], currency: string, grade: string, today
 
 export const slot = z.object({
   label: text.min(1), ruler: short, reference: short, issuer: short, denomination: short, year: short,
-  type: z.enum(['coin','banknote']).optional(), metal: short, source: https.optional(), aliases: z.array(text).max(12).default([])
-}).refine(s => s.ruler || s.reference || s.issuer || s.denomination || s.year || s.type || s.metal, 'Add a matching field')
+  type: z.enum(['coin','banknote']).optional(), metal: short, source: https.optional(), aliases: z.array(text).max(12).default([]),
+  denominationAliases:z.array(text).max(12).optional(),series:text.optional(),
+  dateFrom:z.number().int().min(-9999).max(9999).optional(),dateTo:z.number().int().min(-9999).max(9999).optional()
+}).refine(s => s.ruler || s.reference || s.issuer || s.denomination || s.year || s.type || s.metal ||
+  s.series || s.dateFrom!==undefined || s.dateTo!==undefined, 'Add a matching field')
+  .refine(s=>s.dateFrom===undefined || s.dateTo===undefined || s.dateFrom<=s.dateTo,'Start year must precede end year')
 export type Slot = z.infer<typeof slot>
 export type Item = z.infer<typeof item>
 export function matchesSlot(s: Slot, specimen: Item) {
   const equal = (a: string, b: string) => normalize(a) === normalize(b)
+  const explicitYear=/^-?\d{1,4}$/.test(specimen.year) ? Number(specimen.year) : undefined
+  const start=specimen.details?.dateFrom ?? explicitYear ?? specimen.details?.dateTo
+  const end=specimen.details?.dateTo ?? explicitYear ?? specimen.details?.dateFrom
   return (!s.type || specimen.type === s.type) &&
     (!s.reference || equal(s.reference, specimen.reference)) &&
     (!s.issuer || equal(s.issuer, specimen.issuer)) &&
-    (!s.denomination || equal(s.denomination, specimen.denomination)) &&
+    (!s.denomination || [s.denomination,...s.denominationAliases ?? []].some(value=>equal(value,specimen.denomination))) &&
     (!s.year || equal(s.year, specimen.year)) &&
+    (!s.series || equal(s.series,specimen.details?.series ?? '')) &&
+    (s.dateFrom===undefined || (start!==undefined && start>=s.dateFrom)) &&
+    (s.dateTo===undefined || (end!==undefined && end<=s.dateTo)) &&
     (!s.metal || equal(s.metal, specimen.details?.metal ?? '')) &&
     (!s.ruler || [s.ruler, ...s.aliases].some(name => equal(name, specimen.ruler)))
 }

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { https, normalize, text } from '../shared/domain'
 import { all, body, limit, now, router, run, uid } from './core'
 import type { Env } from './core'
+import { ebayEnabled, searchEbay } from './ebay'
 
 const querySchema = z.string().trim().min(2).max(180)
 const hit = z.object({
@@ -12,7 +13,7 @@ const hit = z.object({
   price:z.object({kind:z.enum(['asking','estimate','current_bid']),amount:z.number().nonnegative(),
     currency:z.string().regex(/^[A-Z]{3}$/),premium:z.number().min(0).max(100).optional()}).optional()
 })
-type Hit = z.infer<typeof hit>
+export type Hit = z.infer<typeof hit>
 const firecrawlResponse = z.object({success:z.literal(true),
   data:z.object({web:z.array(z.object({url:z.string(),title:z.string().optional(),description:z.string().optional()})).optional()})})
 const domains = (env:Env) => (env.MARKET_DOMAINS ?? '').split(',').map(v=>v.trim().toLowerCase()).filter(v=>/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(v))
@@ -39,19 +40,20 @@ function unique(results: Hit[], allowed:string[]) {
 }
 export async function marketSearch(env:Env,user:string,query:string) {
   const allowed = domains(env)
+  const ebay=ebayEnabled(env)
   const retrievedAt = new Date().toISOString()
   const results:Hit[] = []
   const coverage:{provider:string;status:string;domains:string[]}[] = []
-  if (!allowed.length || (!env.FIRECRAWL_API_KEY && !env.MARKET_FEED_URL)) return {status:'unavailable',query,retrievedAt,coverage,results}
+  if (!ebay && (!allowed.length || (!env.FIRECRAWL_API_KEY && !env.MARKET_FEED_URL))) return {status:'unavailable',query,retrievedAt,coverage,results}
   await limit(env,'market',user,Number(env.MARKET_PER_USER ?? 30))
   await limit(env,'market','global',Number(env.MARKET_GLOBAL ?? 300))
-  if (env.MARKET_FEED_URL) {
+  if (allowed.length && env.MARKET_FEED_URL) {
     const entry = {provider:'authorized_feed',domains:allowed,status:'unavailable'}
     coverage.push(entry)
     try {
       const target = new URL(https.parse(env.MARKET_FEED_URL))
       target.searchParams.set('q',query)
-      const response = await fetch(target,{redirect:'error',signal:AbortSignal.timeout(8000),
+      const response = await fetch(target,{redirect:'manual',signal:AbortSignal.timeout(8000),
         headers:env.MARKET_FEED_TOKEN ? {Authorization:'Bearer '+env.MARKET_FEED_TOKEN}:undefined})
       if (!response.ok) throw new Error('Feed status')
       const payload = z.array(hit).max(50).parse(await response.json())
@@ -65,11 +67,11 @@ export async function marketSearch(env:Env,user:string,query:string) {
       entry.status = 'queried'
     } catch { console.warn('Authorized marketplace feed unavailable') }
   }
-  if (env.FIRECRAWL_API_KEY) {
+  if (allowed.length && env.FIRECRAWL_API_KEY) {
     const entry = {provider:'firecrawl',domains:allowed,status:'unavailable'}
     coverage.push(entry)
     try {
-      const response = await fetch('https://api.firecrawl.dev/v2/search',{method:'POST',redirect:'error',signal:AbortSignal.timeout(12000),
+      const response = await fetch('https://api.firecrawl.dev/v2/search',{method:'POST',redirect:'manual',signal:AbortSignal.timeout(12000),
         headers:{Authorization:'Bearer '+env.FIRECRAWL_API_KEY,'Content-Type':'application/json'},
         body:JSON.stringify({query:query+' coin banknote auction lot',limit:15,includeDomains:allowed,safe:true,timeout:10000,domainTools:false})})
       if (!response.ok) throw new Error('Search status')
@@ -81,7 +83,15 @@ export async function marketSearch(env:Env,user:string,query:string) {
       entry.status = 'queried'
     } catch { console.warn('Marketplace search unavailable') }
   }
-  const deduped = unique(results,allowed)
+  if(ebay){
+    const entry={provider:'ebay_browse_us',domains:['ebay.com'],status:'unavailable'}
+    coverage.push(entry)
+    try {
+      results.push(...await searchEbay(env,query,retrievedAt))
+      entry.status='queried'
+    } catch { console.warn('Approved eBay Browse provider unavailable') }
+  }
+  const deduped = unique(results,ebay?[...allowed,'ebay.com']:allowed)
   const active = deduped.some(r=>r.state==='active')
   const status = active ? 'active_results' : coverage.some(c=>c.status==='queried') ? 'insufficient_verified_coverage':'unavailable'
   return {status,query,retrievedAt,coverage,results:deduped}
@@ -109,7 +119,7 @@ watchlists.delete('/:id',async c=>{
   return c.body(null,204)
 })
 export async function refreshWatchlists(env:Env) {
-  if (!env.MARKET_FEED_URL || !env.EMAIL || !env.EMAIL_FROM) return
+  if ((!env.MARKET_FEED_URL && !ebayEnabled(env)) || !env.EMAIL || !env.EMAIL_FROM) return
   const watches = await all<Watch>(env,`SELECT w.*,u.email FROM watchlists w JOIN users u ON u.id=w.user_id
     WHERE w.alert=1 AND u.deleting=0 AND COALESCE(w.checked,0)<? ORDER BY COALESCE(w.checked,0) LIMIT 12`,now()-86400)
   for (const watch of watches) {

@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 import { z } from 'zod'
-import { contactInput, id, item, photoLink, sale, slot } from '../src/shared/domain.ts'
+import { bulkItemPatch, contactInput, id, item, photoLink, sale, slot } from '../src/shared/domain.ts'
 import { legacyBatch } from '../src/shared/legacy.ts'
 import { developerReadPaths } from '../src/shared/developerAccess.ts'
 
@@ -74,11 +74,14 @@ endpoint('get','/items','Search and page physical specimens',{queries:['q','page
   output:object({items:array(ref('Item')),next:{type:['integer','null']}})})
 endpoint('post','/items','Catalog a physical specimen',{...idOut,...fields})
 endpoint('post','/items/bulk','Create or replace up to 50 specimen records',{input:array({allOf:[ref('Item'),object({id:uuid},[])]}),status:201,output:object({ids:array(uuid)})})
+endpoint('patch','/items/bulk','Update selected fields on up to 50 owned specimens atomically',{
+  input:z.toJSONSchema(bulkItemPatch,{target:'openapi-3.0',io:'input'}),output:object({updated:number})})
 endpoint('post','/items/import/numisgraph','Import up to 25 owned legacy coin records using their original IDs',{
   input:z.toJSONSchema(legacyBatch,{target:'openapi-3.0',io:'input'}),status:201,
   output:object({imported:number,skipped:number,legacyPhotoLinks:number})})
 endpoint('get','/items/statistics','Count owned specimens and photos')
 endpoint('get','/items/export.csv','Export specimen CSV',{output:string,responseMedia:'text/csv'})
+endpoint('get','/items/insurance.csv','Export an insurance inventory with comparable sales and private photo links',{output:string,responseMedia:'text/csv'})
 endpoint('get','/items/{id}','Get a specimen and its photo associations',{output:ref('Item')})
 endpoint('put','/items/{id}','Replace specimen fields',{...empty,...fields})
 endpoint('delete','/items/{id}','Delete a specimen',empty)
@@ -98,11 +101,15 @@ endpoint('get','/themes/{id}','Read checklist progress and missing slots')
 endpoint('put','/themes/{id}','Replace checklist rules',{...empty,input:checklist})
 endpoint('delete','/themes/{id}','Delete a theme',empty)
 endpoint('get','/valuations/{id}','Read sale-backed valuation',{queries:['currency'],output:ref('Valuation')})
+endpoint('get','/valuations/{id}/research','Look up exact-reference sales from a configured approved provider')
 endpoint('post','/valuations/{id}/sales','Record collector-attested realized sale facts',{status:201,input:array(ref('Sale')),output:ref('Valuation')})
 endpoint('get','/valuations/{id}/history','Read valuation snapshots',{output:array(type('object'))})
 endpoint('get','/market/search','Search configured marketplace providers',{queries:['q'],output:ref('Market')})
 endpoint('get','/references','Look up bundled Nomisma terms by English name or alias',{queries:['q','kind'],
   output:array(object({id:string,kind:string,label:string,sourceLabel:string,aliases:array(string),source:string,attribution:string,license:string}))})
+endpoint('get','/references/ocre','Resolve an OCRE type identifier or official record URL',{queries:['id']})
+endpoint('get','/exchange-rates','Find a dated ECB reference conversion for a currency pair',{queries:['from','to','date'],
+  output:object({currency:string,rate:number,date:string,source:string,provider:string,basis:string})})
 endpoint('get','/watchlists','List saved marketplace searches',{output:array(type('object'))})
 endpoint('post','/watchlists','Upsert a watch with optional email opt-in',{status:201,input:object({query:string,alert:yes},['query'])})
 endpoint('delete','/watchlists/{id}','Remove a watch',empty)

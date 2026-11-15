@@ -19,9 +19,15 @@ export interface Env {
   TURNSTILE_SITE_KEY?: string
   TURNSTILE_SECRET?: string
   FIRECRAWL_API_KEY?: string
+  EBAY_MARKET_ENABLED?: string
+  EBAY_CLIENT_ID?: string
+  EBAY_CLIENT_SECRET?: string
   MARKET_DOMAINS?: string
   MARKET_FEED_URL?: string
   MARKET_FEED_TOKEN?: string
+  SALE_FEED_URL?: string
+  SALE_FEED_TOKEN?: string
+  SALE_SOURCE_DOMAINS?: string
   VISION_MODEL: string
   AI_PER_USER: string
   AI_GLOBAL: string
@@ -66,7 +72,7 @@ export function isLocal(env: Env) {
 export function sameOrigin(c: WebContext) {
   if (c.req.header('Origin') !== c.env.APP_ORIGIN) fail(403, 'Origin validation failed')
 }
-export async function boundedBody(request: Request, cap: number) {
+export async function boundedBody(request: Pick<Request,'body'>, cap: number) {
   const reader = request.body?.getReader()
   if (!reader) return new Uint8Array(0)
   const chunks: Uint8Array[] = []

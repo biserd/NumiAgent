@@ -1,9 +1,11 @@
 import { z } from 'zod'
-import { csv, id, item, matchesSlot, photoLink, romanTheme, sale, slot, valueSales } from '../shared/domain'
+import { bulkItemPatch, csv, id, item, matchesSlot, photoLink, sale, slot, valueSales } from '../shared/domain'
 import type { Item, Sale, Slot } from '../shared/domain'
 import { convertLegacyCoin, legacyBatch } from '../shared/legacy'
 import { all, body, fail, now, one, router, run, uid } from './core'
 import type { Env } from './core'
+import { previewTheme } from './themePlanning'
+import { researchSales } from './saleResearch'
 
 const record = item.extend({ photos: z.array(photoLink).max(12).optional() })
 type Input = z.infer<typeof record>
@@ -63,14 +65,7 @@ export async function saveItems(env: Env,user:string,entries:{id:string; input:I
   return entries.map(e=>e.id)
 }
 export async function stats(env: Env,user: string) {
-  const evidence = await all<SaleRow & {item_id:string;specimen_grade:string}>(env,
-    'SELECT s.*,i.grade AS specimen_grade FROM sales s JOIN items i ON i.id=s.item_id AND i.user_id=s.user_id WHERE s.user_id=? ORDER BY s.date DESC',user)
-  const groups = new Map<string,{sales:Sale[];grade:string}>()
-  for (const row of evidence) {
-    const group = groups.get(row.item_id) ?? {sales:[],grade:row.specimen_grade}
-    group.sales.push(saleFromRow(row))
-    groups.set(row.item_id,group)
-  }
+  const groups=await collectionEvidence(env,user)
   const portfolio = {currency:'USD',valuedItems:0,low:0,median:0,high:0}
   for (const group of groups.values()) {
     const result = valueSales(group.sales,portfolio.currency,group.grade)
@@ -87,6 +82,17 @@ export async function stats(env: Env,user: string) {
     photos: (await one<{count:number}>(env,'SELECT COUNT(*) AS count FROM photos WHERE user_id=? AND state<>?',user,'uploading'))?.count ?? 0,
     storageBytes: (await one<{bytes:number}>(env,'SELECT COALESCE(SUM(bytes),0) AS bytes FROM photos WHERE user_id=?',user))?.bytes ?? 0
   }
+}
+async function collectionEvidence(env:Env,user:string) {
+  const evidence = await all<SaleRow & {item_id:string;specimen_grade:string}>(env,
+    'SELECT s.*,i.grade AS specimen_grade FROM sales s JOIN items i ON i.id=s.item_id AND i.user_id=s.user_id WHERE s.user_id=? ORDER BY s.date DESC',user)
+  const groups = new Map<string,{sales:Sale[];grade:string}>()
+  for (const row of evidence) {
+    const group = groups.get(row.item_id) ?? {sales:[],grade:row.specimen_grade}
+    group.sales.push(saleFromRow(row))
+    groups.set(row.item_id,group)
+  }
+  return groups
 }
 
 export const collections = router()
@@ -128,6 +134,37 @@ items.get('/export.csv',async c=>{
   const keys = ['id','type','title','issuer','ruler','denomination','year','reference','grade','tags','notes','purchase_price','fees','currency','purchase_date','provenance','certification','details']
   return c.text(csv([keys,...rows.map(r=>keys.map(key=>r[key]))]),200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="collection.csv"'})
 })
+items.get('/insurance.csv',async c=>{
+  const user=c.get('user').id
+  const [items,groups,photos]=await Promise.all([
+    all<Row & {folder:string|null}>(c.env,`SELECT i.*,c.name AS folder FROM items i LEFT JOIN collections c
+      ON c.id=i.collection_id AND c.user_id=i.user_id WHERE i.user_id=? ORDER BY i.title COLLATE NOCASE,i.id`,user),
+    collectionEvidence(c.env,user),
+    all<{item_id:string;photo_id:string}>(c.env,'SELECT item_id,photo_id FROM item_photos WHERE user_id=? ORDER BY item_id,side,photo_id',user)
+  ])
+  const photosByItem=new Map<string,string[]>()
+  for(const photo of photos){
+    const ids=photosByItem.get(photo.item_id) ?? []
+    ids.push(c.env.APP_ORIGIN+'/api/v1/photos/'+photo.photo_id)
+    photosByItem.set(photo.item_id,ids)
+  }
+  const snapshot=new Date()
+  const headings=['specimen_id','collection','title','type','issuer','ruler','denomination','year','reference','grade',
+    'certification','provenance','purchase_source','purchase_date','purchase_price','acquisition_fees','purchase_currency',
+    'assessment_date','assessment_status','estimate_currency','estimate_low','estimate_median','estimate_high',
+    'comparable_sale_urls','private_photo_urls','notes']
+  const records=items.map(row=>{
+    const specimen=decode(row)
+    const detail=specimen.details
+    const assessment=valueSales(groups.get(row.id)?.sales ?? [],'USD',row.grade,snapshot)
+    const used=new Set(assessment.used)
+    return [row.id,row.folder,row.title,row.type,row.issuer,row.ruler,row.denomination,row.year,row.reference,row.grade,
+      detail?.certification,detail?.provenance,detail?.purchaseSource,detail?.purchaseDate,detail?.purchasePrice,detail?.fees,detail?.currency,
+      assessment.asOf,assessment.status,assessment.currency,assessment.range?.low,assessment.range?.median,assessment.range?.high,
+      assessment.evidence.filter(sale=>used.has(sale.id)).map(sale=>sale.url).join('\n'),(photosByItem.get(row.id) ?? []).join('\n'),row.notes]
+  })
+  return c.text(csv([headings,...records]),200,{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="numiagent-insurance-inventory.csv"'})
+})
 items.post('/',async c=>{
   const input = await body(c,record)
   const [key] = await saveItems(c.env,c.get('user').id,[{id:uid(),input}])
@@ -139,6 +176,19 @@ items.post('/bulk',async c=>{
   const entries = inputs.map(({id:key,...input})=>({id:key ?? uid(),input,update:!!key}))
   for (const entry of entries) if (entry.update) await findItem(c.env,user,entry.id)
   return c.json({ids:await saveItems(c.env,user,entries)},201)
+})
+items.patch('/bulk',async c=>{
+  const {ids,changes}=await body(c,bulkItemPatch)
+  const user=c.get('user').id
+  if(changes.collection_id) await requireCollection(c.env,user,changes.collection_id)
+  const fields=Object.entries(changes)
+  const assignments=fields.map(([field])=>field+'=?').join(',')
+  const result=await run(c.env,`WITH selected AS (SELECT value AS id FROM json_each(?))
+    UPDATE items SET ${assignments},updated=? WHERE user_id=? AND id IN (SELECT id FROM selected)
+    AND ?=(SELECT COUNT(*) FROM items WHERE user_id=? AND id IN (SELECT id FROM selected))`,
+    JSON.stringify(ids),...fields.map(([,value])=>value),now(),user,ids.length,user)
+  if(result.meta.changes!==ids.length) return fail(404,'At least one selected specimen is unavailable')
+  return c.json({updated:result.meta.changes})
 })
 items.post('/import/numisgraph',async c=>{
   const input = await body(c,legacyBatch)
@@ -174,6 +224,11 @@ export async function valuation(env:Env,user:string,key:string,currency='USD') {
   return valueSales(sales.map(saleFromRow),currency,specimen.grade)
 }
 export const valuations = router()
+valuations.get('/:id/research',async c=>{
+  const user=c.get('user').id
+  const specimen=await findItem(c.env,user,c.req.param('id'))
+  return c.json(await researchSales(c.env,user,specimen))
+})
 valuations.get('/:id',async c=>{
   const currency = (c.req.query('currency') ?? 'USD').toUpperCase()
   if (!/^[A-Z]{3}$/.test(currency)) return fail(400,'Use a three-letter currency code')
@@ -202,9 +257,14 @@ export async function themeProgress(env:Env,user:string,key:string) {
   const theme = await one<Theme>(env,'SELECT id,name,slots FROM themes WHERE user_id=? AND id=?',user,key)
   if (!theme) return fail(404,'Theme unavailable')
   const specimens = (await all<Row>(env,'SELECT * FROM items WHERE user_id=?',user)).map(decode)
-  const slots = (JSON.parse(theme.slots) as Slot[]).map(rule=>({...rule,owned:specimens.filter(i=>matchesSlot(rule,i)).map(i=>({id:i.id,title:i.title}))}))
+  const slots = (JSON.parse(theme.slots) as Slot[]).map(rule=>({...rule,owned:specimens.filter(i=>matchesSlot(rule,i))
+    .map(i=>({id:i.id,title:i.title,hasReference:!!i.reference.trim()}))}))
   const owned = slots.filter(s=>s.owned.length > 0).length
-  return {id:theme.id,name:theme.name,slots,owned,missing:slots.filter(s=>!s.owned.length),percent:Math.round(100*owned/slots.length)}
+  const missing=slots.filter(s=>!s.owned.length)
+  const missingReferences=new Set(slots.flatMap(rule=>rule.owned.filter(item=>!item.hasReference).map(item=>item.id))).size
+  const priorities=[...missing.filter(s=>s.source),...missing.filter(s=>!s.source)].slice(0,3)
+    .map(s=>({label:s.label,reason:s.source?'Reference available to verify the target':'Next missing slot in checklist order'}))
+  return {id:theme.id,name:theme.name,slots,owned,missing,priorities,missingReferences,percent:slots.length?Math.round(100*owned/slots.length):0}
 }
 
 const themeInput = name.extend({slots:z.array(slot).min(1).max(100)})
@@ -212,12 +272,7 @@ export const themes = router()
 themes.get('/',async c=>c.json(await listThemes(c.env,c.get('user').id)))
 themes.post('/preview',async c=>{
   const { goal } = await body(c,z.object({goal:z.string().trim().min(1).max(400)}))
-  if (!/roman/i.test(goal) || !/emperor/i.test(goal) || /augustus through constantine|byzantin|second century|third century|fourth century/i.test(goal)) {
-    return c.json({status:'manual_required',slots:[],name:goal.slice(0,100)})
-  }
-  const silver = /silver|denari/i.test(goal)
-  return c.json({status:'template',name:'First-century Roman emperors',
-    slots:romanTheme.map(s=>({...s,metal:silver ? 'Silver':'',denomination:/denari/i.test(goal) ? 'Denarius':''}))})
+  return c.json(await previewTheme(c.env,c.get('user').id,goal))
 })
 themes.post('/',async c=>{
   const input = await body(c,themeInput)

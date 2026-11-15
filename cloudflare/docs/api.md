@@ -4,6 +4,8 @@ The OpenAPI 3.1 document is at [public/openapi.json](../public/openapi.json) and
 
 Sign in and open Developer to create a named read-only API key. Use `Authorization: Bearer <key>` on operations marked with `developerKey` in OpenAPI. These include catalog, photo and import reads, themes, valuations, watchlists, references and marketplace search. Keys expire after 90 days. Each account has a shared limit of 120 developer REST requests per minute. Only the creation response shows the secret. Revoke access in Developer.
 
+Use `GET /api/v1/exchange-rates?from=EUR&to=USD&date=2026-11-13` for the latest common ECB observation on or up to seven days before a sale. `GET /api/v1/references/ocre?id=ric.1%282%29.aug.208` returns a source-linked OCRE type. A licensed sale provider can be queried by owned specimen at `GET /api/v1/valuations/{id}/research`. Sales still need collector review before insertion. The browser session can edit selected fields with `PATCH /api/v1/items/bulk` and export insurance records at `GET /api/v1/items/insurance.csv`. The latter includes links requiring an authorized session. Download private images separately if sharing them with an insurer.
+
 Transfer an authenticated legacy portfolio export with `POST /api/v1/items/import/numisgraph`. Send the original `/api/coins` rows as `coins` (up to 25 per call) and an optional `collectionId` owned by the current collector. The response counts imported and already-present rows and reports legacy photo references to reconcile. Use `GET /api/v1/references?q=caligula&kind=ruler` for Nomisma names, aliases, citations, and attribution.
 
 ## MCP

@@ -78,13 +78,13 @@ export const sitePages:Record<string,SitePage> = {
       ],links:[help]},
       {title:'Build and search a private catalog',paragraphs:[
         'Save coins and banknotes in named collection folders. Record issuer, denomination, date, grade, references, notes, measurements, inscriptions, and type-specific details. Find pieces with text search and filters, inspect potential duplicates that share a reference, and see collection and import counts on the overview.',
-        'Transfer a supported NumisGraph portfolio export when you choose. Export collection records as CSV or download account data as JSON.'
+        'Edit selected fields across up to 50 specimens at once. Look up a Roman coin type in OCRE and attach its source link. Export a standard or insurance inventory CSV, download account data as JSON, or transfer a supported NumisGraph portfolio export.'
       ],links:[{href:'/app#collection',label:'Open the collection'}]},
       {title:'Find out what comparable pieces sold for',paragraphs:[
-        'Give every estimate a trail you can follow. Record the auction house, original lot link, sale date, currency, and grade. Keep hammer prices and prices with buyer’s premium straight. When enough comparable records support a range, you’ll see it in the specimen’s valuation history. When evidence is thin, the catalog says so.'
+        'Give every estimate a trail you can follow. Enter comparables or import verified sale records with original lot links. Look up a dated ECB reference rate when sales use different currencies. When enough comparable records support a range, you’ll see it in the specimen’s valuation history. When evidence is thin, the catalog says so.'
       ],links:[{href:'/blog/compare-coin-auction-prices',label:'See how to compare realized auction prices'}]},
       {title:'See which pieces your set still needs',paragraphs:[
-        'Before you go looking for another piece, see what you already have. Start with the reference-linked first-century Roman emperor checklist or build your own. Match your catalog by ruler, denomination, or reference and keep the gaps together as a list you can work through.'
+        'Before you go looking for another piece, see what you already have. Start from a sourced Roman emperor or Canadian banknote checklist, or ask for a draft of your own rules. Review the suggestions, then see what matches, which records need references, and which gaps to research first.'
       ],links:[{href:'/app#themes',label:'Open themes'}]},
       {title:'Search auctions and save watches',paragraphs:[
         'Keep a set of searches for pieces you’re looking for and revisit them from Marketplace. When an auction source is configured, results show their source and verification status. Saved watches can send alerts for verified active lots through an approved feed. Live auction coverage is currently unavailable.'
@@ -132,7 +132,8 @@ export const sitePages:Record<string,SitePage> = {
         'Your uploaded photographs and catalog are private to your account. When you consent to AI analysis for a batch, Cloudflare Workers AI processes the photographs for identification suggestions. You can also catalog them manually.'
       ]},
       {title:'Services and connected tools',paragraphs:[
-        'Cloudflare hosts the site, stores the app data, checks for spam and abuse, and delivers sign-in email. Your browser requests the site typefaces from Google Fonts. If you run a marketplace search, the query may be sent to configured providers. A connected agent or API integration can read records within the access you grant it. NumiAgent stores a hash of each API key and retains its label, scope and expiry while the key is active.'
+        'Cloudflare hosts the site, stores app data, checks for abuse, and delivers sign-in email. An AI theme preview sends your collecting request to Workers AI. OCRE lookups send a coin type identifier. ECB lookups send currency codes and a date. Auction searches and comparable-sale lookups can send your search terms or reference to configured providers.',
+        'Your browser requests site typefaces from Google Fonts. A connected agent or API integration can read records within the access you grant it. NumiAgent stores a hash of each API key and retains its label, scope, and expiry while the key is active.'
       ]},
       {title:'Support requests',paragraphs:[
         'The contact form stores your reply email, topic, and message so the operator can review and respond. Contact messages are scheduled for deletion from the active inbox after 90 days. Omit payment details, sign-in links, and other sensitive information.'

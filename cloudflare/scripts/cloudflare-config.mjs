@@ -21,6 +21,8 @@ config.name = namespace
 config.vars = {...config.vars,APP_MODE:environment,APP_ORIGIN:origin.origin,EMAIL_FROM:from,TURNSTILE_SITE_KEY:siteKey,
   VISION_MODEL:process.env.NUMIS_VISION_MODEL || config.vars.VISION_MODEL,
   MARKET_DOMAINS:process.env.NUMIS_MARKET_DOMAINS ?? '',MARKET_FEED_URL:process.env.NUMIS_MARKET_FEED_URL ?? '',
+  EBAY_MARKET_ENABLED:process.env.NUMIS_EBAY_MARKET_ENABLED==='true'?'true':'false',
+  SALE_FEED_URL:process.env.NUMIS_SALE_FEED_URL ?? '',SALE_SOURCE_DOMAINS:process.env.NUMIS_SALE_SOURCE_DOMAINS ?? '',
   AI_PER_USER:process.env.NUMIS_AI_PER_USER || config.vars.AI_PER_USER,AI_GLOBAL:process.env.NUMIS_AI_GLOBAL || config.vars.AI_GLOBAL,
   MARKET_PER_USER:process.env.NUMIS_MARKET_PER_USER || '30',MARKET_GLOBAL:process.env.NUMIS_MARKET_GLOBAL || '300'}
 config.d1_databases = [{binding:'DB',database_name:namespace,database_id:databaseId}]

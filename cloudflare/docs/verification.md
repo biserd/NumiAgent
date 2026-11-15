@@ -28,6 +28,10 @@
 
 ## Model benchmark
 
+On November 14, 2026, two public reference images were sent to Gemma 4 and Qwen 3.8 on Workers AI. Both models returned valid results and detected the expected coin or banknote type in both images. Each matched the expected object count and all specified attribution fields in one of the two images. The model setting remains configurable. This smoke test leaves mixed trays, production throughput, iPhone capture, and representative accuracy to be measured with more images.
+
+Images used for this smoke test were the [Yale University Art Gallery Trajan denarius, inventory 1938.6000.2894](https://commons.wikimedia.org/wiki/File%3ADenarius_of_Trajan%2C_Emperor_of_Rome_from_Rome%2C_Yale_University_Art_Gallery%2C_inv._1938.6000.2894_-_YDEA_-_134662.jpg) and a [public-domain 1896 five-dollar silver certificate](https://commons.wikimedia.org/wiki/File%3A5_Silver_US_Dollars_1896.jpg). Neither image is bundled with the application.
+
 Use private, consented photos and a temporary account-scoped Workers AI token. Build a JSON array with `file` (relative path), `consent: true`, and `expected` (an array of objects with `type` and any known `issuer`, `ruler`, `denomination`, and `reference`). Run:
 
 ```sh
@@ -40,4 +44,8 @@ Set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_TOKEN` through the environment. C
 
 Photo selection and browser conversion are tested on an Edge touch viewport. iPhone Safari, HEIF conversion, camera hardware, object-region accuracy, and evidence of sustained production throughput require device and staging checks. Unsupported HEIF files need conversion in a browser or app that can decode them. Users can pair sides and correct crop percentages manually. Crop coordinates are stored with item-photo associations.
 
-The first-century Roman template uses documented ruler references. Broader natural-language catalog compilation and a live OCRE type matcher are future work. Sale data entered by collectors stays labeled as collector-attested. Mixed currencies require dated and sourced conversion before they can be compared. The marketplace adapter is ready for configured providers, and its verified coverage is empty on the default offline setup. Email alerts run only for opted-in watches with an approved structured feed.
+Sourced themes cover first-century Roman emperors and the 1935, 1937, and 1954 Bank of Canada series by denomination. Custom AI rules remain editable suggestions. Matching reports reference gaps and suggests three missing slots to review. OCRE exact-type lookup and dated ECB conversion were exercised against both real providers from a Cloudflare preview.
+
+The actual app was tested with three individually reviewed Tiberius denarii attributed to RIC I 30 and graded Good VF. The calculation used [CNG EA 609 lot 581](https://www.cngcoins.com/Lot.aspx?LOT_ID=196094), [CNG EA 607 lot 559](https://www.cngcoins.com/Lot.aspx?LOT_ID=191317), and [CNG EA 616 lot 669](https://www.cngcoins.com/Lot.aspx?LOT_ID=206013). The three hammer prices were USD 550, 1,300, and 1,600 with 20% premiums. The isolated test returned a USD 1,110–1,740 range with a USD 1,560 median. These are source facts used for verification, with Lyon varieties and surfaces that vary by specimen. The example remains outside production collection data.
+
+eBay Browse and the licensed sale-feed adapter require approved production configuration. Realized prices entered or imported by a collector remain collector-attested. Portfolio estimates use compatible dated currency observations and accepted grades. Verify authorized listings and opted-in alert delivery before enabling a live source.

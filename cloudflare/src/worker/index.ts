@@ -11,6 +11,7 @@ import { authorizeDeveloper, developerKeys } from './developer'
 import { imports, photos, processQueue, reconcileImports } from './ingest'
 import { market, refreshWatchlists, watchlists } from './market'
 import { publicPage } from './publicSite'
+import { exchangeRates, ocre } from './officialData'
 export { PhotoWorkflow } from './ingest'
 
 const api = router()
@@ -40,6 +41,8 @@ api.route('/themes',themes)
 api.route('/valuations',valuations)
 api.route('/market',market)
 api.route('/watchlists',watchlists)
+api.route('/exchange-rates',exchangeRates)
+api.route('/references/ocre',ocre)
 api.get('/references',c=>{
   const query = z.object({q:z.string().trim().min(2).max(180),kind:z.enum(referenceKinds).optional()}).safeParse(c.req.query())
   if (!query.success) return fail(400,'Enter a reference term and optional ruler, mint, denomination, or metal kind')

@@ -6,6 +6,24 @@ import { matchReference } from '../src/shared/references.ts'
 import { ecbQuote, parseOcre } from '../src/worker/officialData.ts'
 import { normalizeEbay } from '../src/worker/ebay.ts'
 import { parseThemeDraft } from '../src/worker/themePlanning.ts'
+import { parsePhotoCandidates } from '../src/worker/vision.ts'
+
+test('Photo review keeps an identifiable coin when Gemma returns null, numeric text, or an unusable crop',()=>{
+  const response = JSON.stringify([
+    {type:'coin', title:'Jefferson nickel', year:2007, issuer:null, reference:null, confidence:'91%',
+      details:{mint:null, mintMark:'D'}, crop:{x:.82,y:.4,width:.32,height:.4}},
+    { type:'unclear', title:'Uncertain second object' }
+  ])
+  const [coin,...others] = parsePhotoCandidates('~~~json\n' + response + '\n~~~')
+  assert.equal(others.length,0)
+  assert.equal(coin.year,'2007')
+  assert.equal(coin.reference,'')
+  assert.equal(coin.details.mintMark,'D')
+  assert.equal(coin.confidence,.91)
+  assert.equal(coin.crop,undefined)
+  assert.deepEqual(parsePhotoCandidates('[]'),[])
+  assert.throws(()=>parsePhotoCandidates('[null]'),/no valid candidates/)
+})
 
 test('Theme drafts accept string years and strip unsourced references and URLs',()=>{
   const draft=JSON.stringify({name:'Test draft',slots:[

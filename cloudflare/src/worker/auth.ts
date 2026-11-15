@@ -24,6 +24,43 @@ async function signIn(c: WebContext, user: string) {
 }
 const auth = router()
 auth.get('/config', c => c.json({ turnstile: c.env.TURNSTILE_SITE_KEY || null, local: isLocal(c.env) }))
+// The iPhone app handles email entry and sign-in itself. This isolated page only
+// runs the same Turnstile challenge used by the website.
+auth.get('/native-challenge', c => {
+  const state = c.req.query('state') ?? ''
+  const siteKey = c.env.TURNSTILE_SITE_KEY ?? ''
+  if (!/^[a-f0-9-]{36}$/.test(state)) return fail(400,'Invalid security check')
+  if (!/^[a-zA-Z0-9_-]+$/.test(siteKey)) return fail(503,'Security check is temporarily unavailable')
+  const nonce = token()
+  c.header('Content-Security-Policy', `default-src 'none'; script-src 'nonce-${nonce}' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'`)
+  c.header('X-Robots-Tag','noindex')
+  return c.html(`<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NumiAgent security check</title><h1>NumiAgent security check</h1>
+<p id="status" role="status">Complete the security check to request your sign-in email.</p><div id="challenge"></div>
+<a id="continue" hidden>Continue in NumiAgent</a>
+<script nonce="${nonce}">
+function loadChallenge() {
+  turnstile.render('#challenge', {sitekey: '${siteKey}', action: 'login', callback: function (response) {
+    const query = new URLSearchParams({state: '${state}', challenge: response})
+    const link = document.querySelector('#continue')
+    link.href = 'numiagent-auth://challenge?' + query.toString()
+    link.hidden = false
+    document.querySelector('#status').textContent = 'Security check complete.'
+  }, 'error-callback': challengeError, 'expired-callback': function () {
+    document.querySelector('#continue').hidden = true
+    document.querySelector('#status').textContent = 'Complete the security check to request your sign-in email.'
+  }})
+}
+function challengeError() {
+  document.querySelector('#status').textContent = 'The security check could not load. Close this sheet and try again.'
+}
+window.addEventListener('error', function (event) {
+  if (event.target && event.target.id === 'turnstile') challengeError()
+}, true)
+</script>
+<script id="turnstile" nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=loadChallenge&render=explicit" defer></script></html>`)
+})
 auth.post('/request', async c => {
   sameOrigin(c)
   const input = await body(c,z.object({email:z.email().max(250),challenge:z.string().max(2048).optional()}))

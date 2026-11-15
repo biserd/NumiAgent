@@ -47,6 +47,9 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.match(landing,/class="hero-art"/)
     assert.match(landing,/aria-label="Collector guides"/)
     assert.match(landing,/Coin &amp; Banknote Collection Software/)
+    for(const issue of ['Too many photos to sort?','Stuck on an unfamiliar piece?','Unsure what it’s worth?','What’s still missing?']){
+      assert.ok(landing.includes(issue),issue)
+    }
     for(const [path,heading] of [['/about','About NumiAgent'],['/features','NumiAgent features'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent'],
       ['/developers','NumiAgent for developers'],['/developers/access','API and MCP access'],['/developers/api','REST API guide'],['/developers/mcp','MCP connection guide']]){
       const response=await fetch(base+path)

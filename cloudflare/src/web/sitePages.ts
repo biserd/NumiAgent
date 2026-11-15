@@ -5,7 +5,7 @@ export const brand = 'NumiAgent'
 export const canonicalOrigin = 'https://numiagent.com'
 export const landingSeo = {
   title:'Coin & Banknote Collection Software | NumiAgent',
-  description:'Organize your coin and banknote collection. Import photos, review AI identifications, record auction prices, and track which pieces you still need.'
+  description:'Turn coin and banknote photos into a private catalog. Identify unfamiliar pieces, compare actual auction sales, and see what is missing from your sets.'
 }
 
 type Link = {href:string;label:string}
@@ -50,7 +50,7 @@ export const sitePages:Record<string,SitePage> = {
     sections:[
       {title:'Why I’m building NumiAgent',paragraphs:[
         'A coin can fit in the palm of your hand. The work of figuring out what it is can take up a tray, a spreadsheet, and half a browser window. I wanted one place to keep the photographs, the attribution I settled on, and the sources I’d want to check again later.',
-        'I also wanted the catalog to be useful on an ordinary evening. You should be able to photograph a batch on your phone, set it aside, and pick up the review when you have time. If you already know what you have, you should be able to enter it by hand and move on.'
+        'I want NumiAgent to help with the jobs that put collecting on hold. There’s the camera roll you still need to sort, the coin you haven’t identified, the price you can’t trace to a sale, and the set you keep checking to remember what’s missing. Those are the problems I keep coming back to as I build it.'
       ]},
       {title:'Leave room to be unsure',paragraphs:[
         'The interesting part of identification is often the doubt. A worn legend can change the reading. A banknote may look familiar until you turn it over and notice a different signature. NumiAgent offers suggestions for you to review, with space to correct the crop, pair the two sides, and record your own attribution.',
@@ -68,23 +68,23 @@ export const sitePages:Record<string,SitePage> = {
   '/features':{
     label:'Features',title:'NumiAgent features',
     seoTitle:'Coin Catalog, Photo ID & Valuation Tools | NumiAgent',
-    description:'See how NumiAgent imports and identifies coins and banknotes, manages private collections, tracks auction evidence, and connects to your tools.',
+    description:'Clear your photo backlog, identify unfamiliar coins and banknotes, compare actual auction sales, and track the pieces you still need.',
     sections:[
-      {title:'Photograph and import a batch',paragraphs:[
-        'Choose images from your phone or computer, or take a photo from a supported mobile browser. Name each batch, follow upload and processing progress, and return to review it later. You can keep compatible originals up to 6 MB or let the browser resize supported formats.'
+      {title:'Turn the photo backlog into a catalog',paragraphs:[
+        'Get the tray out of your camera roll. Import a batch from your phone or computer, name it so you can find it later, and see which images are ready for review. Keep compatible originals up to 6 MB or let the browser resize supported formats. You can pause and pick up the batch later.'
       ],links:[{href:'/app#imports',label:'Open photo imports'}]},
-      {title:'Review AI identification and pair both sides',paragraphs:[
-        'Choose whether to run AI analysis for each batch. Review candidate attributions, confidence scores and suggested crop areas, then correct the details before saving. Pair obverse and reverse images, crop a specimen from a tray photo, or skip AI and catalog manually.'
+      {title:'Get unstuck on a mystery coin or banknote',paragraphs:[
+        'An unfamiliar portrait or worn legend is easier to research with a few candidates. Opt in to AI analysis and review suggested attributions, confidence scores, and crops. Pair front and back photos, correct the record, or catalog the piece by hand.'
       ],links:[help]},
       {title:'Build and search a private catalog',paragraphs:[
         'Save coins and banknotes in named collection folders. Record issuer, denomination, date, grade, references, notes, measurements, inscriptions, and type-specific details. Find pieces with text search and filters, inspect potential duplicates that share a reference, and see collection and import counts on the overview.',
         'Transfer a supported NumisGraph portfolio export when you choose. Export collection records as CSV or download account data as JSON.'
       ],links:[{href:'/app#collection',label:'Open the collection'}]},
-      {title:'Track auction evidence and valuation history',paragraphs:[
-        'Record realized sale prices with the auction house, lot link, date, currency, and grade. Distinguish hammer prices from prices including buyer’s premium. NumiAgent estimates a range when there are enough comparable records and shows insufficient market evidence when there aren’t. Recorded valuations build a history for the specimen.'
-      ]},
-      {title:'Build checklists and track missing pieces',paragraphs:[
-        'Start with the reference-linked first-century Roman emperor checklist or build your own theme. Use attributes such as ruler, denomination, or catalog reference to match pieces you already own. The checklist shows what’s accounted for and which entries are still missing.'
+      {title:'Find out what comparable pieces sold for',paragraphs:[
+        'Give every estimate a trail you can follow. Record the auction house, original lot link, sale date, currency, and grade. Keep hammer prices and prices with buyer’s premium straight. When enough comparable records support a range, you’ll see it in the specimen’s valuation history. When evidence is thin, the catalog says so.'
+      ],links:[{href:'/blog/compare-coin-auction-prices',label:'See how to compare realized auction prices'}]},
+      {title:'See which pieces your set still needs',paragraphs:[
+        'Before you go looking for another piece, see what you already have. Start with the reference-linked first-century Roman emperor checklist or build your own. Match your catalog by ruler, denomination, or reference and keep the gaps together as a list you can work through.'
       ],links:[{href:'/app#themes',label:'Open themes'}]},
       {title:'Search auctions and save watches',paragraphs:[
         'Keep a set of searches for pieces you’re looking for and revisit them from Marketplace. When an auction source is configured, results show their source and verification status. Saved watches can send alerts for verified active lots through an approved feed. Live auction coverage is currently unavailable.'

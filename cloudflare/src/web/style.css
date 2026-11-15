@@ -52,6 +52,9 @@ label{display:grid;gap:5px;font-size:.91rem;font-weight:600;min-width:0}.check{d
 .footer-guides{grid-column:2;border-top:1px solid #f9f3e726;padding-top:9px}
 .related-guides{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px}
 .related-guides ul{display:flex;flex-wrap:wrap;gap:8px 22px;padding:0;margin:12px 0 0;list-style:none;color:#654416}
+.features{grid-template-columns:repeat(4,minmax(0,1fr));gap:28px}
+@media(max-width:960px){.features{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:660px){.features{grid-template-columns:1fr;gap:20px}}
 @media(max-width:660px){.site-footer:has(.footer-guides){grid-template-columns:1fr}.footer-guides{grid-column:1}}
 @media(max-width:660px){.site-header nav>a.nav-blog{display:inline-flex}.post-grid{grid-template-columns:1fr}}
 @media(min-width:380px) and (max-width:660px){.site-header nav>a.nav-features{display:inline-flex}}

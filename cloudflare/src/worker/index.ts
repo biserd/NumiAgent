@@ -70,6 +70,9 @@ export default {
       if (isApi) response = await app.fetch(request,env,ctx)
       else if (isAgent) response = await agentRequest(request,env,ctx)
       else response = await publicPage(request,url,env) ?? await env.ASSETS.fetch(request)
+      if (url.pathname==='/404' && response.ok) {
+        response = new Response(response.body,{status:404,headers:response.headers})
+      }
     } catch (error) {
       const status = error instanceof HTTPException ? error.status : 500
       response = Response.json({error:status===500 ? 'The request could not be completed':(error as Error).message},{status})

@@ -2,40 +2,57 @@ import SwiftUI
 
 struct ImportHistory: View {
     let api: NumiAPI
+    var selection: Binding<String?>? = nil
+    var revision = 0
+    var demo = false
+    var onNewImport: (() -> Void)? = nil
     @State private var imports: [ImportSummary] = []
     @State private var error: String?
     @State private var loading = true
 
     var body: some View {
-        List {
+        List(selection: selection) {
+            if let onNewImport {
+                Button(action: onNewImport) { Label("New photo import", systemImage: "plus") }
+                    .buttonStyle(.borderless)
+            }
             ForEach(imports) { batch in
-                NavigationLink {
-                    ImportReview(api: api, batchID: batch.id)
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text(batch.label)
-                        Text("\(batch.total) photos · \(batch.pending ?? 0) processing")
-                            .font(.footnote).foregroundStyle(.secondary)
+                if selection != nil {
+                    NavigationLink(value: batch.id) { row(batch) }
+                } else {
+                    NavigationLink {
+                        ImportReview(api: api, batchID: batch.id)
+                    } label: {
+                        row(batch)
                     }
                 }
             }
             if loading { ProgressView() }
             if let error { Text(error).foregroundStyle(.red) }
-            if imports.isEmpty && !loading && error == nil {
+            if imports.isEmpty && !loading && error == nil && !demo {
                 ContentUnavailableView("No uploads yet", systemImage: "photo.on.rectangle",
                                        description: Text("Take or select photos from Capture."))
             }
         }
         .navigationTitle("Photo imports")
-        .task { await load() }
+        .task(id: revision) { await load() }
         .refreshable { await load() }
     }
 
     private func load() async {
         defer { loading = false }
         error = nil
+        guard !demo else { return }
         do { imports = try await api.get("/imports") }
         catch { if !Task.isCancelled { self.error = error.localizedDescription } }
+    }
+
+    private func row(_ batch: ImportSummary) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(batch.label)
+            Text("\(batch.total) photos · \(batch.pending ?? 0) processing")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
     }
 }
 
@@ -47,6 +64,7 @@ struct ImportReview: View {
 
     let api: NumiAPI
     let batchID: String
+    var expanded = false
     @State private var batch: PhotoImport?
     @State private var edit: PendingEdit?
     @State private var error: String?
@@ -60,7 +78,7 @@ struct ImportReview: View {
                 progressSection(batch)
                 ForEach(batch.photos.indices, id: \.self) { index in
                     let photo = batch.photos[index]
-                    ImportPhotoSection(api: api, photo: photo, number: index + 1,
+                    ImportPhotoSection(api: api, photo: photo, number: index + 1, expanded: expanded,
                                        canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice in
                         editPhoto(photo, suggestion: choice)
                     } retry: {
@@ -141,6 +159,7 @@ private struct ImportPhotoSection: View {
     let api: NumiAPI
     let photo: ImportedPhoto
     let number: Int
+    let expanded: Bool
     let canRetry: Bool
     let working: Bool
     let edit: (PhotoCandidate?) -> Void
@@ -148,7 +167,7 @@ private struct ImportPhotoSection: View {
 
     var body: some View {
         Section("Photo \(number)") {
-            SpecimenImage(api: api, id: photo.id, sampleAsset: nil).frame(height: 220)
+            SpecimenImage(api: api, id: photo.id, sampleAsset: nil).frame(height: expanded ? 330 : 220)
             Label(photo.statusLabel, systemImage: photo.isPending ? "clock" : "photo")
             if let message = photo.error { Text(message).font(.footnote).foregroundStyle(.secondary) }
             if photo.canCatalog {

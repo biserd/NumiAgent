@@ -23,6 +23,6 @@ Your iPhone and web catalog use the same NumiAgent account. Explore the demo or 
 
 ## Review notes
 
-The native tabs cover catalog search and editing, auction evidence, camera and photo imports, identification review, checklists, and exports. Account deletion can be initiated in **Settings**. The on-device demo shows example records, sample identification, and illustrative sales without requiring sign-in.
+The native screens cover catalog search and editing, auction evidence, camera and photo imports, identification review, checklists, and exports. iPad has a sidebar and split views, with wider specimen photos. Account deletion can be initiated in **Settings**. The on-device demo shows example records, sample identification, and illustrative sales without requiring sign-in.
 
 Before submission, provide App Review with access to the signed-in workflows through a dedicated review account. Complete App Privacy using the production data practices, including account email, collection data and optional photo processing by Cloudflare Workers AI. [App Privacy details](https://developer.apple.com/app-store/app-privacy-details/).

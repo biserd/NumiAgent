@@ -75,7 +75,7 @@ struct NativeAccountTools: View {
             Section("Sign-ins") {
                 ForEach(devices) { device in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(device.current == 1 ? "This iPhone" : "Other session")
+                        Text(device.current == 1 ? "This device" : "Other session")
                         Text(Date(timeIntervalSince1970: device.created).formatted())
                             .font(.footnote).foregroundStyle(.secondary)
                         if device.current != 1 {

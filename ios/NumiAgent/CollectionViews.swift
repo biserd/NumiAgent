@@ -3,6 +3,7 @@ import SwiftUI
 struct CatalogScreen: View {
     let api: NumiAPI
     let demo: Bool
+    var workspaceSelection: WorkspaceListSelection<Specimen>? = nil
     @State private var query = ""
     @State private var adding = false
     @State private var managingFolders = false
@@ -13,69 +14,92 @@ struct CatalogScreen: View {
     @State private var preview: String?
 
     var body: some View {
-        NavigationStack {
-            List {
-                if demo {
-                    Text("Demo collection").font(.footnote).foregroundStyle(.secondary)
+        if workspaceSelection != nil { catalog }
+        else {
+            NavigationStack {
+                catalog.navigationDestination(item: $preview) { id in
+                    if let item = DemoCollection.specimens.first(where: { $0.id == id }) {
+                        SpecimenScreen(item: item, api: api, demo: demo, onChange: {})
+                    }
                 }
-                ForEach(items) { item in
+            }
+        }
+    }
+
+    private var catalog: some View {
+        List(selection: workspaceSelection?.matching(items)) {
+            if demo {
+                Text("Demo collection").font(.footnote).foregroundStyle(.secondary)
+            }
+            ForEach(items) { item in
+                if workspaceSelection != nil {
+                    NavigationLink(value: item.id) { row(item) }
+                        .accessibilityIdentifier("specimen-\(item.id)")
+                } else {
                     NavigationLink {
-                        SpecimenScreen(item: item, api: api, demo: demo) { reload() }
+                        SpecimenScreen(item: item, api: api, demo: demo, onChange: reload)
                     } label: {
-                        HStack(spacing: 12) {
-                            SpecimenImage(api: api, id: item.photo, sampleAsset: demo ? DemoCollection.photo(for: item) : nil)
-                                .frame(width: 49, height: 49)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.title).font(.headline)
-                                if !item.subtitle.isEmpty {
-                                    Text(item.subtitle).font(.subheadline).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-                if let next {
-                    Button("Load more specimens") { Task { await load(page: next, query: query) } }.disabled(loading)
-                }
-                if loading { ProgressView() }
-                if let error { Text(error).foregroundStyle(.red) }
-                if items.isEmpty && !loading && error == nil {
-                    ContentUnavailableView(
-                        query.isEmpty ? "No specimens yet" : "No matching specimens",
-                        systemImage: "square.grid.2x2",
-                        description: Text(query.isEmpty ? "Add a specimen or capture a batch of photographs." : "Try a different name or reference.")
-                    )
-                }
-            }
-            .navigationTitle("Collection")
-            .navigationDestination(item: $preview) { id in
-                if let item = DemoCollection.specimens.first(where: { $0.id == id }) {
-                    SpecimenScreen(item: item, api: api, demo: demo) {}
-                }
-            }
-            .searchable(text: $query, prompt: "Name, ruler, or reference")
-            .toolbar {
-                if !demo {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Add specimen", systemImage: "plus") { adding = true }
-                    }
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Manage collections", systemImage: "folder") { managingFolders = true }
+                        row(item)
                     }
                 }
             }
-            .sheet(isPresented: $adding) { ItemEditor(api: api) { reload() } }
-            .sheet(isPresented: $managingFolders, onDismiss: reload) { CollectionFoldersScreen(api: api) }
-            .refreshable { await load(page: 0, query: query) }
-            .task(id: query) {
-                let requestedQuery = query
-                if !requestedQuery.isEmpty {
-                    do { try await Task.sleep(for: .milliseconds(300)) }
-                    catch { return }
+            if let next {
+                Button("Load more specimens") { Task { await load(page: next, query: query) } }.disabled(loading)
+            }
+            if loading { ProgressView() }
+            if let error { Text(error).foregroundStyle(.red) }
+            if items.isEmpty && !loading && error == nil {
+                ContentUnavailableView(
+                    query.isEmpty ? "No specimens yet" : "No matching specimens",
+                    systemImage: "square.grid.2x2",
+                    description: Text(query.isEmpty ? "Add a specimen or capture a batch of photographs." : "Try a different name or reference.")
+                )
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Collection")
+        .searchable(text: $query, prompt: "Name, ruler, or reference")
+        .toolbar {
+            if !demo {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Add specimen", systemImage: "plus") { adding = true }
                 }
-                await load(page: 0, query: requestedQuery)
-                if demo && PreviewLaunch.screen == .valuation { preview = DemoCollection.specimens.first?.id }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Manage collections", systemImage: "folder") { managingFolders = true }
+                }
+            }
+        }
+        .sheet(isPresented: $adding) { ItemEditor(api: api) { reload() } }
+        .sheet(isPresented: $managingFolders, onDismiss: reload) { CollectionFoldersScreen(api: api) }
+        .refreshable { await load(page: 0, query: query) }
+        .task(id: LoadKey(query: query, revision: workspaceSelection?.revision ?? 0)) {
+            let requestedQuery = query
+            if !requestedQuery.isEmpty {
+                do { try await Task.sleep(for: .milliseconds(300)) }
+                catch { return }
+            }
+            await load(page: 0, query: requestedQuery)
+            if workspaceSelection == nil && demo && PreviewLaunch.screen == .valuation {
+                preview = DemoCollection.specimens.first?.id
+            }
+        }
+    }
+
+    private struct LoadKey: Equatable {
+        let query: String
+        let revision: Int
+    }
+
+    private func row(_ item: Specimen) -> some View {
+        HStack(spacing: 12) {
+            SpecimenImage(api: api, id: item.photo, sampleAsset: demo ? DemoCollection.photo(for: item) : nil)
+                .frame(width: 49, height: 49)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title).font(.headline)
+                if !item.subtitle.isEmpty {
+                    Text(item.subtitle).font(.subheadline).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -141,11 +165,13 @@ struct SpecimenImage: View {
     }
 }
 
-private struct SpecimenScreen: View {
+struct SpecimenScreen: View {
     @State private var item: Specimen
     let api: NumiAPI
     let demo: Bool
     let onChange: () -> Void
+    let onDelete: (() -> Void)?
+    let expanded: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var deleting = false
@@ -157,11 +183,14 @@ private struct SpecimenScreen: View {
 
     private var previewingValuation: Bool { demo && PreviewLaunch.screen == .valuation }
 
-    init(item: Specimen, api: NumiAPI, demo: Bool, onChange: @escaping () -> Void) {
+    init(item: Specimen, api: NumiAPI, demo: Bool, expanded: Bool = false,
+         onChange: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
         _item = State(initialValue: item)
         self.api = api
         self.demo = demo
+        self.expanded = expanded
         self.onChange = onChange
+        self.onDelete = onDelete
     }
 
     var body: some View {
@@ -169,15 +198,17 @@ private struct SpecimenScreen: View {
             if !previewingValuation {
                 let sample = demo ? DemoCollection.photo(for: item) : nil
                 if let photos = item.photos, !photos.isEmpty {
-                    ForEach(photos) { photo in
-                        VStack(alignment: .leading, spacing: 5) {
-                            SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil).frame(height: 180)
-                            Text(photo.side.capitalized).font(.caption).foregroundStyle(.secondary)
+                    if expanded {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 205), spacing: 12)], spacing: 12) {
+                            ForEach(photos) { photo in galleryPhoto(photo, height: 220) }
                         }
+                        .padding(.vertical, 8)
+                    } else {
+                        ForEach(photos) { photo in galleryPhoto(photo, height: 180) }
                     }
                 } else if item.photo != nil || sample != nil {
                     SpecimenImage(api: api, id: item.photo, sampleAsset: sample)
-                        .frame(height: 200)
+                        .frame(height: expanded ? 300 : 200)
                         .listRowInsets(EdgeInsets())
                 }
                 Section("Specimen") {
@@ -267,11 +298,20 @@ private struct SpecimenScreen: View {
                 Task {
                     do {
                         try await api.write("/items/" + item.id, method: "DELETE")
-                        onChange()
-                        dismiss()
+                        if let onDelete { onDelete() }
+                        else { onChange(); dismiss() }
                     } catch { detailError = error.localizedDescription }
                 }
             }
+        }
+    }
+
+    private func galleryPhoto(_ photo: PhotoLink, height: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil)
+                .frame(height: height)
+                .clipShape(.rect(cornerRadius: 8))
+            Text(photo.side.capitalized).font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -300,6 +340,7 @@ private struct SpecimenScreen: View {
 struct ThemesScreen: View {
     let api: NumiAPI
     let demo: Bool
+    var workspaceSelection: WorkspaceListSelection<ThemeSummary>? = nil
     @State private var adding = false
     @State private var themes: [ThemeSummary] = []
     @State private var loading = true
@@ -307,34 +348,47 @@ struct ThemesScreen: View {
     @State private var preview: String?
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(themes) { theme in
+        if workspaceSelection != nil { checklists }
+        else {
+            NavigationStack {
+                checklists.navigationDestination(item: $preview) { _ in
+                    ThemeScreen(api: api, theme: DemoCollection.theme, demo: demo, onChange: {})
+                }
+            }
+        }
+    }
+
+    private var checklists: some View {
+        List(selection: workspaceSelection?.matching(themes)) {
+            ForEach(themes) { theme in
+                if workspaceSelection != nil {
+                    NavigationLink(theme.name, value: theme.id)
+                } else {
                     NavigationLink(theme.name) {
-                        ThemeScreen(api: api, theme: theme, demo: demo) { Task { await load() } }
+                        ThemeScreen(api: api, theme: theme, demo: demo, onChange: { Task { await load() } })
                     }
                 }
-                if loading { ProgressView() }
-                if let error { Text(error).foregroundStyle(.red) }
-                if themes.isEmpty && !loading && error == nil {
-                    ContentUnavailableView("No checklists yet", systemImage: "checklist",
-                                           description: Text("Create a checklist to track the pieces you still need."))
-                }
             }
-            .navigationTitle("Checklists")
-            .navigationDestination(item: $preview) { _ in
-                ThemeScreen(api: api, theme: DemoCollection.theme, demo: demo) {}
+            if loading { ProgressView() }
+            if let error { Text(error).foregroundStyle(.red) }
+            if themes.isEmpty && !loading && error == nil {
+                ContentUnavailableView("No checklists yet", systemImage: "checklist",
+                                       description: Text("Create a checklist to track the pieces you still need."))
             }
-            .toolbar {
-                if !demo {
-                    ToolbarItem(placement: .primaryAction) { Button("New checklist", systemImage: "plus") { adding = true } }
-                }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Checklists")
+        .toolbar {
+            if !demo {
+                ToolbarItem(placement: .primaryAction) { Button("New checklist", systemImage: "plus") { adding = true } }
             }
-            .sheet(isPresented: $adding) { ChecklistEditor(api: api) { Task { await load() } } }
-            .refreshable { await load() }
-            .task {
-                await load()
-                if demo && PreviewLaunch.screen == .checklists { preview = DemoCollection.theme.id }
+        }
+        .sheet(isPresented: $adding) { ChecklistEditor(api: api) { Task { await load() } } }
+        .refreshable { await load() }
+        .task(id: workspaceSelection?.revision ?? 0) {
+            await load()
+            if workspaceSelection == nil && demo && PreviewLaunch.screen == .checklists {
+                preview = DemoCollection.theme.id
             }
         }
     }
@@ -348,11 +402,12 @@ struct ThemesScreen: View {
     }
 }
 
-private struct ThemeScreen: View {
+struct ThemeScreen: View {
     let api: NumiAPI
     let theme: ThemeSummary
     let demo: Bool
     let onChange: () -> Void
+    var onDelete: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var deleting = false
@@ -420,8 +475,8 @@ private struct ThemeScreen: View {
                 Task {
                     do {
                         try await api.write("/themes/" + theme.id, method: "DELETE")
-                        onChange()
-                        dismiss()
+                        if let onDelete { onDelete() }
+                        else { onChange(); dismiss() }
                     } catch { self.error = error.localizedDescription }
                 }
             }

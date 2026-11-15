@@ -19,13 +19,14 @@ export async function publicPage(request:Request,url:URL,env:Env) {
   const article=page?.article
   const schema=article ? [{
     '@type':'BlogPosting',headline:page.title,description,url:canonical,mainEntityOfPage:canonical,
-    datePublished:article.published,image:[image],inLanguage:'en',articleSection:article.topic,
+    datePublished:article.published,dateModified:article.updated ?? article.published,
+    image:[image],inLanguage:'en',articleSection:article.topic,
     author:{'@type':'Organization',name:brand,url:canonicalOrigin+'/about'},
     publisher:{'@type':'Organization',name:brand,url:canonicalOrigin+'/'}
   },{
     '@type':'BreadcrumbList',itemListElement:[
       {'@type':'ListItem',position:1,name:brand,item:canonicalOrigin+'/'},
-      {'@type':'ListItem',position:2,name:'Blog',item:canonicalOrigin+'/blog'},
+      {'@type':'ListItem',position:2,name:sitePages['/blog'].title,item:canonicalOrigin+'/blog'},
       {'@type':'ListItem',position:3,name:page.title,item:canonical}
     ]
   }] : [{
@@ -44,7 +45,10 @@ export async function publicPage(request:Request,url:URL,env:Env) {
         'og:site_name':brand,'og:type':article?'article':'website','og:title':title,'og:description':description,
         'og:url':canonical,'og:image':image,'og:image:alt':'Illustration of a Roman bronze coin'
       }
-      if(article) metadata['article:published_time']=new Date(article.published).toISOString()
+      if(article) {
+        metadata['article:published_time']=new Date(article.published).toISOString()
+        if(article.updated) metadata['article:modified_time']=new Date(article.updated).toISOString()
+      }
       for(const [property,content] of Object.entries(metadata)) {
         element.append('<meta property="'+property+'" content="'+escapeAttribute(content)+'">',{html:true})
       }

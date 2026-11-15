@@ -29,7 +29,11 @@ export function publicPages():Plugin {
         'Open your private coin and banknote collection.','<main><h1>Sign in to '+brand+'</h1><p>Opening your collection…</p></main>')})
       this.emitFile({type:'asset',fileName:'404.html',source:privateHtml(template,'Page unavailable · '+brand,
         'Find your way back to NumiAgent.','<main><h1>Page unavailable</h1><p><a href="/">Return to NumiAgent</a></p></main>')})
-      const urls=['/',...Object.keys(sitePages)].map(path=>'<url><loc>'+escapeXml(canonicalOrigin+path)+'</loc></url>').join('')
+      const urls=['/',...Object.keys(sitePages)].map(path=>{
+        const article=sitePages[path]?.article
+        const lastmod=article ? '<lastmod>'+escapeXml(article.updated ?? article.published)+'</lastmod>' : ''
+        return '<url><loc>'+escapeXml(canonicalOrigin+path)+'</loc>'+lastmod+'</url>'
+      }).join('')
       this.emitFile({type:'asset',fileName:'sitemap.xml',source:'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+urls+'</urlset>'})
       const items=blogPosts.map(post=>{
         const url=escapeXml(canonicalOrigin+post.path)

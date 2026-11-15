@@ -9,7 +9,8 @@ export const landingSeo = {
 }
 
 type Link = {href:string;label:string}
-type Section = {title:string;paragraphs:string[];links?:Link[];code?:string}
+type Paragraph = string | {before:string;link:Link;after:string}
+type Section = {id?:string;title:string;paragraphs:Paragraph[];links?:Link[];code?:string}
 export type SitePage = {
   label:string
   title:string
@@ -17,7 +18,7 @@ export type SitePage = {
   description:string
   sections:Section[]
   effective?:string
-  article?:{topic:string;published:string}
+  article?:{topic:string;published:string;updated?:string;related:string[]}
 }
 
 const contact = {href:'/contact',label:'Contact NumiAgent'}
@@ -38,9 +39,9 @@ export const developerLinks = [
 
 export const sitePages:Record<string,SitePage> = {
   '/blog':{
-    label:'Blog',title:'NumiAgent blog',
+    label:'Blog',title:'Coin and banknote collecting guides',
     seoTitle:'Coin & Banknote Collecting Guides | NumiAgent',
-    description:'Practical guides for photographing, cataloging, researching, and collecting coins and banknotes.',
+    description:'Learn to photograph coins, identify Roman types, catalog paper money, compare auction prices realized, and build a collection checklist.',
     sections:[]
   },
   ...Object.fromEntries(blogPosts.map(post=>[post.path,post])),
@@ -70,22 +71,22 @@ export const sitePages:Record<string,SitePage> = {
     seoTitle:'Coin Catalog, Photo ID & Valuation Tools | NumiAgent',
     description:'Clear your photo backlog, identify unfamiliar coins and banknotes, compare actual auction sales, and track the pieces you still need.',
     sections:[
-      {title:'Turn the photo backlog into a catalog',paragraphs:[
+      {id:'photo-imports',title:'Turn the photo backlog into a catalog',paragraphs:[
         'Get the tray out of your camera roll. Import a batch from your phone or computer, name it so you can find it later, and see which images are ready for review. Keep compatible originals up to 6 MB or let the browser resize supported formats. You can pause and pick up the batch later.'
-      ],links:[{href:'/app#imports',label:'Open photo imports'}]},
-      {title:'Get unstuck on a mystery coin or banknote',paragraphs:[
+      ],links:[{href:'/app#imports',label:'Open photo imports'},{href:'/blog/photograph-coins-and-banknotes',label:'Photograph coins and banknotes for a batch'}]},
+      {id:'identification',title:'Get unstuck on a mystery coin or banknote',paragraphs:[
         'An unfamiliar portrait or worn legend is easier to research with a few candidates. Opt in to AI analysis and review suggested attributions, confidence scores, and crops. Pair front and back photos, correct the record, or catalog the piece by hand.'
-      ],links:[help]},
-      {title:'Build and search a private catalog',paragraphs:[
+      ],links:[help,{href:'/blog/identify-roman-coins',label:'Identify a Roman coin from its features'}]},
+      {id:'catalog',title:'Build and search a private catalog',paragraphs:[
         'Save coins and banknotes in named collection folders. Record issuer, denomination, date, grade, references, notes, measurements, inscriptions, and type-specific details. Find pieces with text search and filters, inspect potential duplicates that share a reference, and see collection and import counts on the overview.',
         'Edit selected fields across up to 50 specimens at once. Look up a Roman coin type in OCRE and attach its source link. Export a standard or insurance inventory CSV, download account data as JSON, or transfer a supported NumisGraph portfolio export.'
-      ],links:[{href:'/app#collection',label:'Open the collection'}]},
-      {title:'Find out what comparable pieces sold for',paragraphs:[
+      ],links:[{href:'/app#collection',label:'Open the collection'},{href:'/blog/start-a-digital-coin-catalog',label:'Set up a digital coin inventory'},{href:'/blog/catalog-banknote-collection',label:'Catalog a banknote collection'}]},
+      {id:'valuation',title:'Find out what comparable pieces sold for',paragraphs:[
         'Give every estimate a trail you can follow. Enter comparables or import verified sale records with original lot links. Look up a dated ECB reference rate when sales use different currencies. When enough comparable records support a range, you’ll see it in the specimen’s valuation history. When evidence is thin, the catalog says so.'
       ],links:[{href:'/blog/compare-coin-auction-prices',label:'See how to compare realized auction prices'}]},
-      {title:'See which pieces your set still needs',paragraphs:[
+      {id:'checklists',title:'See which pieces your set still needs',paragraphs:[
         'Before you go looking for another piece, see what you already have. Start from a sourced Roman emperor or Canadian banknote checklist, or ask for a draft of your own rules. Review the suggestions, then see what matches, which records need references, and which gaps to research first.'
-      ],links:[{href:'/app#themes',label:'Open themes'}]},
+      ],links:[{href:'/app#themes',label:'Open themes'},{href:'/blog/build-a-roman-emperor-coin-checklist',label:'Build a Roman emperor coin checklist'}]},
       {title:'Search auctions and save watches',paragraphs:[
         'Keep a set of searches for pieces you’re looking for and revisit them from Marketplace. When an auction source is configured, results show their source and verification status. Saved watches can send alerts for verified active lots through an approved feed. Live auction coverage is currently unavailable.'
       ],links:[{href:'/app#marketplace',label:'Open marketplace'}]},

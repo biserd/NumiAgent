@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { developerLinks, type SitePage } from './sitePages'
+import { developerLinks, sitePages, type SitePage } from './sitePages'
 import { blogDate, blogPosts } from './blogPosts'
 import SiteNav from './SiteNav.vue'
 import ContactForm from './ContactForm.vue'
@@ -10,13 +10,20 @@ defineProps<{page:SitePage;path:string}>()
     <SiteNav/>
     <main class="information">
       <div class="information-header wrap">
-        <a v-if="page.article" class="article-back" href="/blog">← NumiAgent blog</a>
+        <nav v-if="page.article" class="article-breadcrumbs" aria-label="Breadcrumb">
+          <a href="/">NumiAgent</a>
+          <span aria-hidden="true">/</span>
+          <a href="/blog">{{sitePages['/blog'].title}}</a>
+        </nav>
         <nav v-if="path==='/developers' || path.startsWith('/developers/')" class="developer-nav" aria-label="Developer documentation">
           <a v-for="link in developerLinks" :key="link.href" :href="link.href" :aria-current="path===link.href?'page':undefined">{{link.label}}</a>
         </nav>
         <h1>{{page.title}}</h1>
         <p>{{page.description}}</p>
-        <p class="article-meta" v-if="page.article">{{page.article.topic}} · <time :datetime="page.article.published">{{blogDate(page.article.published)}}</time></p>
+        <p class="article-meta" v-if="page.article">
+          {{page.article.topic}} · <time :datetime="page.article.published">{{blogDate(page.article.published)}}</time>
+          <template v-if="page.article.updated"> · Updated <time :datetime="page.article.updated">{{blogDate(page.article.updated)}}</time></template>
+        </p>
         <small v-if="page.effective">Effective {{page.effective}}</small>
       </div>
       <div class="information-content wrap">
@@ -30,9 +37,12 @@ defineProps<{page:SitePage;path:string}>()
           </div>
           <a class="feed-link" href="/blog/rss.xml">Subscribe via RSS</a>
         </template>
-        <section v-for="section in page.sections" :key="section.title">
+        <section v-for="section in page.sections" :key="section.title" :id="section.id">
           <h2>{{section.title}}</h2>
-          <p v-for="paragraph in section.paragraphs" :key="paragraph">{{paragraph}}</p>
+          <p v-for="(paragraph,index) in section.paragraphs" :key="index">
+            <template v-if="typeof paragraph==='string'">{{paragraph}}</template>
+            <template v-else>{{paragraph.before}}<a :href="paragraph.link.href">{{paragraph.link.label}}</a>{{paragraph.after}}</template>
+          </p>
           <pre v-if="section.code" class="docs-code" tabindex="0"><code>{{section.code}}</code></pre>
           <div v-if="section.links?.length" class="information-links">
             <a v-for="link in section.links" :key="link.href" :href="link.href">{{link.label}} <span aria-hidden="true">↗</span></a>
@@ -41,9 +51,9 @@ defineProps<{page:SitePage;path:string}>()
         <aside v-if="page.article" class="related-guides" aria-labelledby="related-guides-title">
           <h2 id="related-guides-title">Related collector guides</h2>
           <ul>
-            <template v-for="post in blogPosts" :key="post.path">
-              <li v-if="path!==post.path"><a :href="post.path">{{post.guideLabel}}</a></li>
-            </template>
+            <li v-for="post in blogPosts.filter(guide=>page.article?.related.includes(guide.path))" :key="post.path">
+              <a :href="post.path">{{post.guideLabel}}</a>
+            </li>
           </ul>
         </aside>
         <ContactForm v-if="path==='/contact'"/>

@@ -6,6 +6,7 @@ import { all, body, fail, now, one, router, run, uid } from './core'
 import type { Env } from './core'
 import { previewTheme } from './themePlanning'
 import { researchSales } from './saleResearch'
+import { mergeItems } from './mergeItems'
 
 const record = item.extend({ photos: z.array(photoLink).max(12).optional() })
 type Input = z.infer<typeof record>
@@ -33,29 +34,41 @@ export async function findItem(env: Env,user:string,key:string) {
 const itemValues = (i:Input) => [i.collection_id ?? null,i.type,i.title,i.issuer,i.ruler,i.denomination,i.year,i.reference,
   i.grade,i.notes,i.tags,JSON.stringify(i.details ?? {})]
 
-export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:string;attempt:number}, input:Input,
+export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:string;attempt:number;batch_id:string;pair_side?:string|null}, input:Input,
   crop: z.infer<typeof photoLink>['crop'], candidates:string) {
   const {id:key,user_id:user,attempt} = photo
   const current = `SELECT 1 FROM photos p JOIN imports b ON b.id=p.batch_id AND b.user_id=p.user_id
     JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.user_id=? AND p.attempt=? AND p.state='running'
-    AND b.auto_catalog=1 AND b.cancelled=0 AND u.deleting=0`
+    AND b.auto_catalog=1 AND b.cancelled=0 AND u.deleting=0
+    AND (b.paired=0 OR EXISTS(SELECT 1 FROM photos back WHERE back.batch_id=p.batch_id AND back.user_id=p.user_id
+      AND back.pair_side='reverse' AND back.state='manual'))`
   const guard = [key,user,attempt]
   const timestamp = now()
   const values = [key,user,...itemValues(input),timestamp,timestamp]
   const placeholders = values.map(()=>'?').join(',')
   // One stable item key per photo. The transaction commits the record, link and status together.
-  const [, , saved] = await env.DB.batch([
+  const paired = photo.pair_side==='obverse'
+  const statements = [
     env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated)
       SELECT ${placeholders} WHERE EXISTS(${current}) ON CONFLICT(id) DO NOTHING`)
       .bind(...values,...guard),
     env.DB.prepare(`INSERT INTO item_photos(user_id,item_id,photo_id,side,crop)
-      SELECT ?,?,?,'overview',? WHERE EXISTS(${current}) AND EXISTS(SELECT 1 FROM items WHERE id=? AND user_id=?)
+      SELECT p.user_id,?,p.id,COALESCE(p.pair_side,'overview'),? FROM photos p
+      WHERE p.user_id=? AND (p.id=? OR (?=1 AND p.batch_id=? AND p.pair_side='reverse'))
+      AND EXISTS(${current}) AND EXISTS(SELECT 1 FROM items WHERE id=? AND user_id=?)
       ON CONFLICT(item_id,photo_id,side) DO NOTHING`)
-      .bind(user,key,key,crop ? JSON.stringify(crop) : null,...guard,key,user),
+      .bind(key,!paired && crop ? JSON.stringify(crop) : null,user,key,Number(paired),photo.batch_id,...guard,key,user),
     env.DB.prepare(`UPDATE photos SET state='saved',candidates=?,error=NULL,updated=? WHERE id=? AND user_id=?
       AND EXISTS(${current}) AND EXISTS(SELECT 1 FROM item_photos WHERE user_id=? AND item_id=? AND photo_id=?)`)
       .bind(candidates,timestamp,key,user,...guard,user,key,key)
-  ])
+  ]
+  if (paired) {
+    statements.push(env.DB.prepare(`UPDATE photos SET state='saved',updated=? WHERE user_id=? AND batch_id=? AND pair_side='reverse'
+      AND state='manual' AND EXISTS(SELECT 1 FROM item_photos WHERE user_id=? AND item_id=? AND photo_id=photos.id)
+      AND EXISTS(SELECT 1 FROM photos front WHERE front.id=? AND front.user_id=? AND front.attempt=? AND front.state='saved')`)
+      .bind(timestamp,user,photo.batch_id,user,key,key,user,attempt))
+  }
+  const [, , saved] = await env.DB.batch(statements)
   return saved.meta.changes > 0
 }
 function insertItem(env:Env, user:string, key:string, input:Input, legacyId:string|null=null) {
@@ -229,6 +242,13 @@ items.post('/import/numisgraph',async c=>{
   return c.json({imported,skipped:input.coins.length-imported,legacyPhotoLinks},201)
 })
 items.get('/:id',async c=>c.json(await findItem(c.env,c.get('user').id,c.req.param('id'))))
+items.post('/:id/merge',async c=>{
+  const key = id.parse(c.req.param('id'))
+  const {sourceId} = await body(c,z.object({sourceId:id}))
+  const user = c.get('user').id
+  await mergeItems(c.env,user,key,sourceId)
+  return c.json(await findItem(c.env,user,key))
+})
 items.put('/:id',async c=>{
   const input = await body(c,record)
   const key = c.req.param('id')

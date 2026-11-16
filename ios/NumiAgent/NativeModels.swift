@@ -66,6 +66,7 @@ struct ImportSummary: Decodable, Identifiable {
     let failed: Int?
     let saved: Int?
     let cancelled: Int?
+    let paired: Int?
 }
 
 struct PhotoImport: Decodable {
@@ -73,6 +74,10 @@ struct PhotoImport: Decodable {
     let cancelled: Int
     let analyze: Int
     let photos: [ImportedPhoto]
+    var paired: Int? = nil
+
+    var subjects: [ImportedPhoto] { paired == 1 ? photos.filter { $0.side == "obverse" } : photos }
+    var awaitingPair: Bool { paired == 1 && cancelled == 0 && (photos.count < 2 || subjects.first?.state == "manual" && subjects.first?.error == nil) }
 
     static let demoAutomatic = PhotoImport(label: "Example photo batch", cancelled: 0, analyze: 1, photos: [
         .init(id: "demo-photo-1", state: "saved", candidates: [], error: nil,
@@ -99,6 +104,7 @@ struct ImportedPhoto: Decodable, Identifiable {
     let candidates: [PhotoCandidate]
     let error: String?
     let record: ImportedRecord?
+    var side: String? = nil
 
     var isPending: Bool { ["queued", "running", "uploading"].contains(state) }
     var canCatalog: Bool { ["review", "manual", "failed"].contains(state) }

@@ -27,11 +27,24 @@ private struct SaleResearch: Decodable {
 
 struct SaleResearchScreen: View {
     let api: NumiAPI
-    let itemID: String
+    let item: Specimen
     let onSave: () -> Void
     @State private var research: SaleResearch?
     @State private var selected: SaleDraft?
     @State private var error: String?
+    @State private var saleEditor = false
+    @State private var keywords: String
+
+    init(api: NumiAPI, item: Specimen, onSave: @escaping () -> Void) {
+        self.api = api
+        self.item = item
+        self.onSave = onSave
+        let identity = [item.issuer, item.year, item.denomination].filter { !$0.isBlank }
+        let keywords = identity.count >= 2 ? identity : [item.title] + identity.filter {
+            !item.title.localizedCaseInsensitiveContains($0)
+        }
+        _keywords = State(initialValue: keywords.joined(separator: " "))
+    }
 
     var body: some View {
         List {
@@ -54,27 +67,55 @@ struct SaleResearchScreen: View {
                 ProgressView("Finding realized sales")
             }
             if let error { Text(error).foregroundStyle(.red) }
+            Section {
+                TextField("Search terms", text: $keywords)
+                if let soldSearch, !keywords.isBlank {
+                    Link(destination: soldSearch) { Label("Search sold listings on eBay", systemImage: "arrow.up.right.square") }
+                }
+                if let archive = URL(string: "https://www.numisbids.com/results") {
+                    Link(destination: archive) { Label("Browse NumisBids auction results", systemImage: "arrow.up.right.square") }
+                }
+                Button("Add realized sale", systemImage: "plus") { saleEditor = true }
+            } header: {
+                Text("Look up completed sales")
+            } footer: {
+                Text("Compare the date, variety and condition before adding a result. Use the amount from a completed sale.")
+            }
         }
         .navigationTitle("Comparable sales")
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $selected) { sale in
-            SaleEditor(api: api, itemID: itemID, sale: sale, onSave: onSave)
+            SaleEditor(api: api, itemID: item.id, sale: sale, onSave: onSave)
+        }
+        .sheet(isPresented: $saleEditor) {
+            SaleEditor(api: api, itemID: item.id, onSave: onSave)
         }
     }
 
     private func load() async {
         error = nil
-        do { research = try await api.get("/valuations/" + itemID + "/research") }
+        do { research = try await api.get("/valuations/" + item.id + "/research") }
         catch { if !Task.isCancelled { self.error = error.localizedDescription } }
     }
 
     private func explanation(_ status: String) -> String {
         switch status {
-        case "reference_required": return "Add a catalog reference to find sales for this specimen."
+        case "provider_not_configured": return "NumiAgent doesn’t have a completed-sales feed connected. You can still look up sold listings or add a sale below."
+        case "reference_required": return "Add a catalog reference to search the connected sale feed."
         case "no_matches": return "No verified sources matched this catalog reference."
-        default: return "Automatic sale research is unavailable. You can enter a realized sale from an auction record."
+        default: return "The connected sale feed couldn’t be reached. You can still look up sold listings below."
         }
+    }
+
+    private var soldSearch: URL? {
+        var components = URLComponents(string: "https://www.ebay.com/sch/i.html")
+        components?.queryItems = [
+            .init(name: "_nkw", value: keywords.trimmingCharacters(in: .whitespacesAndNewlines)),
+            .init(name: "LH_Sold", value: "1"), .init(name: "LH_Complete", value: "1"),
+            .init(name: "_sop", value: "13")
+        ]
+        return components?.url
     }
 }
 

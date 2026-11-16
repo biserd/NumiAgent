@@ -4,7 +4,7 @@ import { boundedBody, fail, limit, router } from './core.ts'
 const day=86400000
 const currency=z.string().regex(/^[A-Z]{3}$/)
 const ratesQuery=z.object({from:currency,to:currency,date:z.iso.date()})
-const ocreId=/^ric\.[a-z0-9.()_-]{4,120}$/i
+export const ocreId=/^ric\.[a-z0-9.()_-]{4,120}$/i
 
 export const exchangeRates=router()
 exchangeRates.get('/',async c=>{
@@ -79,7 +79,8 @@ export function parseOcre(payload:unknown,identifier:string){
   if(!candidate || !label) return null
   const side=(name:string)=>{
     const description=entries.find(entry=>entry['@id']===candidate['@id']+'#'+name)
-    return {legend:textValue(description?.['nmo:hasLegend']),description:textValue(description?.['dcterms:description'])}
+    return {legend:textValue(description?.['nmo:hasLegend']),description:textValue(description?.['dcterms:description']),
+      portrait:nomismaLinks(description?.['nmo:hasPortrait'])}
   }
   return {id:identifier,label,source:'https://numismatics.org/ocre/id/'+encodeURIComponent(identifier),
     attribution:'Online Coins of the Roman Empire (ANS and NYU ISAW)',license:'ODbL 1.0',
@@ -88,16 +89,25 @@ export function parseOcre(payload:unknown,identifier:string){
     startDate:textValue(candidate['nmo:hasStartDate']),endDate:textValue(candidate['nmo:hasEndDate']),
     obverse:side('obverse'),reverse:side('reverse')}
 }
+
+export async function fetchOcreReference(identifier:string,signal:AbortSignal) {
+  const target='https://numismatics.org/ocre/id/'+encodeURIComponent(identifier)+'.jsonld'
+  return fetch(target,{headers:{Accept:'application/ld+json'},redirect:'manual',signal})
+}
+
+export async function readOcreReference(response:Response,identifier:string) {
+  return parseOcre(JSON.parse(new TextDecoder().decode(await boundedBody(response,256*1024))),identifier)
+}
+
 export const ocre=router()
 ocre.get('/',async c=>{
   const input=c.req.query('id') ?? ''
   const identifier=input.trim().replace(/^https:\/\/(?:www\.)?numismatics\.org\/ocre\/id\//i,'')
-    .replace(/%28/gi,'(').replace(/%29/gi,')').toLowerCase()
+    .replace(/%28/gi,'(').replace(/%29/gi,')')
   if(!ocreId.test(identifier)) return fail(400,'Enter an OCRE type identifier or its original HTTPS record URL')
   await limit(c.env,'ocre',c.get('user').id,35)
   await limit(c.env,'ocre','global',350)
-  const target='https://numismatics.org/ocre/id/'+encodeURIComponent(identifier)+'.jsonld'
-  const response=await fetch(target,{headers:{Accept:'application/ld+json'},redirect:'manual',signal:AbortSignal.timeout(10000)})
+  const response=await fetchOcreReference(identifier,AbortSignal.timeout(10000))
     .catch(error=>{
       console.warn('OCRE reference data request failed',{kind:error instanceof Error?error.name:'unknown'})
       return fail(503,'OCRE is temporarily unavailable')
@@ -107,10 +117,9 @@ ocre.get('/',async c=>{
     console.warn('OCRE reference data HTTP status',response.status)
     return fail(503,'OCRE is temporarily unavailable')
   }
-  let payload:unknown
-  try{payload=JSON.parse(new TextDecoder().decode(await boundedBody(response,256*1024)))}
+  let reference
+  try{reference=await readOcreReference(response,identifier)}
   catch{return fail(503,'OCRE returned an unreadable record')}
-  const reference=parseOcre(payload,identifier)
   if(!reference) return fail(404,'OCRE did not return an English type record')
   return c.json(reference)
 })

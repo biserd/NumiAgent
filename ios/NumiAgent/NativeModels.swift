@@ -129,20 +129,59 @@ struct PhotoCandidate: Decodable {
     let details: Specimen.Details?
     let confidence: Double
     let crop: PhotoCrop?
+    var catalogMatches: [CoinCatalogMatch]? = nil
+    var catalogMatchCount: Int? = nil
 
-    func draft() -> ItemDraft {
-        var draft = ItemDraft()
+    func draft(using record: CoinCatalogMatch? = nil, updating item: Specimen? = nil) -> ItemDraft {
+        var draft = item.map { ItemDraft(item: $0) } ?? ItemDraft()
         draft.type = type
         draft.title = title
-        draft.ruler = ruler ?? ""
-        draft.issuer = issuer ?? ""
-        draft.denomination = denomination ?? ""
-        draft.year = year ?? ""
-        draft.reference = reference ?? ""
-        draft.notes = notes ?? ""
-        draft.details = details ?? .init()
+        draft.ruler = ruler.flatMap { $0.isBlank ? nil : $0 } ?? draft.ruler
+        draft.issuer = issuer.flatMap { $0.isBlank ? nil : $0 } ?? draft.issuer
+        draft.denomination = denomination.flatMap { $0.isBlank ? nil : $0 } ?? draft.denomination
+        draft.year = year.flatMap { $0.isBlank ? nil : $0 } ?? draft.year
+        if let record {
+            draft.reference = record.id
+            draft.details.referenceUrl = record.source.absoluteString
+        } else if let reference, !reference.isBlank {
+            draft.reference = reference
+            draft.details.referenceUrl = details?.referenceUrl
+        }
+        if draft.notes.isBlank { draft.notes = notes ?? "" }
+        if let details {
+            func observed(_ value: String?, or existing: String?) -> String? {
+                guard let value, !value.isBlank else { return existing }
+                return value
+            }
+            draft.details.metal = observed(details.metal, or: draft.details.metal)
+            draft.details.mint = observed(details.mint, or: draft.details.mint)
+            draft.details.mintMark = observed(details.mintMark, or: draft.details.mintMark)
+            draft.details.variant = observed(details.variant, or: draft.details.variant)
+            draft.details.series = observed(details.series, or: draft.details.series)
+            draft.details.serial = observed(details.serial, or: draft.details.serial)
+            draft.details.signatures = observed(details.signatures, or: draft.details.signatures)
+            draft.details.inscriptions = observed(details.inscriptions, or: draft.details.inscriptions)
+            draft.details.obverse = observed(details.obverse, or: draft.details.obverse)
+            draft.details.reverse = observed(details.reverse, or: draft.details.reverse)
+            draft.details.obverseLegend = observed(details.obverseLegend, or: draft.details.obverseLegend)
+            draft.details.reverseLegend = observed(details.reverseLegend, or: draft.details.reverseLegend)
+            if let from = details.dateFrom, let to = details.dateTo {
+                draft.details.dateFrom = from
+                draft.details.dateTo = to
+            }
+        }
         return draft
     }
+}
+
+struct CoinCatalogMatch: Decodable, Identifiable {
+    struct Side: Decodable {
+        let legend, description: String?
+    }
+
+    let id, label, attribution: String
+    let source: URL
+    let obverse, reverse: Side
 }
 
 struct ChecklistRule: Codable, Identifiable {

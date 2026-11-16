@@ -233,6 +233,10 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal(pairedCoin.denomination,'1 dollar')
     assert.deepEqual(Object.fromEntries(pairedCoin.photos.map(photo=>[photo.side,photo.photoId])),{obverse:front.id,reverse:back.id})
     assert.equal((await api('/items/'+back.id,a)).status,404)
+    assert.equal((await api('/imports/refine/'+front.id,b,'POST',{})).status,404)
+    const refined=await json(await api('/imports/refine/'+front.id,a,'POST',{}))
+    assert.equal(refined.candidates[0].title,pairedCoin.title)
+    assert.deepEqual((await json(await api('/items/'+front.id,a))).photos,pairedCoin.photos)
     await json(await api(pairRoute+'/photos?side=reverse',a,'PUT',fixture(172)))
     assert.equal((await json(await api('/items?q=1998 Hong Kong',a))).items.length,1)
     const saved=await json(await api('/items',a,'POST',{title:'Trajan denarius',ruler:'Trajan',type:'coin',grade:'VF',details:{metal:'Silver'},

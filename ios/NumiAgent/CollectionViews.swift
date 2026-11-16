@@ -176,6 +176,7 @@ struct SpecimenScreen: View {
     @State private var editing = false
     @State private var deleting = false
     @State private var merging = false
+    @State private var identifying = false
     @State private var saleEditor = false
     @State private var detailError: String?
     @State private var loaded = false
@@ -217,10 +218,17 @@ struct SpecimenScreen: View {
                     field("Ruler", item.ruler)
                     field("Denomination", item.denomination)
                     field("Date", item.year)
-                    field("Reference", item.reference)
+                    if let referenceURL = item.details?.referenceUrl, let source = URL(string: referenceURL),
+                       source.scheme == "https", !item.reference.isBlank {
+                        Link(item.reference, destination: source)
+                    } else {
+                        field("Reference", item.reference)
+                    }
                     field("Grade", item.grade)
                     field("Metal", item.details?.metal ?? "")
                     field("Mint", item.details?.mint ?? "")
+                    field("Obverse legend", item.details?.obverseLegend ?? "")
+                    field("Reverse legend", item.details?.reverseLegend ?? "")
                     if !item.notes.isEmpty { Text(item.notes) }
                 }
             }
@@ -269,6 +277,9 @@ struct SpecimenScreen: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu("Specimen actions", systemImage: "ellipsis.circle") {
                         Button("Edit specimen") { editing = true }.disabled(!loaded)
+                        if item.photos?.isEmpty == false {
+                            Button("Improve identification", systemImage: "viewfinder") { identifying = true }
+                        }
                         Button("Merge with another record") { merging = true }.disabled(!loaded)
                         Button("Delete specimen", role: .destructive) { deleting = true }
                     }
@@ -300,6 +311,15 @@ struct SpecimenScreen: View {
                 item = merged
                 onChange()
                 Task { await loadValuation() }
+            }
+        }
+        .sheet(isPresented: $identifying) {
+            SpecimenIdentificationSheet(api: api, item: item) {
+                onChange()
+                Task {
+                    await loadDetail()
+                    await loadValuation()
+                }
             }
         }
         .confirmationDialog("Delete this specimen?", isPresented: $deleting, titleVisibility: .visible) {

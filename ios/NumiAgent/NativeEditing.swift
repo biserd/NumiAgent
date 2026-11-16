@@ -118,6 +118,8 @@ struct ItemEditor: View {
                         TextField("Metal", text: optional($draft.details.metal))
                         TextField("Mint", text: optional($draft.details.mint))
                         TextField("Mint mark", text: optional($draft.details.mintMark))
+                        TextField("Obverse legend", text: optional($draft.details.obverseLegend), axis: .vertical)
+                        TextField("Reverse legend", text: optional($draft.details.reverseLegend), axis: .vertical)
                     } else {
                         TextField("Series", text: optional($draft.details.series))
                         TextField("Serial number", text: optional($draft.details.serial))

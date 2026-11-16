@@ -4,9 +4,11 @@ import { csv, item, matchesSlot, romanTheme, slot, valueSales } from '../src/sha
 import { convertLegacyCoin, legacyCoin } from '../src/shared/legacy.ts'
 import { matchReference } from '../src/shared/references.ts'
 import { ecbQuote, parseOcre } from '../src/worker/officialData.ts'
+import { applyOcreMatches } from '../src/worker/ocreIdentification.ts'
+import { findCircularRim } from '../src/worker/coinCloseup.ts'
 import { normalizeEbay } from '../src/worker/ebay.ts'
 import { parseThemeDraft } from '../src/worker/themePlanning.ts'
-import { automaticCatalogCandidate, parsePhotoCandidates } from '../src/worker/vision.ts'
+import { automaticCatalogCandidate, parsePhotoCandidates, parseRomanLegends } from '../src/worker/vision.ts'
 
 test('Photo review keeps an identifiable coin when Gemma returns null, numeric text, or an unusable crop',()=>{
   const response = JSON.stringify([
@@ -66,6 +68,54 @@ test('OCRE must return the exact type and only carries Nomisma resource links',(
   const resolved=parseOcre(record,identifier)
   assert.deepEqual(resolved.authority,['https://nomisma.org/id/augustus'])
   assert.equal(resolved.obverse.legend,'AVGVSTVS')
+})
+
+test('Roman identification ranks a reverse diagnostic and keeps ambiguous RIC variants for review',()=>{
+  const [observed]=parsePhotoCandidates(JSON.stringify([{type:'coin',title:'Roman silver',issuer:'Roman Empire',
+    ruler:'Unknown',confidence:.98,details:{obverseLegend:'FAVSTINAE AVG PII AVG FIL',reverseLegend:'V E N V S',
+      reverse:'A standing figure holds an apple and a rudder with a dolphin at its foot'}}]))
+  const record=(ref,animal)=>({
+    id:ref,label:'RIC '+ref,source:'https://numismatics.org/ocre/id/'+ref,
+    attribution:'Online Coins of the Roman Empire',license:'ODbL 1.0',startDate:'0145',endDate:'0161',
+    authority:['https://nomisma.org/id/antoninus_pius'],denomination:['https://nomisma.org/id/denarius'],
+    material:['https://nomisma.org/id/ar'],mint:['https://nomisma.org/id/rome'],
+    obverse:{legend:'FAVSTINAE AVG PII AVG FIL',description:'Bust of Faustina',portrait:['https://nomisma.org/id/faustina_ii']},
+    reverse:{legend:'VENVS',description:'Venus standing, holding an apple and a rudder on a '+animal,portrait:[]}
+  })
+  const dolphin=record('ric.3.ant.517A_denarius','dolphin')
+  const dove=record('ric.3.ant.515B_denarius','dove')
+  const output=applyOcreMatches(observed,[dove,dolphin],true)
+  assert.equal(observed.ruler,'')
+  assert.equal(output.ruler,'Faustina II')
+  assert.equal(output.year,'145–161 CE')
+  assert.equal(output.denomination,'Denarius')
+  assert.equal(output.catalogMatchCount,2)
+  assert.equal(output.catalogMatches[0].id,dolphin.id)
+  assert.equal(output.reference,'')
+  assert.equal(automaticCatalogCandidate([output]),undefined)
+  assert.equal(applyOcreMatches(observed,[dolphin],false).reference,'')
+  assert.equal(applyOcreMatches(observed,[dolphin],true).reference,dolphin.id)
+  const mismatch={...observed,details:{...observed.details,reverseLegend:'CERES'}}
+  assert.equal(applyOcreMatches(mismatch,[dolphin],true),mismatch)
+  const seated={...dolphin,reverse:{...dolphin.reverse,description:'Venus seated with an apple'}}
+  assert.equal(applyOcreMatches(observed,[seated],true),observed)
+  assert.deepEqual(parseRomanLegends('~~~json\n{"obverseLegend":"FAVSTINAE ? FIL","reverseLegend":"VENVS","reverse":"Unknown"}\n~~~'),
+    {obverseLegend:'FAVSTINAE ? FIL',reverseLegend:'VENVS'})
+})
+
+test('The transcription close-up includes a small off-center rim and declines a uniform image',()=>{
+  const width=128, height=144, centerX=71, centerY=99, radius=19
+  const data=new Uint8Array(width*height*4).fill(220)
+  assert.equal(findCircularRim({data,width,height}),null)
+  for(let y=0;y<height;y++) for(let x=0;x<width;x++){
+    if (Math.hypot(x-centerX,y-centerY)>radius) continue
+    const index=(y*width+x)*4
+    data[index]=data[index+1]=data[index+2]=70
+  }
+  const result=findCircularRim({data,width,height})
+  assert.ok(result && result.left <= centerX-radius && result.top <= centerY-radius)
+  assert.ok(result.left+result.width >= centerX+radius && result.top+result.height >= centerY+radius)
+  assert.ok(result.width < width && result.height < height)
 })
 
 test('eBay offers require an auction, approved item URL, and an end time to be active',()=>{

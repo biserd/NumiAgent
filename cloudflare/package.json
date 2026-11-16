@@ -20,6 +20,7 @@
     "@cloudflare/workers-oauth-provider": "1.2.4",
     "@modelcontextprotocol/server": "^2.0.0",
     "hono": "^4.0.0",
+    "jpeg-js": "0.4.4",
     "vue": "^3.5.0",
     "zod": "^4.0.0"
   },

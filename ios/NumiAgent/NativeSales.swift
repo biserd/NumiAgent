@@ -67,12 +67,17 @@ struct SaleResearchScreen: View {
                 ProgressView("Finding realized sales")
             }
             if let error { Text(error).foregroundStyle(.red) }
-            Section("Look up completed sales") {
+            Section {
                 TextField("Search terms", text: $keywords)
                 if let soldSearch, !keywords.isBlank {
                     Link(destination: soldSearch) { Label("Search sold listings on eBay", systemImage: "arrow.up.right.square") }
                 }
+                if let archive = URL(string: "https://www.numisbids.com/results") {
+                    Link(destination: archive) { Label("Browse NumisBids auction results", systemImage: "arrow.up.right.square") }
+                }
                 Button("Add realized sale", systemImage: "plus") { saleEditor = true }
+            } header: {
+                Text("Look up completed sales")
             } footer: {
                 Text("Compare the date, variety and condition before adding a result. Use the amount from a completed sale.")
             }

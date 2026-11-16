@@ -131,6 +131,11 @@ struct PhotoCandidate: Decodable {
     let crop: PhotoCrop?
     var catalogMatches: [CoinCatalogMatch]? = nil
     var catalogMatchCount: Int? = nil
+    var catalogEvidence: String? = nil
+
+    var hasOpenRomanVariant: Bool {
+        issuer == "Roman Empire" && (reference ?? "").isBlank && ruler?.isBlank == false && denomination?.isBlank == false
+    }
 
     func draft(using record: CoinCatalogMatch? = nil, updating item: Specimen? = nil) -> ItemDraft {
         var draft = item.map { ItemDraft(item: $0) } ?? ItemDraft()

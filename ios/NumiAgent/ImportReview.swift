@@ -244,6 +244,10 @@ private struct ImportPhotoSection: View {
             if let record = photo.record {
                 Text(record.title).font(.headline)
                 Text(record.subtitle).font(.subheadline).foregroundStyle(.secondary)
+                if photo.candidates.first?.hasOpenRomanVariant == true {
+                    Label("Ruler and denomination identified. Exact variant open.", systemImage: "info.circle")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 NavigationLink("View record") {
                     ImportedSpecimen(api: api, record: record, expanded: expanded, sample: sample)
                 }
@@ -304,6 +308,10 @@ private struct IdentificationChoice: View {
         } label: {
             VStack(alignment: .leading, spacing: 3) {
                 Text(suggestion.title)
+                if suggestion.issuer == "Roman Empire",
+                   suggestion.ruler?.isBlank != false || suggestion.denomination?.isBlank != false {
+                    Text("Partial identification").font(.footnote).foregroundStyle(.secondary)
+                }
                 Text("Review details").font(.footnote.weight(.semibold)).foregroundStyle(.tint)
                 Text(subtitle.isEmpty ? "Check the type, date and denomination." : subtitle)
                     .font(.footnote).foregroundStyle(.secondary)
@@ -315,9 +323,14 @@ private struct IdentificationChoice: View {
         if let back = suggestion.details?.reverseLegend, !back.isBlank {
             LabeledContent("Reverse reading", value: back).font(.footnote)
         }
+        if suggestion.catalogEvidence == "portrait" {
+            Text("The catalog suggests this denomination for the portrait and metal. The exact type needs further evidence.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
         if let matches = suggestion.catalogMatches, !matches.isEmpty {
             let count = suggestion.catalogMatchCount ?? matches.count
-            Text(count > 1 ? "Compare \(count) possible catalog types" : "Possible catalog match")
+            Text(suggestion.catalogEvidence == "design" ? "Compare similar designs" :
+                    count > 1 ? "Compare \(count) possible catalog types" : "Possible catalog match")
                 .font(.subheadline.weight(.semibold))
             ForEach(matches) { match in
                 VStack(alignment: .leading, spacing: 6) {

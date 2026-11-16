@@ -43,6 +43,7 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
   }
   try {
     const sitemap=await (await fetch(base+'/sitemap.xml')).text()
+    assert.equal((await api('/internal/photo-release',null,'POST',{})).status,401)
     const landing=await (await fetch(base+'/')).text()
     assert.match(landing,/id="app" data-rendered="server"/)
     assert.match(landing,/class="hero-art"/)

@@ -56,6 +56,22 @@ final class TabletWorkspaceTests: XCTestCase {
 
 final class PhoneSignInAndReviewTests: XCTestCase {
     @MainActor
+    func testPhotoQualityOnlyOffersReplacementForFlaggedSide() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--preview-photo-review"]
+        app.launch()
+        let preview = app.buttons["Preview a small front photo"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 15))
+        preview.tap()
+        let replaceFront = app.descendants(matching: .any)["replace-front-photo"].firstMatch
+        XCTAssertTrue(replaceFront.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.descendants(matching: .any)["replace-back-photo"].exists)
+        let backReady = app.descendants(matching: .any)["back-photo-ready"].firstMatch
+        if !backReady.exists { app.swipeUp() }
+        XCTAssertTrue(backReady.exists)
+    }
+
+    @MainActor
     func testSignInAndSavedPhotoActionsAreVisible() {
         continueAfterFailure = false
         let app = XCUIApplication()

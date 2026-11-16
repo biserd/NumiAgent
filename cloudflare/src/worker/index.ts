@@ -12,12 +12,14 @@ import { imports, photos, processQueue, reconcileImports } from './ingest'
 import { market, refreshWatchlists, watchlists } from './market'
 import { publicPage } from './publicSite'
 import { exchangeRates, ocre } from './officialData'
+import { verifyPhotoRelease } from './photoRelease'
 export { PhotoWorkflow } from './ingest'
 
 const api = router()
 api.get('/health',c=>c.json({ok:true}))
 api.route('/auth',auth)
 api.post('/contact',submitContact)
+api.post('/internal/photo-release',verifyPhotoRelease)
 api.use('*',async(c,next)=>{
   const authorization = c.req.header('Authorization')
   if (authorization !== undefined) return authorizeDeveloper(c,authorization,next)

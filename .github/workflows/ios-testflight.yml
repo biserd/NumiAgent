@@ -15,11 +15,37 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: macos-26
     environment: app-store
+    permissions:
+      contents: read
+      id-token: write
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: ios
+      - name: Verify the live photo-only identification regression
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+
+          audience = "https://numiagent.com/photo-identification-release"
+          oidc_url = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"] + "&" + urlencode({"audience": audience})
+          identity_request = Request(oidc_url, headers={
+              "Authorization": "Bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+          })
+          with urlopen(identity_request, timeout=20) as identity:
+              token = json.load(identity)["value"]
+          check = Request("https://numiagent.com/api/v1/internal/photo-release", method="POST",
+                          headers={"Authorization": "Bearer " + token})
+          with urlopen(check, timeout=110) as response:
+              result = json.load(response)
+          if result.get("fixture") != "faustina-two-sided-v1" or result.get("passed") is not True:
+              raise SystemExit(f"Photo identification regression failed: {result}")
+          print("Both original photos identified Faustina II and the denarius denomination; the exact variant stayed open.")
+          PY
       - name: Archive, sign, and upload
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}

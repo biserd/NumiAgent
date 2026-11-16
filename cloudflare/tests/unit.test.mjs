@@ -4,7 +4,7 @@ import { csv, item, matchesSlot, romanTheme, slot, valueSales } from '../src/sha
 import { convertLegacyCoin, legacyCoin } from '../src/shared/legacy.ts'
 import { matchReference } from '../src/shared/references.ts'
 import { ecbQuote, parseOcre } from '../src/worker/officialData.ts'
-import { applyOcreMatches } from '../src/worker/ocreIdentification.ts'
+import { applyOcreMatches, ocreDesignQuery } from '../src/worker/ocreIdentification.ts'
 import { findCircularRim } from '../src/worker/coinCloseup.ts'
 import { normalizeEbay } from '../src/worker/ebay.ts'
 import { parseThemeDraft } from '../src/worker/themePlanning.ts'
@@ -73,13 +73,13 @@ test('OCRE must return the exact type and only carries Nomisma resource links',(
 test('Roman identification ranks a reverse diagnostic and keeps ambiguous RIC variants for review',()=>{
   const [observed]=parsePhotoCandidates(JSON.stringify([{type:'coin',title:'Roman silver',issuer:'Roman Empire',
     ruler:'Unknown',confidence:.98,details:{obverseLegend:'FAVSTINAE AVG PII AVG FIL',reverseLegend:'V E N V S',
-      reverse:'A standing figure holds an apple and a rudder with a dolphin at its foot'}}]))
+      obverse:'Bare-headed bust facing right',reverse:'A standing figure holds an apple and a rudder with a dolphin at its foot'}}]))
   const record=(ref,animal)=>({
     id:ref,label:'RIC '+ref,source:'https://numismatics.org/ocre/id/'+ref,
     attribution:'Online Coins of the Roman Empire',license:'ODbL 1.0',startDate:'0145',endDate:'0161',
     authority:['https://nomisma.org/id/antoninus_pius'],denomination:['https://nomisma.org/id/denarius'],
     material:['https://nomisma.org/id/ar'],mint:['https://nomisma.org/id/rome'],
-    obverse:{legend:'FAVSTINAE AVG PII AVG FIL',description:'Bust of Faustina',portrait:['https://nomisma.org/id/faustina_ii']},
+    obverse:{legend:'FAVSTINAE AVG PII AVG FIL',description:'Bare-headed bust of Faustina',portrait:['https://nomisma.org/id/faustina_ii']},
     reverse:{legend:'VENVS',description:'Venus standing, holding an apple and a rudder on a '+animal,portrait:[]}
   })
   const dolphin=record('ric.3.ant.517A_denarius','dolphin')
@@ -93,12 +93,21 @@ test('Roman identification ranks a reverse diagnostic and keeps ambiguous RIC va
   assert.equal(output.catalogMatches[0].id,dolphin.id)
   assert.equal(output.reference,'')
   assert.equal(automaticCatalogCandidate([output]),undefined)
+  assert.equal(automaticCatalogCandidate([output],true).reference,'')
+  assert.equal(automaticCatalogCandidate([{...output,catalogEvidence:'design'}],true),undefined)
   assert.equal(applyOcreMatches(observed,[dolphin],false).reference,'')
   assert.equal(applyOcreMatches(observed,[dolphin],true).reference,dolphin.id)
   const mismatch={...observed,details:{...observed.details,reverseLegend:'CERES'}}
   assert.equal(applyOcreMatches(mismatch,[dolphin],true),mismatch)
   const seated={...dolphin,reverse:{...dolphin.reverse,description:'Venus seated with an apple'}}
   assert.equal(applyOcreMatches(observed,[seated],true),observed)
+  assert.equal(applyOcreMatches(observed,[seated,dolphin],true).reference,'')
+  const uncertain={...observed,details:{...observed.details,obverse:'Possibly bare-headed'}}
+  assert.equal(applyOcreMatches(uncertain,[dolphin],true).reference,'')
+  const noisy={...observed,ruler:'Faustina II',denomination:'Siliqua',
+    details:{...observed.details,metal:'Silver',reverse:'Standing figure, possibly holding a piece of fruit and a sceptre'}}
+  assert.equal(ocreDesignQuery(noisy),
+    'portrait_facet:"Faustina the Younger" AND material_facet:"Silver" AND fulltext:standing AND (fulltext:apple OR fulltext:pomegranate)')
   assert.deepEqual(parseRomanLegends('~~~json\n{"obverseLegend":"FAVSTINAE ? FIL","reverseLegend":"VENVS","reverse":"Unknown"}\n~~~'),
     {obverseLegend:'FAVSTINAE ? FIL',reverseLegend:'VENVS'})
 })

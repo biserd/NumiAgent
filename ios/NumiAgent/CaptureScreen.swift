@@ -281,7 +281,7 @@ struct CaptureScreen: View {
                     }
                 }
             } else {
-                Section("Coins and banknotes") {
+                Section {
                     Picker("Photos are of", selection: Binding(get: { store.draft.oneItem }, set: { oneItem in
                         record { try store.setOneItem(oneItem) }
                     })) {
@@ -309,6 +309,8 @@ struct CaptureScreen: View {
                         }.disabled(!canAddPhotos)
                     }
                     #endif
+                } header: {
+                    Text("Coins and banknotes")
                 } footer: {
                     Text("Use even light and focus on the lettering and date. Include the whole coin or note in the first photo.")
                 }

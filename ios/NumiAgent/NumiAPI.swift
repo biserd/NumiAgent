@@ -268,14 +268,16 @@ final class NumiAPI {
         return data
     }
 
-    func createImport(id: UUID, name: String, analyze: Bool) async throws {
+    func createImport(id: UUID, name: String, analyze: Bool, autoCatalog: Bool) async throws {
         struct Batch: Encodable {
             let id: String
             let label: String
             let analyze: Bool
             let consent: Bool
+            let autoCatalog: Bool
         }
-        let registration = Batch(id: id.uuidString.lowercased(), label: name, analyze: analyze, consent: analyze)
+        let registration = Batch(id: id.uuidString.lowercased(), label: name, analyze: analyze,
+                                 consent: analyze, autoCatalog: autoCatalog)
         _ = try await send("/imports", method: "POST", body: JSONEncoder().encode(registration))
     }
 

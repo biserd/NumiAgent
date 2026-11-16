@@ -32,6 +32,30 @@ export async function findItem(env: Env,user:string,key:string) {
 
 const itemValues = (i:Input) => [i.collection_id ?? null,i.type,i.title,i.issuer,i.ruler,i.denomination,i.year,i.reference,
   i.grade,i.notes,i.tags,JSON.stringify(i.details ?? {})]
+
+export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:string;attempt:number}, input:Input,
+  crop: z.infer<typeof photoLink>['crop'], candidates:string) {
+  const {id:key,user_id:user,attempt} = photo
+  const current = `SELECT 1 FROM photos p JOIN imports b ON b.id=p.batch_id AND b.user_id=p.user_id
+    JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.user_id=? AND p.attempt=? AND p.state='running'
+    AND b.auto_catalog=1 AND b.cancelled=0 AND u.deleting=0`
+  const guard = [key,user,attempt]
+  const timestamp = now()
+  // One stable item key per photo. The transaction commits the record, link and status together.
+  const [, , saved] = await env.DB.batch([
+    env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated)
+      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(${current}) ON CONFLICT(id) DO NOTHING`)
+      .bind(key,user,...itemValues(input),timestamp,timestamp,...guard),
+    env.DB.prepare(`INSERT INTO item_photos(user_id,item_id,photo_id,side,crop)
+      SELECT ?,?,?,'overview',? WHERE EXISTS(${current}) AND EXISTS(SELECT 1 FROM items WHERE id=? AND user_id=?)
+      ON CONFLICT(item_id,photo_id,side) DO NOTHING`)
+      .bind(user,key,key,crop ? JSON.stringify(crop) : null,...guard,key,user),
+    env.DB.prepare(`UPDATE photos SET state='saved',candidates=?,error=NULL,updated=? WHERE id=? AND user_id=?
+      AND EXISTS(${current}) AND EXISTS(SELECT 1 FROM item_photos WHERE user_id=? AND item_id=? AND photo_id=?)`)
+      .bind(candidates,timestamp,key,user,...guard,user,key,key)
+  ])
+  return saved.meta.changes > 0
+}
 function insertItem(env:Env, user:string, key:string, input:Input, legacyId:string|null=null) {
   return env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated,legacy_coin_id)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,legacy_coin_id) DO NOTHING`)

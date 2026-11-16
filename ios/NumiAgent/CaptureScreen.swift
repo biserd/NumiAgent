@@ -8,6 +8,7 @@ private struct CaptureDraft: Codable {
     var uploaded: Set<UUID> = []
     var submittedName: String?
     var submittedAnalysis: Bool?
+    var submittedAutoCatalog: Bool?
     var lastUploadedBatch: String?
 }
 
@@ -96,17 +97,19 @@ private final class CaptureDraftStore: ObservableObject {
         if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
     }
 
-    func upload(api: NumiAPI, name: String, analyze: Bool) async throws -> String {
+    func upload(api: NumiAPI) async throws -> String {
         var updated = draft
         if updated.submittedName == nil {
-            updated.submittedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            updated.submittedAnalysis = analyze
+            updated.submittedName = "Photo import · " + Date.now.formatted(date: .abbreviated, time: .shortened)
+            updated.submittedAnalysis = true
+            updated.submittedAutoCatalog = true
             try save(updated)
         }
         guard let batchName = updated.submittedName, let batchAnalysis = updated.submittedAnalysis else {
             throw CaptureError.storage
         }
-        try await api.createImport(id: updated.id, name: batchName, analyze: batchAnalysis)
+        try await api.createImport(id: updated.id, name: batchName, analyze: batchAnalysis,
+                                   autoCatalog: updated.submittedAutoCatalog ?? false)
         for id in updated.photos where !updated.uploaded.contains(id) {
             guard let photo = photo(id) else { throw CaptureError.storage }
             try await api.uploadPhoto(Data(contentsOf: photo), batch: updated.id)
@@ -158,7 +161,7 @@ struct CaptureScreen: View {
     @StateObject private var store: CaptureDraftStore
     @State private var selection: [PhotosPickerItem] = []
     @State private var camera = false
-    @State private var name: String
+    @State private var capturedPhoto: UIImage?
     @State private var busy = false
     @State private var error: String?
     @State private var uploadedBatch: String?
@@ -169,7 +172,6 @@ struct CaptureScreen: View {
         self.api = api
         self.account = account
         self.onUpload = onUpload
-        _name = State(initialValue: onUpload == nil ? "iPhone photo batch" : "iPad photo batch")
         _store = StateObject(wrappedValue: CaptureDraftStore(account: account))
     }
 
@@ -189,7 +191,7 @@ struct CaptureScreen: View {
             if account == nil {
                 if PreviewLaunch.screen == .photoReview {
                     NavigationLink("Open example photo batch") {
-                        ImportReview(api: api, batchID: "demo-photo-batch", previewBatch: PhotoImport.demoManual)
+                        ImportReview(api: api, batchID: "demo-photo-batch", previewBatch: PhotoImport.demoAutomatic)
                     }
                 }
                 Section("Demo photo review") {
@@ -211,12 +213,13 @@ struct CaptureScreen: View {
                         Button { camera = true } label: { Label("Take a photo", systemImage: "camera") }
                             .disabled(busy || store.draft.submittedName != nil)
                     }
-                    PhotosPicker(selection: $selection, maxSelectionCount: CaptureDraftStore.maximumPhotos, matching: .images) {
+                    let available = CaptureDraftStore.maximumPhotos - store.draft.photos.count
+                    PhotosPicker(selection: $selection, maxSelectionCount: max(1, available), matching: .images) {
                         Label("Choose photos", systemImage: "photo.on.rectangle")
                     }
-                    .disabled(busy || store.draft.submittedName != nil)
+                    .disabled(busy || store.draft.submittedName != nil || available == 0)
                 } footer: {
-                    Text("Draft photos stay on this device until you upload them.")
+                    Text("Photos upload for cloud AI identification as soon as you add them. Clear matches go straight to your collection. Choose one photo per item with the date visible.")
                 }
                 if !store.draft.photos.isEmpty {
                     Section("On this device") {
@@ -240,18 +243,16 @@ struct CaptureScreen: View {
                         }
                     }
                     Section {
-                        if let submittedName = store.draft.submittedName {
-                            Text(submittedName)
-                            Text("\(store.draft.uploaded.count) of \(store.draft.photos.count) uploaded")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            TextField("Batch name", text: $name)
+                        if busy, store.draft.submittedName != nil {
+                            ProgressView(value: Double(store.draft.uploaded.count), total: Double(store.draft.photos.count)) {
+                                Text("Uploading \(store.draft.uploaded.count) of \(store.draft.photos.count) photos")
+                            }
+                        } else if !busy {
+                            Button("Resume upload", systemImage: "arrow.clockwise") {
+                                Task { await upload() }
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
-                        uploadActions
-                    } header: {
-                        Text("What would you like to do?")
-                    } footer: {
-                        Text("Identify photos sends this batch to AI for suggestions. Save without AI opens manual cataloging.")
                     }
                 }
                 if onUpload == nil {
@@ -260,7 +261,7 @@ struct CaptureScreen: View {
                             NavigationLink {
                                 ImportReview(api: api, batchID: last)
                             } label: {
-                                Label("Continue latest photo review", systemImage: "arrow.right.circle.fill")
+                                Label("View latest import", systemImage: "arrow.right.circle.fill")
                             }
                             .disabled(busy)
                         }
@@ -268,14 +269,14 @@ struct CaptureScreen: View {
                     }
                 }
             }
-            if busy { ProgressView() }
+            if busy && store.draft.submittedName == nil { ProgressView("Preparing photos") }
             if let message = error ?? store.error { Text(message).foregroundStyle(.red) }
         }
         .navigationTitle(onUpload == nil ? "Capture" : "New photo import")
-        .fullScreenCover(isPresented: $camera) {
+        .fullScreenCover(isPresented: $camera, onDismiss: importCapturedPhoto) {
             CameraPicker { image in
+                capturedPhoto = image
                 camera = false
-                if let image { record { try store.append(image) } }
             }
             .ignoresSafeArea()
         }
@@ -285,30 +286,11 @@ struct CaptureScreen: View {
         }
     }
 
-    @ViewBuilder
-    private var uploadActions: some View {
-        if busy, store.draft.submittedName != nil {
-            ProgressView(value: Double(store.draft.uploaded.count), total: Double(store.draft.photos.count)) {
-                Text("Uploading \(store.draft.uploaded.count) of \(store.draft.photos.count) photos")
-            }
-        } else if store.draft.submittedName != nil {
-            Button("Resume upload", systemImage: "arrow.clockwise") {
-                Task { await upload(analyze: store.draft.submittedAnalysis == true) }
-            }
-            .buttonStyle(.borderedProminent)
-        } else {
-            let invalidName = name.isBlank || name.utf16.count > 100
-            Button {
-                Task { await upload(analyze: true) }
-            } label: {
-                Label("Identify photos", systemImage: "sparkles").frame(maxWidth: .infinity, minHeight: 28)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(busy || invalidName)
-            Button("Save without AI") { Task { await upload(analyze: false) } }
-                .buttonStyle(.bordered)
-                .disabled(busy || invalidName)
-        }
+    private func importCapturedPhoto() {
+        guard let image = capturedPhoto else { return }
+        capturedPhoto = nil
+        record { try store.append(image) }
+        if error == nil { Task { await upload() } }
     }
 
     private func record(_ operation: () throws -> Void) {
@@ -320,7 +302,6 @@ struct CaptureScreen: View {
     private func addPhotos(_ picks: [PhotosPickerItem]) async {
         busy = true
         error = nil
-        defer { selection = []; busy = false }
         for pick in picks {
             do {
                 guard let data = try await pick.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
@@ -329,18 +310,20 @@ struct CaptureScreen: View {
                 try store.append(image)
             } catch {
                 self.error = error.localizedDescription
-                return
             }
         }
+        selection = []
+        busy = false
+        if error == nil { await upload() }
     }
 
-    private func upload(analyze: Bool) async {
-        guard !busy else { return }
+    private func upload() async {
+        guard !busy, !store.draft.photos.isEmpty else { return }
         busy = true
         error = nil
         defer { busy = false }
         do {
-            let id = try await store.upload(api: api, name: name, analyze: analyze)
+            let id = try await store.upload(api: api)
             if let onUpload { onUpload(id) }
             else { uploadedBatch = id }
         } catch { self.error = error.localizedDescription }

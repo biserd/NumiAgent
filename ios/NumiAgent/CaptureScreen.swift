@@ -9,6 +9,7 @@ private struct CaptureDraft: Codable {
     var submittedName: String?
     var submittedAnalysis: Bool?
     var submittedAutoCatalog: Bool?
+    var paired: Bool?
     var lastUploadedBatch: String?
 }
 
@@ -73,24 +74,41 @@ private final class CaptureDraftStore: ObservableObject {
     func photo(_ id: UUID) -> URL? { directory?.appending(path: id.uuidString + ".jpg") }
 
     func append(_ image: UIImage) throws {
-        guard draft.submittedName == nil, draft.photos.count < Self.maximumPhotos else {
+        guard draft.submittedName == nil, draft.paired != true, draft.photos.count < Self.maximumPhotos else {
             throw CaptureError.tooMany
         }
-        let id = UUID()
-        let target = try prepareDirectory().appending(path: id.uuidString + ".jpg")
-        let data = try Self.jpeg(image)
-        try data.write(to: target, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        try appendPhotos([Self.jpeg(image)], paired: false)
+    }
+
+    func appendPair(_ images: [UIImage]) throws {
+        guard draft.photos.isEmpty else { throw CaptureError.tooMany }
+        let photos = try images.map(Self.jpeg)
+        guard photos.count == 2, photos[0] != photos[1] else { throw CaptureError.pair }
+        try appendPhotos(photos, paired: true)
+    }
+
+    private func appendPhotos(_ photos: [Data], paired: Bool) throws {
+        let directory = try prepareDirectory()
         var updated = draft
-        updated.photos.append(id)
-        do { try save(updated) }
-        catch {
-            try? FileManager.default.removeItem(at: target)
+        updated.paired = paired
+        var written: [URL] = []
+        do {
+            for data in photos {
+                let id = UUID()
+                let target = directory.appending(path: id.uuidString + ".jpg")
+                try data.write(to: target, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                updated.photos.append(id)
+                written.append(target)
+            }
+            try save(updated)
+        } catch {
+            for url in written { try? FileManager.default.removeItem(at: url) }
             throw error
         }
     }
 
     func removePhoto(_ id: UUID) throws {
-        guard draft.submittedName == nil else { return }
+        guard draft.submittedName == nil, draft.paired != true else { return }
         var updated = draft
         updated.photos.removeAll { $0 == id }
         try save(updated)
@@ -100,7 +118,8 @@ private final class CaptureDraftStore: ObservableObject {
     func upload(api: NumiAPI) async throws -> String {
         var updated = draft
         if updated.submittedName == nil {
-            updated.submittedName = "Photo import · " + Date.now.formatted(date: .abbreviated, time: .shortened)
+            let label = updated.paired == true ? "Both sides" : "Photo import"
+            updated.submittedName = label + " · " + Date.now.formatted(date: .abbreviated, time: .shortened)
             updated.submittedAnalysis = true
             updated.submittedAutoCatalog = true
             try save(updated)
@@ -109,10 +128,11 @@ private final class CaptureDraftStore: ObservableObject {
             throw CaptureError.storage
         }
         try await api.createImport(id: updated.id, name: batchName, analyze: batchAnalysis,
-                                   autoCatalog: updated.submittedAutoCatalog ?? false)
-        for id in updated.photos where !updated.uploaded.contains(id) {
+                                   autoCatalog: updated.submittedAutoCatalog ?? false, paired: updated.paired == true)
+        for (index, id) in updated.photos.enumerated() where !updated.uploaded.contains(id) {
             guard let photo = photo(id) else { throw CaptureError.storage }
-            try await api.uploadPhoto(Data(contentsOf: photo), batch: updated.id)
+            let side: String? = updated.paired == true ? (index == 0 ? "obverse" : "reverse") : nil
+            try await api.uploadPhoto(Data(contentsOf: photo), batch: updated.id, side: side)
             updated.uploaded.insert(id)
             try save(updated)
         }
@@ -143,13 +163,14 @@ private final class CaptureDraftStore: ObservableObject {
 }
 
 private enum CaptureError: LocalizedError {
-    case storage, unsupported, tooMany
+    case storage, unsupported, tooMany, pair
 
     var errorDescription: String? {
         switch self {
         case .storage: return "NumiAgent couldn’t access the photo draft on this device."
         case .unsupported: return "This photo could not be imported. Choose a different image."
         case .tooMany: return "Finish the current batch before adding more photos."
+        case .pair: return "Choose two different photos. Select the front first, then the back."
         }
     }
 }
@@ -160,6 +181,7 @@ struct CaptureScreen: View {
     let onUpload: ((String) -> Void)?
     @StateObject private var store: CaptureDraftStore
     @State private var selection: [PhotosPickerItem] = []
+    @State private var pairSelection: [PhotosPickerItem] = []
     @State private var camera = false
     @State private var capturedPhoto: UIImage?
     @State private var busy = false
@@ -209,17 +231,26 @@ struct CaptureScreen: View {
                 }
             } else {
                 Section {
+                    PhotosPicker(selection: $pairSelection, maxSelectionCount: 2, selectionBehavior: .ordered, matching: .images) {
+                        Label("Both sides of one item", systemImage: "square.on.square")
+                            .fontWeight(.semibold)
+                    }
+                    .disabled(busy || !store.draft.photos.isEmpty)
+                } footer: {
+                    Text("Select the front first, then the back. Both sides upload together for cloud AI identification as one item.")
+                }
+                Section {
                     if UIImagePickerController.isSourceTypeAvailable(.camera) {
                         Button { camera = true } label: { Label("Take a photo", systemImage: "camera") }
-                            .disabled(busy || store.draft.submittedName != nil)
+                            .disabled(busy || store.draft.submittedName != nil || store.draft.paired == true)
                     }
                     let available = CaptureDraftStore.maximumPhotos - store.draft.photos.count
                     PhotosPicker(selection: $selection, maxSelectionCount: max(1, available), matching: .images) {
-                        Label("Choose photos", systemImage: "photo.on.rectangle")
+                        Label("Choose photos of different items", systemImage: "photo.on.rectangle")
                     }
-                    .disabled(busy || store.draft.submittedName != nil || available == 0)
+                    .disabled(busy || store.draft.submittedName != nil || store.draft.paired == true || available == 0)
                 } footer: {
-                    Text("Photos upload for cloud AI identification as soon as you add them. Clear matches go straight to your collection. Choose one photo per item with the date visible.")
+                    Text("Use one photo per item here. Photos upload for cloud AI identification and clear matches go straight to your collection.")
                 }
                 if !store.draft.photos.isEmpty {
                     Section("On this device") {
@@ -231,7 +262,7 @@ struct CaptureScreen: View {
                                 }
                                 Text(store.draft.uploaded.contains(id) ? "Uploaded" : "Ready to upload")
                                 Spacer()
-                                if store.draft.submittedName == nil {
+                                if store.draft.submittedName == nil && store.draft.paired != true {
                                     Button("Remove photo", systemImage: "trash", role: .destructive) {
                                         record { try store.removePhoto(id) }
                                     }
@@ -284,6 +315,10 @@ struct CaptureScreen: View {
             guard !picks.isEmpty else { return }
             Task { await addPhotos(picks) }
         }
+        .onChange(of: pairSelection) { _, picks in
+            guard !picks.isEmpty else { return }
+            Task { await addPair(picks) }
+        }
     }
 
     private func importCapturedPhoto() {
@@ -304,9 +339,7 @@ struct CaptureScreen: View {
         error = nil
         for pick in picks {
             do {
-                guard let data = try await pick.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
-                    throw CaptureError.unsupported
-                }
+                let image = try await loadImage(pick)
                 try store.append(image)
             } catch {
                 self.error = error.localizedDescription
@@ -315,6 +348,27 @@ struct CaptureScreen: View {
         selection = []
         busy = false
         if error == nil { await upload() }
+    }
+
+    private func addPair(_ picks: [PhotosPickerItem]) async {
+        busy = true
+        error = nil
+        do {
+            guard picks.count == 2 else { throw CaptureError.pair }
+            let front = try await loadImage(picks[0])
+            let back = try await loadImage(picks[1])
+            try store.appendPair([front, back])
+        } catch { self.error = error.localizedDescription }
+        pairSelection = []
+        busy = false
+        if error == nil { await upload() }
+    }
+
+    private func loadImage(_ pick: PhotosPickerItem) async throws -> UIImage {
+        guard let data = try await pick.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
+            throw CaptureError.unsupported
+        }
+        return image
     }
 
     private func upload() async {

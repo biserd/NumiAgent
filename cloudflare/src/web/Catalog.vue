@@ -291,7 +291,8 @@ async function importNumisGraph(event:Event) {
       <details><summary>Research comparable sales</summary>
         <p>Search an approved realized-sale feed for the saved catalog reference. Check the original lot and condition before adding evidence.</p>
         <button type="button" @click="action(findSales)">Look for sale records</button>
-        <p v-if="saleResearch?.status==='unavailable'">The realized-sale provider is unavailable.</p>
+        <p v-if="saleResearch?.status==='provider_not_configured'">NumiAgent doesn’t have a completed-sales feed connected.</p>
+        <p v-else-if="saleResearch?.status==='unavailable'">The realized-sale provider is unavailable.</p>
         <p v-else-if="saleResearch?.status==='reference_required'">Save a catalog reference to search for the same type.</p>
         <p v-else-if="saleResearch?.status==='no_matches'">No exact-reference sales were returned.</p>
         <ul v-if="saleResearch?.results.length" class="record-list">

@@ -60,7 +60,7 @@ struct ImportHistory: View {
             Label(status, systemImage: (batch.pending ?? 0) > 0 ? "clock" : "arrow.right.circle")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.tint)
-            Text(batch.total == 1 ? "1 uploaded photo" : "\(batch.total) uploaded photos")
+            Text(batch.paired == 1 ? "Two-sided import" : batch.total == 1 ? "1 uploaded photo" : "\(batch.total) uploaded photos")
                 .font(.footnote).foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
@@ -100,10 +100,11 @@ struct ImportReview: View {
         List {
             if let batch = batch ?? previewBatch {
                 progressSection(batch)
-                ForEach(batch.photos) { photo in
-                    ImportPhotoSection(api: api, photo: photo, expanded: expanded, sample: previewBatch != nil,
+                ForEach(batch.awaitingPair ? [] : batch.subjects) { photo in
+                    ImportPhotoSection(api: api, photo: photo, companion: batch.photos.first { $0.side == "reverse" },
+                                       expanded: expanded, sample: previewBatch != nil,
                                        canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice in
-                        editPhoto(photo, suggestion: choice)
+                        editPhoto(photo, in: batch, suggestion: choice)
                     } retry: {
                         Task { await update("/photos/" + photo.id + "/retry") }
                     }
@@ -136,11 +137,12 @@ struct ImportReview: View {
     }
 
     private func progressSection(_ batch: PhotoImport) -> some View {
-        let pending = batch.photos.filter(\.isPending).count
-        let saved = batch.photos.filter { $0.state == "saved" }.count
-        let needsReview = batch.photos.filter(\.canCatalog).count
-        let hasUnprocessedPhotos = batch.photos.contains { $0.state == "manual" && $0.error == nil }
-        let title = pending > 0 ? "Identifying photos" :
+        let subjects = batch.subjects
+        let pending = subjects.filter(\.isPending).count
+        let saved = subjects.filter { $0.state == "saved" }.count
+        let needsReview = subjects.filter(\.canCatalog).count
+        let hasUnprocessedPhotos = batch.paired != 1 && subjects.contains { $0.state == "manual" && $0.error == nil }
+        let title = batch.awaitingPair ? "Waiting for both sides" : pending > 0 ? "Identifying photos" :
             batch.photos.isEmpty ? "No photos in this import" : saved > 0 ? "Collection updated" :
             needsReview > 0 ? "Check these results" : "Import complete"
         return Section {
@@ -148,15 +150,18 @@ struct ImportReview: View {
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.tint)
             if saved > 0 { Text("\(saved) added to your collection") }
-            if pending > 0 {
+            if batch.awaitingPair {
+                Text("Return to Capture to finish uploading this import.")
+            } else if pending > 0 {
                 Text("Clear matches are added automatically. You can leave this screen while identification runs.")
-                ProgressView(value: Double(batch.photos.count - pending), total: Double(batch.photos.count)) {
-                    Text("\(batch.photos.count - pending) of \(batch.photos.count) photos processed")
+                ProgressView(value: Double(subjects.count - pending), total: Double(subjects.count)) {
+                    Text(batch.paired == 1 ? "Reading the front and back" : "\(subjects.count - pending) of \(subjects.count) photos processed")
                 }
                 Button("Cancel pending analysis", role: .destructive) { confirmCancel = true }
                     .disabled(working)
             } else if needsReview > 0 && !hasUnprocessedPhotos {
-                Text(needsReview == 1 ? "1 photo needs attention. Check the result below." :
+                Text(batch.paired == 1 ? "Check the identification for this item." :
+                    needsReview == 1 ? "1 photo needs attention. Check the result below." :
                     "\(needsReview) photos need attention. Check the results below.")
             }
             if hasUnprocessedPhotos && batch.cancelled == 0 && pending == 0 {
@@ -170,10 +175,16 @@ struct ImportReview: View {
         }
     }
 
-    private func editPhoto(_ photo: ImportedPhoto, suggestion: PhotoCandidate?) {
+    private func editPhoto(_ photo: ImportedPhoto, in batch: PhotoImport, suggestion: PhotoCandidate?) {
         guard previewBatch == nil else { return }
         var draft = suggestion?.draft() ?? ItemDraft()
-        draft.photos = [.init(photoId: photo.id, side: "overview", crop: suggestion?.crop)]
+        if batch.paired == 1 {
+            draft.photos = batch.photos.compactMap { source in
+                source.side.map { .init(photoId: source.id, side: $0, crop: nil) }
+            }
+        } else {
+            draft.photos = [.init(photoId: photo.id, side: "overview", crop: suggestion?.crop)]
+        }
         edit = PendingEdit(draft: draft)
     }
 
@@ -220,6 +231,7 @@ struct ImportReview: View {
 private struct ImportPhotoSection: View {
     let api: NumiAPI
     let photo: ImportedPhoto
+    let companion: ImportedPhoto?
     let expanded: Bool
     let sample: Bool
     let canRetry: Bool
@@ -254,13 +266,27 @@ private struct ImportPhotoSection: View {
             if photo.state == "failed" && canRetry {
                 Button("Retry identification", action: retry).disabled(working)
             }
-            SpecimenImage(api: api, id: sample ? nil : photo.id,
-                          sampleAsset: sample && photo.record == nil ? "DemoCoin" : nil)
-                .frame(height: expanded ? 330 : 220)
+            if let companion {
+                HStack {
+                    sidePhoto(photo, label: "Front")
+                    sidePhoto(companion, label: "Back")
+                }
+            } else {
+                sidePhoto(photo)
+            }
         } header: {
             if photo.record != nil {
                 Label("In your collection", systemImage: "checkmark.circle.fill")
             }
+        }
+    }
+
+    private func sidePhoto(_ side: ImportedPhoto, label: String? = nil) -> some View {
+        VStack {
+            SpecimenImage(api: api, id: sample ? nil : side.id,
+                          sampleAsset: sample && side.record == nil ? "DemoCoin" : nil)
+                .frame(height: companion == nil ? (expanded ? 330 : 220) : (expanded ? 245 : 130))
+            if let label { Text(label).font(.caption).foregroundStyle(.secondary) }
         }
     }
 

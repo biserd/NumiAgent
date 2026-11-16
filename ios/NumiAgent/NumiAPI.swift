@@ -268,22 +268,24 @@ final class NumiAPI {
         return data
     }
 
-    func createImport(id: UUID, name: String, analyze: Bool, autoCatalog: Bool) async throws {
+    func createImport(id: UUID, name: String, analyze: Bool, autoCatalog: Bool, paired: Bool) async throws {
         struct Batch: Encodable {
             let id: String
             let label: String
             let analyze: Bool
             let consent: Bool
             let autoCatalog: Bool
+            let paired: Bool
         }
         let registration = Batch(id: id.uuidString.lowercased(), label: name, analyze: analyze,
-                                 consent: analyze, autoCatalog: autoCatalog)
+                                 consent: analyze, autoCatalog: autoCatalog, paired: paired)
         _ = try await send("/imports", method: "POST", body: JSONEncoder().encode(registration))
     }
 
-    func uploadPhoto(_ photo: Data, batch: UUID) async throws {
-        _ = try await send("/imports/" + batch.uuidString.lowercased() + "/photos",
-                           method: "PUT", body: photo, type: "image/jpeg")
+    func uploadPhoto(_ photo: Data, batch: UUID, side: String? = nil) async throws {
+        let path = "/imports/" + batch.uuidString.lowercased() + "/photos"
+        let query = side.map { [URLQueryItem(name: "side", value: $0)] } ?? []
+        _ = try await send(path, method: "PUT", query: query, body: photo, type: "image/jpeg")
     }
 }
 

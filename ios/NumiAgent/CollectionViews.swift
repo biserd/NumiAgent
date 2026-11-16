@@ -175,6 +175,7 @@ struct SpecimenScreen: View {
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var deleting = false
+    @State private var merging = false
     @State private var saleEditor = false
     @State private var detailError: String?
     @State private var loaded = false
@@ -255,7 +256,7 @@ struct SpecimenScreen: View {
                 Section("Sale evidence") {
                     Button("Add realized sale") { saleEditor = true }
                     NavigationLink("Find comparable sales") {
-                        SaleResearchScreen(api: api, itemID: item.id) { Task { await loadValuation() } }
+                        SaleResearchScreen(api: api, item: item) { Task { await loadValuation() } }
                     }
                 }
             }
@@ -268,6 +269,7 @@ struct SpecimenScreen: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu("Specimen actions", systemImage: "ellipsis.circle") {
                         Button("Edit specimen") { editing = true }.disabled(!loaded)
+                        Button("Merge with another record") { merging = true }.disabled(!loaded)
                         Button("Delete specimen", role: .destructive) { deleting = true }
                     }
                 }
@@ -292,6 +294,13 @@ struct SpecimenScreen: View {
         }
         .sheet(isPresented: $saleEditor) {
             SaleEditor(api: api, itemID: item.id) { Task { await loadValuation() } }
+        }
+        .sheet(isPresented: $merging) {
+            SpecimenMergeSheet(api: api, target: item) { merged in
+                item = merged
+                onChange()
+                Task { await loadValuation() }
+            }
         }
         .confirmationDialog("Delete this specimen?", isPresented: $deleting, titleVisibility: .visible) {
             Button("Delete specimen", role: .destructive) {
@@ -334,6 +343,113 @@ struct SpecimenScreen: View {
             item = try await api.get("/items/" + item.id)
             loaded = true
         } catch { if !Task.isCancelled { detailError = error.localizedDescription } }
+    }
+}
+
+private struct SpecimenMergeSheet: View {
+    let api: NumiAPI
+    let target: Specimen
+    let onMerge: (Specimen) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var records: [Specimen] = []
+    @State private var nextPage: Int?
+    @State private var search = ""
+    @State private var source: Specimen?
+    @State private var confirming = false
+    @State private var loading = true
+    @State private var merging = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Keep this record") { recordLabel(target) }
+                Section {
+                    ForEach(records) { record in
+                        Button {
+                            source = record
+                            confirming = true
+                        } label: {
+                            recordLabel(record)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if let nextPage {
+                        Button("Load more") { Task { await load(page: nextPage, query: search) } }
+                            .disabled(loading)
+                    }
+                    if loading || merging { ProgressView() }
+                    if !loading && records.isEmpty && error == nil { Text("No matching records").foregroundStyle(.secondary) }
+                } header: {
+                    Text("Choose the other record")
+                } footer: {
+                    Text("Select another record of this same physical item. Its photos and sale evidence will move to the record you keep.")
+                }
+                if let error { Text(error).foregroundStyle(.red) }
+            }
+            .disabled(merging)
+            .navigationTitle("Merge records")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $search, prompt: "Find the other record")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(merging) }
+            }
+            .task(id: search) {
+                let submitted = search
+                if !submitted.isEmpty {
+                    do { try await Task.sleep(for: .milliseconds(250)) }
+                    catch { return }
+                }
+                await load(page: 0, query: submitted)
+            }
+            .confirmationDialog("Merge these two records?", isPresented: $confirming, titleVisibility: .visible, presenting: source) { source in
+                Button("Merge records") { Task { await merge(source) } }
+            } message: { source in
+                Text("Keep “\(target.title)” and combine it with “\(source.title)”. Filled fields on the record you keep take priority.")
+            }
+        }
+        .interactiveDismissDisabled(merging)
+    }
+
+    private func recordLabel(_ item: Specimen) -> some View {
+        HStack {
+            SpecimenImage(api: api, id: item.photo, sampleAsset: nil)
+                .frame(width: 54, height: 54)
+            VStack(alignment: .leading) {
+                Text(item.title).font(.headline)
+                if !item.subtitle.isEmpty { Text(item.subtitle).font(.subheadline).foregroundStyle(.secondary) }
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func load(page: Int, query: String) async {
+        loading = true
+        error = nil
+        do {
+            let result: CollectionPage = try await api.get("/items", query: [
+                .init(name: "q", value: query), .init(name: "type", value: target.type), .init(name: "page", value: String(page))
+            ])
+            guard !Task.isCancelled, query == search else { return }
+            let other = result.items.filter { $0.id != target.id }
+            records = page == 0 ? other : records + other.filter { candidate in !records.contains { $0.id == candidate.id } }
+            nextPage = result.next
+        } catch {
+            guard !Task.isCancelled, query == search else { return }
+            self.error = error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func merge(_ source: Specimen) async {
+        merging = true
+        error = nil
+        defer { merging = false }
+        do {
+            let item: Specimen = try await api.post("/items/" + target.id + "/merge", payload: ["sourceId": source.id])
+            onMerge(item)
+            dismiss()
+        } catch { self.error = error.localizedDescription }
     }
 }
 

@@ -4,7 +4,8 @@ import { cleanItem, emptyItem, message, photoURL, request } from './api'
 import type { Box, Candidate, Folder, Link, Photo, RecordForm } from './api'
 import ItemFields from './ItemFields.vue'
 
-type Batch = {id:string;label:string;analyze:number;cancelled:number;photos:Photo[]}
+type ImportPhoto = Photo & {side?:'obverse'|'reverse'|null}
+type Batch = {id:string;label:string;analyze:number;cancelled:number;paired?:number;photos:ImportPhoto[]}
 const batches=ref<{id:string;label:string;total:number;pending:number}[]>([])
 const batch=ref<Batch|null>(null)
 const folders=ref<Folder[]>([])
@@ -28,6 +29,9 @@ const box=ref<Box>({x:0,y:0,width:1,height:1})
 const poll=ref<number>()
 const pending=computed(()=>batch.value?.photos.filter(p=>['running','queued','uploading'].includes(p.state)).length ?? 0)
 const usable=(p:Photo)=>['manual','review','saved','failed'].includes(p.state)
+const reviewable=(p:ImportPhoto)=>batch.value?.paired
+  ? p.side==='obverse' && (['review','failed'].includes(p.state) || (p.state==='manual' && !!p.error))
+  : usable(p)
 const cropPercent=(n:number)=>Math.round(n*100)
 const rectStyle=computed(()=>({left:box.value.x*100+'%',top:box.value.y*100+'%',width:box.value.width*100+'%',height:box.value.height*100+'%'}))
 const reverseOptions=computed(()=>batch.value?.photos.filter(p=>p.id!==current.value && usable(p)) ?? [])
@@ -105,7 +109,8 @@ async function upload(list:File[], fresh:boolean){
   finally{busy.value=false}
 }
 function review(photo:Photo,candidate?:Candidate){
-  current.value=photo.id;reverse.value='';side.value='obverse'
+  current.value=photo.id;side.value='obverse'
+  reverse.value=batch.value?.paired ? batch.value.photos.find(p=>p.side==='reverse')?.id ?? '' : ''
   if(candidate){
     const {confidence:_confidence,crop:_crop,model:_model,referenceMatches:_references,...fields}=candidate
     form.value={...emptyItem(),...fields,details:fields.details ?? {},collection_id:folders.value[0]?.id ?? null}
@@ -125,7 +130,7 @@ async function save(){
     current.value='';notice.value='Specimen added to your collection.'
   })
 }
-const bulkPhoto=(photo:Photo) => photo.state==='review' && photo.candidates.length===1
+const bulkPhoto=(photo:Photo) => !batch.value?.paired && photo.state==='review' && photo.candidates.length===1
 async function bulk(){
   if(!batch.value)return
   const eligible=batch.value.photos.filter(p=>selected.value.includes(p.id) && bulkPhoto(p))
@@ -154,7 +159,7 @@ async function bulk(){
     <label class="check"><input type="checkbox" v-model="keep" :disabled="busy">Keep compatible originals up to 6 MB. Other files are converted to JPEG when supported.</label>
     <div class="actions">
       <button class="primary" :disabled="!files.length || busy" @click="upload(files,true)">Start new batch{{files.length ? ' ('+files.length+')':''}}</button>
-      <button v-if="batch && !batch.cancelled" :disabled="!files.length || busy" @click="upload(files,false)">Add to open batch</button>
+      <button v-if="batch && !batch.cancelled && !batch.paired" :disabled="!files.length || busy" @click="upload(files,false)">Add to open batch</button>
       <button v-if="failures.length" :disabled="busy" @click="upload(failures,false)">Retry {{failures.length}} uploads</button>
     </div>
     <label v-if="busy">Upload attempts {{done}} of {{total}}<progress :value="done" :max="total"></progress></label>
@@ -167,9 +172,9 @@ async function bulk(){
     <div class="photo-grid">
       <article class="photo-card" v-for="(p,index) in batch.photos" :key="p.id">
         <img v-if="p.state!=='uploading'" loading="lazy" :src="photoURL(p.id)" :alt="'Photo '+(index+1)">
-        <div><span class="status">{{p.state}}</span><small v-if="p.error">{{p.error}}</small>
-          <button v-if="p.state==='failed'" @click="action(()=>request('/photos/'+p.id+'/retry','POST'))">Retry analysis</button>
-          <template v-if="usable(p)">
+        <div><span class="status">{{p.side ? (p.side==='obverse' ? 'Front' : 'Back')+' · ' : ''}}{{p.state}}</span><small v-if="p.error">{{p.error}}</small>
+          <button v-if="p.state==='failed' && p.side!=='reverse'" @click="action(()=>request('/photos/'+p.id+'/retry','POST'))">Retry analysis</button>
+          <template v-if="reviewable(p)">
             <button v-for="(candidate,i) in p.candidates" :key="i" @click="review(p,candidate)">{{candidate.title}} · {{Math.round(candidate.confidence*100)}}%</button>
             <button @click="review(p)">Catalog manually</button>
             <label class="check" v-if="bulkPhoto(p)"><input v-model="selected" type="checkbox" :value="p.id">Approve candidate</label>
@@ -194,7 +199,7 @@ async function bulk(){
             <input type="number" min="0" max="100" required :value="cropPercent(box[key])" @input="box[key]=Number(($event.target as HTMLInputElement).value)/100">
           </label>
         </div></fieldset>
-        <div class="form-grid">
+        <div class="form-grid" v-if="!batch?.paired">
           <label>Photo side<select v-model="side"><option value="obverse">Obverse</option><option value="reverse">Reverse</option><option value="overview">Overview</option></select></label>
           <label>Pair with another photo<select v-model="reverse"><option value="">No pairing</option><option v-for="other in reverseOptions" :key="other.id" :value="other.id">Photo {{(batch?.photos.findIndex(p=>p.id===other.id) ?? 0)+1}} · {{other.candidates[0]?.title ?? other.state}}</option></select></label>
         </div>

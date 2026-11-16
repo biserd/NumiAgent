@@ -12,7 +12,7 @@ export async function researchSales(env:Env,user:string,specimen:Item) {
   const unavailable={status:'unavailable',checkedAt,results:[]}
   const hosts=(env.SALE_SOURCE_DOMAINS ?? '').split(',').map(host=>host.trim().toLowerCase())
     .filter(host=>/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(host))
-  if(!env.SALE_FEED_URL || !hosts.length) return unavailable
+  if(!env.SALE_FEED_URL || !hosts.length) return {...unavailable,status:'provider_not_configured'}
   if(!specimen.reference.trim()) return {...unavailable,status:'reference_required'}
   const provider=https.safeParse(env.SALE_FEED_URL)
   if(!provider.success) return unavailable

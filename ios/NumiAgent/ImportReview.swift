@@ -417,6 +417,15 @@ private struct IdentificationChoice: View {
 struct SpecimenIdentificationSheet: View {
     private struct Result: Decodable { let candidates: [PhotoCandidate] }
     private struct Search: Encodable { let legends: [String: String]? }
+    private struct VisualResult: Decodable {
+        struct Match: Decodable, Identifiable {
+            let source: URL
+            let label, attribution, obverse, reverse: String
+            var id: URL { source }
+        }
+        let photoCount: Int
+        let matches: [Match]
+    }
     let api: NumiAPI
     let item: Specimen
     let onSave: () -> Void
@@ -428,6 +437,9 @@ struct SpecimenIdentificationSheet: View {
     @State private var reverseLegend = ""
     @State private var enteredLegends = false
     @State private var searching = false
+    @State private var visualResult: VisualResult?
+    @State private var visualError: String?
+    @State private var visualSearching = false
 
     var body: some View {
         if let draft {
@@ -435,6 +447,43 @@ struct SpecimenIdentificationSheet: View {
         } else {
             NavigationStack {
                 List {
+                    if item.type == "coin" {
+                        Section {
+                            Button("Search with Syllogeum", systemImage: "photo.on.rectangle.angled") {
+                                Task { await searchCoinPhotos() }
+                            }
+                            .disabled(visualSearching)
+                            if visualSearching { ProgressView("Comparing coin photos") }
+                            if let visualError {
+                                Text(visualError).font(.footnote).foregroundStyle(.secondary)
+                            }
+                            if let visualResult {
+                                Text(visualResult.matches.isEmpty ? "No visual suggestions were returned." :
+                                    "Compare the designs before updating your identification.")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                                if visualResult.photoCount == 1 {
+                                    Text("For a stronger comparison, add the other side and label the photos Front and Back.")
+                                        .font(.footnote).foregroundStyle(.secondary)
+                                }
+                                ForEach(visualResult.matches) { hit in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Link(hit.label, destination: hit.source)
+                                        let details = [hit.obverse, hit.reverse, hit.attribution]
+                                        ForEach(details.indices, id: \.self) { index in
+                                            let detail = details[index]
+                                            if !detail.isEmpty {
+                                                Text(detail).font(.footnote).foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } header: {
+                            Text("Ancient coin photo search")
+                        } footer: {
+                            Text("Search sends the saved photo of each available side to Syllogeum for visual comparison.")
+                        }
+                    }
                     if let error {
                         Text(error).foregroundStyle(.secondary)
                         if candidates == nil { Button("Try again") { Task { await identify() } } }
@@ -483,6 +532,18 @@ struct SpecimenIdentificationSheet: View {
                 .task { await identify() }
             }
         }
+    }
+
+    private func searchCoinPhotos() async {
+        guard !visualSearching else { return }
+        visualSearching = true
+        visualResult = nil
+        visualError = nil
+        defer { visualSearching = false }
+        do {
+            let result: VisualResult = try await api.post("/imports/visual-search/" + item.id, payload: ["consent": true])
+            if !Task.isCancelled { visualResult = result }
+        } catch { if !Task.isCancelled { visualError = error.localizedDescription } }
     }
 
     private func identify(useLegends: Bool = false) async {

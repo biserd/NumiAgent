@@ -74,10 +74,23 @@ struct PhotoImport: Decodable {
     let analyze: Int
     let photos: [ImportedPhoto]
 
-    static let demoManual = PhotoImport(label: "Example photo batch", cancelled: 0, analyze: 0, photos: [
-        .init(id: "demo-photo-1", state: "manual", candidates: [], error: nil),
-        .init(id: "demo-photo-2", state: "manual", candidates: [], error: nil)
+    static let demoAutomatic = PhotoImport(label: "Example photo batch", cancelled: 0, analyze: 1, photos: [
+        .init(id: "demo-photo-1", state: "saved", candidates: [], error: nil,
+              record: .init(id: "demo-3", title: "Bank of Canada one-dollar note", type: "banknote",
+                            year: "1935", issuer: "Bank of Canada", denomination: "1 dollar")),
+        .init(id: "demo-photo-2", state: "review", candidates: [
+            .init(type: "coin", title: "Roman bronze coin", ruler: nil, issuer: "Roman Empire",
+                  denomination: nil, year: nil, reference: nil, notes: nil, details: nil, confidence: 0.6, crop: nil)
+        ], error: nil, record: nil)
     ])
+}
+
+struct ImportedRecord: Decodable {
+    let id, title, type, year, issuer, denomination: String
+
+    var subtitle: String {
+        [type.capitalized, year, denomination, issuer].filter { !$0.isBlank }.joined(separator: " · ")
+    }
 }
 
 struct ImportedPhoto: Decodable, Identifiable {
@@ -85,18 +98,19 @@ struct ImportedPhoto: Decodable, Identifiable {
     let state: String
     let candidates: [PhotoCandidate]
     let error: String?
+    let record: ImportedRecord?
 
     var isPending: Bool { ["queued", "running", "uploading"].contains(state) }
-    var canCatalog: Bool { ["review", "manual", "failed", "saved"].contains(state) }
+    var canCatalog: Bool { ["review", "manual", "failed"].contains(state) }
     var statusLabel: String {
         switch state {
         case "queued": return "Waiting for AI"
         case "running": return "Analyzing photo"
         case "uploading": return "Uploading"
-        case "review": return candidates.isEmpty ? "No identification found" : "Ready to review"
-        case "manual": return "Ready to catalog manually"
-        case "failed": return "Analysis failed"
-        case "saved": return "Cataloged"
+        case "review": return candidates.isEmpty ? "No identification found" : "Needs review"
+        case "manual": return "Awaiting identification"
+        case "failed": return "Identification couldn’t finish"
+        case "saved": return record == nil ? "Cataloged previously" : "In your collection"
         case "cancelled": return "Canceled"
         default: return state.capitalized
         }

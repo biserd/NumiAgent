@@ -6,7 +6,7 @@ import { matchReference } from '../src/shared/references.ts'
 import { ecbQuote, parseOcre } from '../src/worker/officialData.ts'
 import { normalizeEbay } from '../src/worker/ebay.ts'
 import { parseThemeDraft } from '../src/worker/themePlanning.ts'
-import { parsePhotoCandidates } from '../src/worker/vision.ts'
+import { automaticCatalogCandidate, parsePhotoCandidates } from '../src/worker/vision.ts'
 
 test('Photo review keeps an identifiable coin when Gemma returns null, numeric text, or an unusable crop',()=>{
   const response = JSON.stringify([
@@ -23,6 +23,18 @@ test('Photo review keeps an identifiable coin when Gemma returns null, numeric t
   assert.equal(coin.crop,undefined)
   assert.deepEqual(parsePhotoCandidates('[]'),[])
   assert.throws(()=>parsePhotoCandidates('[null]'),/no valid candidates/)
+})
+
+test('Automatic cataloging needs one complete match with a visible year',()=>{
+  const nickel = {type:'coin',title:'Jefferson nickel',issuer:'United States',denomination:'5 cents',year:2007,confidence:.98,visibleDate:true}
+  const decide = (...results) => automaticCatalogCandidate(parsePhotoCandidates(JSON.stringify(results)))
+  assert.equal(decide(nickel).year,'2007')
+  assert.equal(decide({...nickel,visibleDate:false}),undefined)
+  assert.equal(decide({...nickel,year:'2007/2008'}),undefined)
+  assert.equal(decide({...nickel,denomination:'Unknown'}),undefined)
+  assert.equal(decide({...nickel,confidence:.75}),undefined)
+  assert.equal(decide(nickel,{type:'unknown'}),undefined)
+  assert.equal(decide(nickel,nickel),undefined)
 })
 
 test('Theme drafts accept string years and strip unsourced references and URLs',()=>{

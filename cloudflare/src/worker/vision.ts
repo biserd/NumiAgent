@@ -1,4 +1,15 @@
 import { candidate, crop } from '../shared/domain.ts'
+import type { z } from 'zod'
+
+type Observation = z.infer<typeof candidate> & { visibleDate?: boolean }
+
+export function automaticCatalogCandidate(observations: Observation[]) {
+  if (observations.length !== 1) return undefined
+  const [match] = observations
+  if (match.confidence < .9 || !match.visibleDate || !/^[1-9]\d{0,3}(?:\s+(?:BC|BCE|AD|CE|AH))?$/i.test(match.year)) return undefined
+  const known = (value: string) => value.length > 0 && !/^(unknown|uncertain|unreadable|n\/?a|none|\?)$/i.test(value)
+  return known(match.denomination) && (known(match.issuer) || known(match.ruler)) ? match : undefined
+}
 
 type ObjectFields = Record<string, unknown>
 const fields = (value: unknown): ObjectFields =>
@@ -43,7 +54,7 @@ export function parsePhotoCandidates(raw: string) {
       confidence: confidence(input.confidence),
       crop: crop.safeParse(input.crop).data
     })
-    return result.success ? [result.data] : []
+    return result.success ? [{...result.data,visibleDate:entries.length === 1 && input.visibleDate === true}] : []
   })
   if (entries.length && !valid.length) throw new Error('Vision response contained no valid candidates')
   return valid

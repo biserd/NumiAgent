@@ -4,7 +4,7 @@ import { deflateSync, crc32 } from 'node:zlib'
 import { test } from 'node:test'
 import { localServer } from './server.mjs'
 
-const fixture = (serial) => {
+const fixture = (serial, addText = false) => {
   const chunk=(tag,value)=>{
     const length=Buffer.alloc(4);length.writeUInt32BE(value.length)
     const typed=Buffer.concat([Buffer.from(tag),value])
@@ -13,7 +13,8 @@ const fixture = (serial) => {
   }
   const header=Buffer.alloc(13);header.writeUInt32BE(2,0);header.writeUInt32BE(2,4);header[8]=8;header[9]=2
   return Buffer.concat([Buffer.from('89504e470d0a1a0a','hex'),chunk('IHDR',header),
-    chunk('IDAT',deflateSync(Buffer.from([0,12,12,12,serial,5,3,0,4,5,6,7,8,9]))),chunk('IEND',Buffer.alloc(0))])
+    chunk('IDAT',deflateSync(Buffer.from([0,12,12,12,serial,5,3,0,4,5,6,7,8,9]))),
+    ...(addText ? [chunk('tEXt',Buffer.from([120,0,121]))] : []),chunk('IEND',Buffer.alloc(0))])
 }
 const wait = ms => new Promise(resolve=>setTimeout(resolve,ms))
 test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roman checklist and scoped MCP', {timeout:300000}, async t=>{
@@ -179,6 +180,36 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     }
     assert.equal(reconsidered.photos[0].state,'review',server.logs())
     assert.equal((await json(await api('/imports',a))).find(row=>row.id===manual).suggestions,1)
+    const automatic=randomUUID()
+    const registration={id:automatic,label:'Automatic catalog fixture',analyze:true,consent:true,autoCatalog:true}
+    await json(await api('/imports',a,'POST',registration),201)
+    assert.equal((await api('/imports',a,'POST',{...registration,autoCatalog:false})).status,409)
+    // Equal fixture dimensions with different byte lengths let the test model return one clear match and one uncertain match.
+    const clearImage=fixture(170)
+    const unclearImage=fixture(170,true)
+    const complete=clearImage.length%2===0 ? clearImage : unclearImage
+    const uncertain=clearImage.length%2!==0 ? clearImage : unclearImage
+    const goodPhoto=await json(await api('/imports/'+automatic+'/photos',a,'PUT',complete),201)
+    const checkPhoto=await json(await api('/imports/'+automatic+'/photos',a,'PUT',uncertain),201)
+    let automaticBatch
+    for(let j=0;j<30;j++) {
+      automaticBatch=await json(await api('/imports/'+automatic,a))
+      if (automaticBatch.photos.some(p=>p.state==='saved') && automaticBatch.photos.some(p=>p.state==='review')) break
+      await wait(1000)
+    }
+    const accepted=automaticBatch.photos.find(p=>p.id===goodPhoto.id)
+    const review=automaticBatch.photos.find(p=>p.id===checkPhoto.id)
+    assert.equal(accepted.state,'saved',server.logs())
+    assert.equal(review.state,'review')
+    assert.equal(review.record,null)
+    assert.deepEqual(accepted.record,{id:goodPhoto.id,title:'2007 Jefferson nickel',type:'coin',year:'2007',issuer:'United States',denomination:'5 cents'})
+    const nickel=await json(await api('/items/'+accepted.record.id,a))
+    assert.deepEqual(nickel.photos,[{photoId:goodPhoto.id,side:'overview',crop:null}])
+    assert.equal((await api('/items/'+nickel.id,b)).status,404)
+    assert.deepEqual(await json(await api('/imports/'+automatic+'/photos',a,'PUT',complete)),{id:goodPhoto.id,state:'saved'})
+    assert.equal((await json(await api('/items?q=Jefferson',a))).items.length,1)
+    assert.equal((await api('/items/'+nickel.id,a,'DELETE')).status,204)
+    assert.equal((await json(await api('/imports/'+automatic,a))).photos.find(p=>p.id===goodPhoto.id).record,null)
     const saved=await json(await api('/items',a,'POST',{title:'Trajan denarius',ruler:'Trajan',type:'coin',grade:'VF',details:{metal:'Silver'},
       photos:[{photoId:ids[0],side:'obverse'},{photoId:ids[1],side:'reverse'}]}),201)
     const foreign=await json(await api('/items',b,'POST',{title:'Other private specimen',type:'coin'}),201)

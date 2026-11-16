@@ -75,12 +75,16 @@ final class PhoneSignInAndReviewTests: XCTestCase {
         let openBatch = app.buttons["Open example photo batch"].firstMatch
         XCTAssertTrue(openBatch.waitForExistence(timeout: 15))
         openBatch.tap()
-        let identify = app.buttons["Identify photos"].firstMatch
-        XCTAssertTrue(identify.waitForExistence(timeout: 10))
-        XCTAssertTrue(identify.isHittable)
-        identify.tap()
-        let consent = app.alerts["Identify these photos?"].firstMatch
-        XCTAssertTrue(consent.waitForExistence(timeout: 10))
-        consent.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["1 added to your collection"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Catalog manually"].exists)
+        let viewRecord = app.buttons["View record"].firstMatch
+        if !viewRecord.isHittable { app.swipeUp() }
+        XCTAssertTrue(viewRecord.isHittable)
+        viewRecord.tap()
+        XCTAssertTrue(app.navigationBars["Bank of Canada one-dollar note"].firstMatch.waitForExistence(timeout: 10))
+        app.navigationBars.buttons.firstMatch.tap()
+        let uncertain = app.staticTexts["Review details"].firstMatch
+        if !uncertain.isHittable { app.swipeUp() }
+        XCTAssertTrue(uncertain.waitForExistence(timeout: 10))
     }
 }

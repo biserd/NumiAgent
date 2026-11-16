@@ -10,6 +10,7 @@ const issuer='https://token.actions.githubusercontent.com'
 const keys=createRemoteJWKSet(new URL(issuer+'/.well-known/jwks'),{timeoutDuration:4000})
 const audience='https://numiagent.com/photo-identification-release'
 const allowedWorkflow='biserd/NumiAgent/.github/workflows/ios-testflight.yml@refs/heads/main'
+const allowedSubject='repo:biserd@4376132/NumiAgent@1121219233:environment:app-store'
 const portraits=new Set(['faustina ii','faustina the younger','faustina younger','faustina junior','faustina minor'])
 
 export async function verifyPhotoRelease(c:WebContext) {
@@ -19,7 +20,7 @@ export async function verifyPhotoRelease(c:WebContext) {
   try {
     const {payload}=await jwtVerify(token,keys,{
       issuer,audience,algorithms:['RS256'],maxTokenAge:'8 minutes',
-      subject:'repo:biserd/NumiAgent:environment:app-store'
+      subject:allowedSubject
     })
     claims=payload
   } catch { return fail(401,'Invalid release workflow token') }

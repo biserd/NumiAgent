@@ -28,7 +28,6 @@ jobs:
           python3 - <<'PY'
           import json
           import os
-          import base64
           from urllib.error import HTTPError
           from urllib.parse import urlencode
           from urllib.request import Request, urlopen
@@ -40,8 +39,11 @@ jobs:
           })
           with urlopen(identity_request, timeout=20) as identity:
               token = json.load(identity)["value"]
-          check = Request("https://numiagent.com/api/v1/internal/photo-release", method="POST",
-                          headers={"Authorization": "Bearer " + token})
+          check = Request("https://numiagent.com/api/v1/internal/photo-release", method="POST", headers={
+              "Authorization": "Bearer " + token,
+              "User-Agent": "NumiAgent-release-verification/1.0",
+              "Accept": "application/json",
+          })
           try:
               with urlopen(check, timeout=110) as response:
                   result = json.load(response)
@@ -50,11 +52,6 @@ jobs:
                   reason = json.loads(error.read(2048)).get("error", "")
               except (ValueError, AttributeError):
                   reason = "Unexpected response from the production site"
-              if error.code == 403:
-                  encoded = token.split(".")[1]
-                  claims = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
-                  names = ("repository_id", "workflow_ref", "ref", "event_name")
-                  print("Release workflow context:", json.dumps({name: claims.get(name) for name in names}))
               raise SystemExit(f"Photo regression check returned HTTP {error.code}. {reason}")
           if result.get("fixture") != "faustina-two-sided-v1" or result.get("passed") is not True:
               raise SystemExit(f"Photo identification regression failed: {result}")

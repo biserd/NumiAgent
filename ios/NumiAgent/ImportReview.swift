@@ -103,8 +103,8 @@ struct ImportReview: View {
                 ForEach(batch.awaitingPair ? [] : batch.subjects) { photo in
                     ImportPhotoSection(api: api, photo: photo, companion: batch.photos.first { $0.side == "reverse" },
                                        expanded: expanded, sample: previewBatch != nil,
-                                       canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice in
-                        editPhoto(photo, in: batch, suggestion: choice)
+                                       canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice, reference in
+                        editPhoto(photo, in: batch, suggestion: choice, reference: reference)
                     } retry: {
                         Task { await update("/photos/" + photo.id + "/retry") }
                     }
@@ -175,9 +175,9 @@ struct ImportReview: View {
         }
     }
 
-    private func editPhoto(_ photo: ImportedPhoto, in batch: PhotoImport, suggestion: PhotoCandidate?) {
+    private func editPhoto(_ photo: ImportedPhoto, in batch: PhotoImport, suggestion: PhotoCandidate?, reference: CoinCatalogMatch?) {
         guard previewBatch == nil else { return }
-        var draft = suggestion?.draft() ?? ItemDraft()
+        var draft = suggestion?.draft(using: reference) ?? ItemDraft()
         if batch.paired == 1 {
             draft.photos = batch.photos.compactMap { source in
                 source.side.map { .init(photoId: source.id, side: $0, crop: nil) }
@@ -236,7 +236,7 @@ private struct ImportPhotoSection: View {
     let sample: Bool
     let canRetry: Bool
     let working: Bool
-    let edit: (PhotoCandidate?) -> Void
+    let edit: (PhotoCandidate?, CoinCatalogMatch?) -> Void
     let retry: () -> Void
 
     var body: some View {
@@ -256,10 +256,10 @@ private struct ImportPhotoSection: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 ForEach(photo.candidates.indices, id: \.self) { index in
-                    suggestionButton(photo.candidates[index])
+                    IdentificationChoice(suggestion: photo.candidates[index]) { edit(photo.candidates[index], $0) }
                 }
                 if photo.candidates.isEmpty {
-                    Button("Enter details") { edit(nil) }
+                    Button("Enter details") { edit(nil, nil) }
                         .buttonStyle(.bordered)
                 }
             }
@@ -290,11 +290,17 @@ private struct ImportPhotoSection: View {
         }
     }
 
-    private func suggestionButton(_ suggestion: PhotoCandidate) -> some View {
+}
+
+private struct IdentificationChoice: View {
+    let suggestion: PhotoCandidate
+    let select: (CoinCatalogMatch?) -> Void
+
+    var body: some View {
         let subtitle = [suggestion.issuer, suggestion.denomination, suggestion.year]
             .compactMap { $0 }.filter { !$0.isBlank }.joined(separator: " · ")
-        return Button {
-            edit(suggestion)
+        Button {
+            select(nil)
         } label: {
             VStack(alignment: .leading, spacing: 3) {
                 Text(suggestion.title)
@@ -303,6 +309,122 @@ private struct ImportPhotoSection: View {
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }
+        if let front = suggestion.details?.obverseLegend, !front.isBlank {
+            LabeledContent("Obverse reading", value: front).font(.footnote)
+        }
+        if let back = suggestion.details?.reverseLegend, !back.isBlank {
+            LabeledContent("Reverse reading", value: back).font(.footnote)
+        }
+        if let matches = suggestion.catalogMatches, !matches.isEmpty {
+            let count = suggestion.catalogMatchCount ?? matches.count
+            Text(count > 1 ? "Compare \(count) possible catalog types" : "Possible catalog match")
+                .font(.subheadline.weight(.semibold))
+            ForEach(matches) { match in
+                VStack(alignment: .leading, spacing: 6) {
+                    Link(match.label, destination: match.source).font(.subheadline.weight(.semibold))
+                    if let description = match.obverse.description {
+                        Text(description).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    if let description = match.reverse.description {
+                        Text(description).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Button("Use this reference") { select(match) }.buttonStyle(.borderless)
+                }
+                .padding(.vertical, 3)
+            }
+        } else if suggestion.issuer == "Roman Empire",
+                  let front = suggestion.details?.obverseLegend, !front.isBlank,
+                  let back = suggestion.details?.reverseLegend, !back.isBlank {
+            Text("No catalog match verified for these readings.").font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct SpecimenIdentificationSheet: View {
+    private struct Result: Decodable { let candidates: [PhotoCandidate] }
+    private struct Search: Encodable { let legends: [String: String]? }
+    let api: NumiAPI
+    let item: Specimen
+    let onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var candidates: [PhotoCandidate]?
+    @State private var draft: ItemDraft?
+    @State private var error: String?
+    @State private var obverseLegend = ""
+    @State private var reverseLegend = ""
+    @State private var enteredLegends = false
+    @State private var searching = false
+
+    var body: some View {
+        if let draft {
+            ItemEditor(api: api, itemID: item.id, draft: draft, onSave: onSave)
+        } else {
+            NavigationStack {
+                List {
+                    if let error {
+                        Text(error).foregroundStyle(.secondary)
+                        if candidates == nil { Button("Try again") { Task { await identify() } } }
+                    }
+                    if let candidates {
+                        if candidates.isEmpty {
+                            Text(enteredLegends ? "No catalog type matched those inscriptions." :
+                                "No match found. A closer photo of each side can help.").foregroundStyle(.secondary)
+                        }
+                        if candidates.count > 1 {
+                            Text("Multiple items were detected. Review a match that belongs to this specimen.")
+                                .foregroundStyle(.secondary)
+                        }
+                        ForEach(candidates.indices, id: \.self) { index in
+                            Section {
+                                IdentificationChoice(suggestion: candidates[index]) { match in
+                                    draft = candidates[index].draft(using: match, updating: item)
+                                }
+                            }
+                        }
+                    } else if error == nil {
+                        ProgressView("Reading both sides and checking catalog references")
+                    }
+                    if item.type == "coin", candidates != nil || error != nil {
+                        Section {
+                            TextField("Obverse legend", text: $obverseLegend).textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                            TextField("Reverse legend", text: $reverseLegend).textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                            Button("Search Roman catalog") { Task { await identify(useLegends: true) } }
+                                .disabled(searching || obverseLegend.count < 5 || reverseLegend.count < 4)
+                            if searching { ProgressView() }
+                        } header: {
+                            Text("Check the inscriptions")
+                        } footer: {
+                            Text("Enter the letters you see. Use ? for any unreadable span.")
+                        }
+                    }
+                }
+                .navigationTitle("Improve identification")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                }
+                .task { await identify() }
+            }
+        }
+    }
+
+    private func identify(useLegends: Bool = false) async {
+        searching = true
+        enteredLegends = useLegends
+        error = nil
+        defer { searching = false }
+        do {
+            let legends = useLegends ? ["obverseLegend": obverseLegend, "reverseLegend": reverseLegend] : nil
+            let result: Result = try await api.post("/imports/refine/" + item.id, payload: Search(legends: legends))
+            guard !Task.isCancelled else { return }
+            candidates = result.candidates
+            if !useLegends {
+                obverseLegend = result.candidates.first?.details?.obverseLegend ?? item.details?.obverseLegend ?? ""
+                reverseLegend = result.candidates.first?.details?.reverseLegend ?? item.details?.reverseLegend ?? ""
+            }
+        } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
     }
 }
 

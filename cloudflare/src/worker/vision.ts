@@ -1,16 +1,24 @@
 import { candidate, crop } from '../shared/domain.ts'
 import type { z } from 'zod'
 
-export type Observation = z.infer<typeof candidate> & { visibleDate?: boolean }
+export type Observation = z.infer<typeof candidate> & {
+  visibleDate?: boolean
+  catalogEvidence?: 'portrait' | 'design' | 'legends' | 'exact'
+}
 
 export function isRomanCoin(observation:Observation) {
   return observation.type==='coin' && /\b(?:roman (?:empire|imperial|silver|bronze|gold)|ancient rome)\b/i
     .test(observation.issuer+' '+observation.title)
 }
 
-export function automaticCatalogCandidate(observations: Observation[]) {
+export function automaticCatalogCandidate(observations: Observation[], bothSides = false) {
   if (observations.length !== 1) return undefined
   const [match] = observations
+  if (isRomanCoin(match)) {
+    const matchedLegends = match.catalogEvidence === 'legends' || match.catalogEvidence === 'exact'
+    return bothSides && matchedLegends && match.confidence >= .9 && knownText(match.ruler) && knownText(match.denomination)
+      ? match : undefined
+  }
   if (match.confidence < .9 || !match.visibleDate || !/^[1-9]\d{0,3}(?:\s+(?:BC|BCE|AD|CE|AH))?$/i.test(match.year)) return undefined
   return knownText(match.denomination) && (knownText(match.issuer) || knownText(match.ruler)) ? match : undefined
 }

@@ -1,6 +1,7 @@
 import PhotosUI
 import SwiftUI
 import UIKit
+import Vision
 
 private struct CaptureDraft: Codable {
     var id = UUID()
@@ -187,6 +188,8 @@ struct CaptureScreen: View {
     @State private var busy = false
     @State private var error: String?
     @State private var uploadedBatch: String?
+    @State private var qualityPair: CheckedPair?
+    @State private var uploadReviewedPair = false
     @State private var demoPhoto = PreviewLaunch.screen == .capture
     @State private var demoResult = PreviewLaunch.screen == .capture
 
@@ -215,6 +218,13 @@ struct CaptureScreen: View {
                     NavigationLink("Open example photo batch") {
                         ImportReview(api: api, batchID: "demo-photo-batch", previewBatch: PhotoImport.demoAutomatic)
                     }
+                    #if DEBUG
+                    Button("Preview a small front photo") {
+                        let small = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 64)).image { _ in }
+                        let sharp = UIGraphicsImageRenderer(size: CGSize(width: 600, height: 600)).image { _ in }
+                        qualityPair = CheckedPair(photos: [CheckedCoinPhoto(small), CheckedCoinPhoto(sharp)])
+                    }
+                    #endif
                 }
                 Section("Demo photo review") {
                     Button("Add sample photo") { demoPhoto = true }
@@ -231,13 +241,18 @@ struct CaptureScreen: View {
                 }
             } else {
                 Section {
+                    Label("Fill the frame with one side", systemImage: "viewfinder")
+                    Text("Use even light, keep the whole rim visible, and tap the lettering to focus before taking the photo.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Section {
                     PhotosPicker(selection: $pairSelection, maxSelectionCount: 2, selectionBehavior: .ordered, matching: .images) {
                         Label("Both sides of one item", systemImage: "square.on.square")
                             .fontWeight(.semibold)
                     }
                     .disabled(busy || !store.draft.photos.isEmpty)
                 } footer: {
-                    Text("Select the front first, then the back. Both sides upload together for cloud AI identification as one item.")
+                    Text("Select the front first, then the back. For portrait coins, the portrait goes first. Clear photos upload together for identification.")
                 }
                 Section {
                     if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -304,6 +319,13 @@ struct CaptureScreen: View {
             if let message = error ?? store.error { Text(message).foregroundStyle(.red) }
         }
         .navigationTitle(onUpload == nil ? "Capture" : "New photo import")
+        .sheet(item: $qualityPair, onDismiss: finishPairReview) { pair in
+            PairPhotoQualityReview(photos: pair.photos) { images in
+                record { try store.appendPair(images) }
+                uploadReviewedPair = error == nil
+                qualityPair = nil
+            }
+        }
         .fullScreenCover(isPresented: $camera, onDismiss: importCapturedPhoto) {
             CameraPicker { image in
                 capturedPhoto = image
@@ -357,18 +379,23 @@ struct CaptureScreen: View {
             guard picks.count == 2 else { throw CaptureError.pair }
             let front = try await loadImage(picks[0])
             let back = try await loadImage(picks[1])
-            try store.appendPair([front, back])
+            let checked = [CheckedCoinPhoto(front), CheckedCoinPhoto(back)]
+            if checked.contains(where: { $0.warning != nil }) {
+                qualityPair = CheckedPair(photos: checked)
+            } else {
+                try store.appendPair([front, back])
+            }
         } catch { self.error = error.localizedDescription }
         pairSelection = []
         busy = false
-        if error == nil { await upload() }
+        if error == nil && qualityPair == nil { await upload() }
     }
 
-    private func loadImage(_ pick: PhotosPickerItem) async throws -> UIImage {
-        guard let data = try await pick.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
-            throw CaptureError.unsupported
+    private func finishPairReview() {
+        if uploadReviewedPair {
+            uploadReviewedPair = false
+            Task { await upload() }
         }
-        return image
     }
 
     private func upload() async {
@@ -381,6 +408,166 @@ struct CaptureScreen: View {
             if let onUpload { onUpload(id) }
             else { uploadedBatch = id }
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+private struct CheckedPair: Identifiable {
+    let id = UUID()
+    let photos: [CheckedCoinPhoto]
+}
+
+private func loadImage(_ pick: PhotosPickerItem) async throws -> UIImage {
+    guard let data = try await pick.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
+        throw CaptureError.unsupported
+    }
+    return image
+}
+
+private struct CheckedCoinPhoto {
+    let image: UIImage
+    let warning: String?
+
+    init(_ image: UIImage) {
+        self.image = image
+        warning = Self.check(image)
+    }
+
+    private static func check(_ image: UIImage) -> String? {
+        guard let pixels = image.cgImage else { return nil }
+        let shortSide = min(pixels.width, pixels.height)
+        if shortSide < 420 { return "This photo has too few pixels to read fine lettering. Choose an original or take a closer photo." }
+        let request = VNDetectContoursRequest()
+        request.maximumImageDimension = 256
+        guard (try? VNImageRequestHandler(cgImage: pixels).perform([request])) != nil,
+              let contours = request.results?.first else { return nil }
+        // Look for a closed, round contour within the frame. Screenshot borders and labels are not coin rims.
+        let bounds = (0..<contours.contourCount).compactMap { index -> CGRect? in
+            guard let contour = try? contours.contour(at: index), contour.pointCount >= 18 else { return nil }
+            let rect = contour.normalizedPath.boundingBoxOfPath
+            let width = rect.width * CGFloat(pixels.width)
+            let height = rect.height * CGFloat(pixels.height)
+            let ratio = width / max(height, 1)
+            guard (0.76...1.32).contains(ratio), min(width, height) >= 90,
+                  rect.minX > 0.025, rect.minY > 0.025, rect.maxX < 0.975, rect.maxY < 0.975 else { return nil }
+            return rect
+        }.max { $0.width * $0.height < $1.width * $1.height }
+        guard let bounds else { return nil }
+        let subjectSpan = min(bounds.width * CGFloat(pixels.width), bounds.height * CGFloat(pixels.height))
+        if subjectSpan < CGFloat(shortSide) * 0.42 {
+            return "The subject may be too small in this frame. Move closer and include the entire edge."
+        }
+        return hasFineDetail(pixels, bounds: bounds) ? nil :
+            "The lettering may be out of focus. Hold the camera steady and tap the rim to focus."
+    }
+
+    private static func hasFineDetail(_ image: CGImage, bounds: CGRect) -> Bool {
+        let width = CGFloat(image.width), height = CGFloat(image.height)
+        let crop = CGRect(x: bounds.minX * width, y: (1 - bounds.maxY) * height,
+                          width: bounds.width * width, height: bounds.height * height).integral
+        guard let subject = image.cropping(to: crop) else { return true }
+        let size = 96
+        var pixels = [UInt8](repeating: 0, count: size * size)
+        return pixels.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(data: buffer.baseAddress, width: size, height: size, bitsPerComponent: 8,
+                                          bytesPerRow: size, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: 0) else { return true }
+            context.draw(subject, in: CGRect(x: 0, y: 0, width: CGFloat(size), height: CGFloat(size)))
+            let gray = buffer.bindMemory(to: UInt8.self)
+            var edges = 0
+            for y in 8..<(size - 8) {
+                for x in 8..<(size - 8) {
+                    let i = y * size + x
+                    let laplacian = abs(4 * Int(gray[i]) - Int(gray[i - 1]) - Int(gray[i + 1]) -
+                                        Int(gray[i - size]) - Int(gray[i + size]))
+                    if laplacian > 20 { edges += 1 }
+                }
+            }
+            return edges >= 30
+        }
+    }
+}
+
+private struct PairPhotoQualityReview: View {
+    private enum Side: Int, CaseIterable {
+        case front, back
+        var title: String { self == .front ? "Front" : "Back" }
+    }
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var photos: [CheckedCoinPhoto]
+    @State private var frontReplacement: PhotosPickerItem?
+    @State private var backReplacement: PhotosPickerItem?
+    @State private var cameraSide: Side?
+    @State private var camera = false
+    @State private var loading = false
+    @State private var error: String?
+    let usePhotos: ([UIImage]) -> Void
+
+    init(photos: [CheckedCoinPhoto], usePhotos: @escaping ([UIImage]) -> Void) {
+        _photos = State(initialValue: photos)
+        self.usePhotos = usePhotos
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                ForEach(Side.allCases, id: \.self) { side in
+                    let photo = photos[side.rawValue]
+                    Section(side.title) {
+                        Image(uiImage: photo.image).resizable().scaledToFit().frame(maxHeight: 150)
+                        if let warning = photo.warning {
+                            Label(warning, systemImage: "exclamationmark.triangle").font(.subheadline)
+                            PhotosPicker(selection: side == .front ? $frontReplacement : $backReplacement, matching: .images) {
+                                Label("Replace \(side.title.lowercased()) photo", systemImage: "photo.on.rectangle")
+                            }
+                            .accessibilityIdentifier("replace-\(side.title.lowercased())-photo")
+                            .disabled(loading)
+                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                Button("Retake \(side.title.lowercased())", systemImage: "camera") {
+                                    cameraSide = side
+                                    camera = true
+                                }.disabled(loading)
+                            }
+                        } else {
+                            Label("Ready", systemImage: "checkmark.circle").foregroundStyle(.secondary)
+                                .accessibilityIdentifier("\(side.title.lowercased())-photo-ready")
+                        }
+                    }
+                }
+                if let error { Text(error).foregroundStyle(.red) }
+                Button("Use these photos") { usePhotos(photos.map(\.image)) }.disabled(loading)
+            }
+            .navigationTitle("Check photo clarity")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(loading) } }
+            .onChange(of: frontReplacement) { _, item in if let item { replace(.front, with: item) } }
+            .onChange(of: backReplacement) { _, item in if let item { replace(.back, with: item) } }
+            .fullScreenCover(isPresented: $camera, onDismiss: continueIfClear) {
+                CameraPicker { image in
+                    if let image, let cameraSide { photos[cameraSide.rawValue] = CheckedCoinPhoto(image) }
+                    camera = false
+                }.ignoresSafeArea()
+            }
+        }
+    }
+
+    private func replace(_ side: Side, with item: PhotosPickerItem) {
+        loading = true
+        error = nil
+        Task {
+            defer {
+                loading = false
+                if side == .front { frontReplacement = nil } else { backReplacement = nil }
+            }
+            do { photos[side.rawValue] = CheckedCoinPhoto(try await loadImage(item)) }
+            catch { self.error = error.localizedDescription }
+            if error == nil { continueIfClear() }
+        }
+    }
+
+    private func continueIfClear() {
+        if photos.allSatisfy({ $0.warning == nil }) {
+            usePhotos(photos.map(\.image))
+        }
     }
 }
 

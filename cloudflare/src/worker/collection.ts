@@ -41,11 +41,13 @@ export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:stri
     AND b.auto_catalog=1 AND b.cancelled=0 AND u.deleting=0`
   const guard = [key,user,attempt]
   const timestamp = now()
+  const values = [key,user,...itemValues(input),timestamp,timestamp]
+  const placeholders = values.map(()=>'?').join(',')
   // One stable item key per photo. The transaction commits the record, link and status together.
   const [, , saved] = await env.DB.batch([
     env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated)
-      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(${current}) ON CONFLICT(id) DO NOTHING`)
-      .bind(key,user,...itemValues(input),timestamp,timestamp,...guard),
+      SELECT ${placeholders} WHERE EXISTS(${current}) ON CONFLICT(id) DO NOTHING`)
+      .bind(...values,...guard),
     env.DB.prepare(`INSERT INTO item_photos(user_id,item_id,photo_id,side,crop)
       SELECT ?,?,?,'overview',? WHERE EXISTS(${current}) AND EXISTS(SELECT 1 FROM items WHERE id=? AND user_id=?)
       ON CONFLICT(item_id,photo_id,side) DO NOTHING`)

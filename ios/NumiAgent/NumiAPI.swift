@@ -283,10 +283,11 @@ final class NumiAPI {
         _ = try await send("/imports", method: "POST", body: JSONEncoder().encode(registration))
     }
 
-    func uploadPhoto(_ photo: Data, batch: UUID, side: String? = nil) async throws {
+    func uploadPhoto(_ photo: Data, batch: UUID, side: String? = nil) async throws -> String {
         let path = "/imports/" + batch.uuidString.lowercased() + "/photos"
         let query = side.map { [URLQueryItem(name: "side", value: $0)] } ?? []
-        _ = try await send(path, method: "PUT", query: query, body: photo, type: "image/jpeg")
+        let (data, _) = try await send(path, method: "PUT", query: query, body: photo, type: "image/jpeg")
+        return try JSONDecoder().decode(APIIdentifier.self, from: data).id
     }
 }
 

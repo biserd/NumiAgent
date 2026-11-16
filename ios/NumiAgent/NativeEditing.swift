@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct CollectionFoldersScreen: View {
@@ -75,34 +76,43 @@ struct ItemEditor: View {
     var itemID: String?
     var pairing: [ImportedPhoto]
     let onSave: () -> Void
+    let onCreated: ((String) -> Void)?
+    var allowsPhotoUpload: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var draft: ItemDraft
     @State private var folders: [CollectionFolder] = []
     @State private var error: String?
     @State private var busy = false
+    @State private var selectedPhoto: PhotosPickerItem?
 
     init(api: NumiAPI, itemID: String? = nil, draft: ItemDraft = .init(),
-         pairing: [ImportedPhoto] = [], onSave: @escaping () -> Void) {
+         pairing: [ImportedPhoto] = [], allowsPhotoUpload: Bool = true, onCreated: ((String) -> Void)? = nil,
+         onSave: @escaping () -> Void) {
         self.api = api
         self.itemID = itemID
         self.pairing = pairing
         self.onSave = onSave
+        self.onCreated = onCreated
+        self.allowsPhotoUpload = allowsPhotoUpload
         _draft = State(initialValue: draft)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Specimen") {
+                Section("Identification") {
                     Picker("Type", selection: $draft.type) {
                         Text("Coin").tag("coin")
                         Text("Banknote").tag("banknote")
                     }
                     TextField("Title", text: $draft.title)
                     TextField("Issuer", text: $draft.issuer)
-                    TextField("Ruler", text: $draft.ruler)
                     TextField("Denomination", text: $draft.denomination)
                     TextField("Year or date", text: $draft.year)
+                }
+                .listRowBackground(CollectorDesign.surface)
+                Section("Collection details") {
+                    TextField("Ruler", text: $draft.ruler)
                     TextField("Catalog reference", text: $draft.reference)
                     TextField("Grade", text: $draft.grade)
                     Picker("Collection", selection: $draft.collection_id) {
@@ -113,6 +123,7 @@ struct ItemEditor: View {
                         ForEach(folders) { folder in Text(folder.name).tag(Optional(folder.id)) }
                     }
                 }
+                .listRowBackground(CollectorDesign.surface)
                 Section("Additional details") {
                     if draft.type == "coin" {
                         TextField("Metal", text: optional($draft.details.metal))
@@ -131,12 +142,26 @@ struct ItemEditor: View {
                     TextField("Notes", text: $draft.notes, axis: .vertical)
                     TextField("Tags", text: $draft.tags)
                 }
+                .listRowBackground(CollectorDesign.surface)
                 if let photos = draft.photos, !photos.isEmpty {
                     photoFields(photos)
                 }
+                if allowsPhotoUpload, (draft.photos?.count ?? 0) < 12 {
+                    Section {
+                        PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                            Label("Add a photo without AI", systemImage: "photo.badge.plus")
+                        }
+                        .disabled(busy)
+                    } footer: {
+                        Text("Add a clearer photo or another view to this record.")
+                    }
+                    .listRowBackground(CollectorDesign.surface)
+                }
                 if let error { Text(error).foregroundStyle(.red) }
             }
-            .navigationTitle(itemID == nil ? "New specimen" : "Edit specimen")
+            .scrollContentBackground(.hidden)
+            .background(CollectorDesign.background)
+            .navigationTitle(itemID == nil ? "Enter details" : "Edit item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(busy) }
@@ -145,6 +170,10 @@ struct ItemEditor: View {
                 }
             }
             .interactiveDismissDisabled(busy)
+            .onChange(of: selectedPhoto) { _, photo in
+                guard let photo else { return }
+                Task { await addPhoto(photo) }
+            }
             .task {
                 do { folders = try await api.get("/collections") }
                 catch { if !Task.isCancelled { self.error = error.localizedDescription } }
@@ -167,8 +196,8 @@ struct ItemEditor: View {
                     set: { if (draft.photos?.count ?? 0) > index { draft.photos?[index].side = $0 } }
                 )) {
                     Text("Overview").tag("overview")
-                    Text("Obverse").tag("obverse")
-                    Text("Reverse").tag("reverse")
+                    Text("Front").tag("obverse")
+                    Text("Back").tag("reverse")
                 }
                 if photo.crop != nil {
                     Button("Use entire photo") {
@@ -194,6 +223,23 @@ struct ItemEditor: View {
                 }
             }
         }
+        .listRowBackground(CollectorDesign.surface)
+    }
+
+    private func addPhoto(_ photo: PhotosPickerItem) async {
+        guard !busy, (draft.photos?.count ?? 0) < 12 else { selectedPhoto = nil; return }
+        busy = true
+        error = nil
+        defer { busy = false; selectedPhoto = nil }
+        do {
+            let image = try await loadCaptureImage(photo)
+            let data = try CaptureDraftStore.jpeg(image)
+            let batch = UUID()
+            try await api.createImport(id: batch, name: "Additional item photo", analyze: false,
+                                       autoCatalog: false, paired: false, expectedPhotos: nil)
+            let id = try await api.uploadPhoto(data, batch: batch)
+            draft.photos = (draft.photos ?? []) + [.init(photoId: id, side: "overview", crop: nil)]
+        } catch { self.error = error.localizedDescription }
     }
 
     private func save() async {
@@ -204,7 +250,8 @@ struct ItemEditor: View {
             if let itemID {
                 try await api.write("/items/" + itemID, method: "PUT", payload: draft)
             } else {
-                try await api.write("/items", method: "POST", payload: draft)
+                let record: APIIdentifier = try await api.post("/items", payload: draft)
+                onCreated?(record.id)
             }
             onSave()
             dismiss()

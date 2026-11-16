@@ -48,20 +48,36 @@ struct SaleResearchScreen: View {
 
     var body: some View {
         List {
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.title).font(.title2.bold())
+                    if !item.subtitle.isEmpty { Text(item.subtitle).foregroundStyle(.secondary) }
+                }
+            }
+            .listRowBackground(CollectorDesign.surface)
             if let research {
                 if research.results.isEmpty {
-                    Text(explanation(research.status)).foregroundStyle(.secondary)
+                    Section {
+                        CollectorNotice(title: "No verified sales yet", message: explanation(research.status),
+                                        icon: "chart.bar", warning: research.status != "no_matches")
+                    }
+                    .listRowBackground(CollectorDesign.surface)
                 }
                 ForEach(research.results) { sale in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("\(sale.house) · Lot \(sale.lot)").font(.headline)
-                        Text(sale.amount, format: .currency(code: sale.currency))
-                        Text(sale.date).font(.footnote).foregroundStyle(.secondary)
+                    Section {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("\(sale.house) · Lot \(sale.lot)").font(.headline)
+                            Text(sale.amount, format: .currency(code: sale.currency))
+                            Text("\(sale.date) · \(sale.basis == "hammer" ? "Hammer price" : "Includes buyer’s premium")")
+                                .font(.footnote).foregroundStyle(.secondary)
+                            if !sale.grade.isEmpty { Text(sale.grade).font(.footnote).foregroundStyle(.secondary) }
+                        }
                         if let url = URL(string: sale.url), url.scheme == "https" {
-                            Link("Open auction source", destination: url)
+                            Link(destination: url) { Label("Open original lot", systemImage: "arrow.up.right.square") }
                         }
                         Button("Review and add") { selected = sale }
                     }
+                    .listRowBackground(CollectorDesign.surface)
                 }
             } else if error == nil {
                 ProgressView("Finding realized sales")
@@ -75,14 +91,28 @@ struct SaleResearchScreen: View {
                 if let archive = URL(string: "https://www.numisbids.com/results") {
                     Link(destination: archive) { Label("Browse NumisBids auction results", systemImage: "arrow.up.right.square") }
                 }
-                Button("Add realized sale", systemImage: "plus") { saleEditor = true }
             } header: {
                 Text("Look up completed sales")
             } footer: {
                 Text("Compare the date, variety and condition before adding a result. Use the amount from a completed sale.")
             }
+            .listRowBackground(CollectorDesign.surface)
         }
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
         .navigationTitle("Comparable sales")
+        .safeAreaInset(edge: .bottom) {
+            VStack {
+                Button {
+                    saleEditor = true
+                } label: {
+                    Label("Add a completed sale", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 30)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(14)
+            .background(CollectorDesign.surface)
+        }
         .task { await load() }
         .refreshable { await load() }
         .sheet(item: $selected) { sale in
@@ -101,7 +131,7 @@ struct SaleResearchScreen: View {
 
     private func explanation(_ status: String) -> String {
         switch status {
-        case "provider_not_configured": return "NumiAgent doesn’t have a completed-sales feed connected. You can still look up sold listings or add a sale below."
+        case "provider_not_configured": return "Automatic lookup is unavailable. Find a completed sale and add its original lot link."
         case "reference_required": return "Add a catalog reference to search the connected sale feed."
         case "no_matches": return "No verified sources matched this catalog reference."
         default: return "The connected sale feed couldn’t be reached. You can still look up sold listings below."
@@ -197,7 +227,9 @@ struct SaleEditor: View {
                 if busy { ProgressView() }
                 if let error { Text(error).foregroundStyle(.red) }
             }
-            .navigationTitle("Add sale evidence")
+            .scrollContentBackground(.hidden)
+            .background(CollectorDesign.background)
+            .navigationTitle("Add a completed sale")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(busy) }

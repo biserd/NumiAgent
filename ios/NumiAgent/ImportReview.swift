@@ -2,62 +2,83 @@ import SwiftUI
 
 struct ImportHistory: View {
     let api: NumiAPI
+    @ObservedObject var store: CaptureDraftStore
     var selection: Binding<String?>? = nil
     var revision = 0
     var demo = false
     var onNewImport: (() -> Void)? = nil
-    @State private var imports: [ImportSummary] = []
-    @State private var error: String?
     @State private var loading = true
+
+    private var visibleImports: [ImportSummary] { store.imports.filter { $0.id != store.draftBatchID } }
+    private var needsAttention: [ImportSummary] { visibleImports.filter(\.requiresAttention) }
+    private var active: [ImportSummary] { visibleImports.filter { !$0.requiresAttention && ($0.isProcessing || $0.isWaiting) } }
+    private var finished: [ImportSummary] { visibleImports.filter { !$0.requiresAttention && !$0.isProcessing && !$0.isWaiting } }
 
     var body: some View {
         List(selection: selection) {
             if let onNewImport {
-                Button(action: onNewImport) { Label("New photo import", systemImage: "plus") }
-                    .buttonStyle(.borderless)
-            }
-            if !imports.isEmpty {
                 Section {
-                    ForEach(imports) { batch in
-                        if selection != nil {
-                            NavigationLink(value: batch.id) { row(batch) }
-                        } else {
-                            NavigationLink {
-                                ImportReview(api: api, batchID: batch.id)
-                            } label: {
-                                row(batch)
-                            }
-                        }
+                    Button(action: onNewImport) {
+                        Label(store.hasDraft ? (store.uploading ? "View draft upload" : "Resume photo draft") : "New capture",
+                              systemImage: store.hasDraft ? "photo.on.rectangle" : "plus")
+                            .frame(maxWidth: .infinity, minHeight: 29)
                     }
-                } footer: {
-                    Text("Open an import to see what was added and check any results that need your input.")
+                    .buttonStyle(.borderedProminent)
+                }
+                .listRowBackground(CollectorDesign.surface)
+            } else if store.hasDraft {
+                Section {
+                    CollectorNotice(title: "Draft on this device", message: "Return to Capture to finish your draft.",
+                                    icon: "photo.on.rectangle")
                 }
             }
+            groups("Needs review", imports: needsAttention)
+            groups("Processing and drafts", imports: active)
+            groups("Recent imports", imports: finished)
             if loading { ProgressView() }
-            if let error { Text(error).foregroundStyle(.red) }
-            if imports.isEmpty && !loading && error == nil && !demo {
+            if let error = store.activityError { Text(error).foregroundStyle(.red) }
+            if visibleImports.isEmpty && !loading && store.activityError == nil && !demo {
                 ContentUnavailableView("No uploads yet", systemImage: "photo.on.rectangle",
-                                       description: Text("Take or select photos from Capture."))
+                                       description: Text("Add photos to see processing and review updates here."))
             }
         }
-        .navigationTitle("Photo imports")
-        .task(id: revision) { await load() }
-        .refreshable { await load() }
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
+        .navigationTitle("Capture activity")
+        .task(id: revision) {
+            guard !demo else { loading = false; return }
+            while !Task.isCancelled {
+                await store.refreshActivity(api: api)
+                loading = false
+                do { try await Task.sleep(for: active.isEmpty ? .seconds(30) : .seconds(8)) }
+                catch { return }
+            }
+        }
+        .refreshable { if !demo { await store.refreshActivity(api: api) } }
     }
 
-    private func load() async {
-        defer { loading = false }
-        error = nil
-        guard !demo else { return }
-        do { imports = try await api.get("/imports") }
-        catch { if !Task.isCancelled { self.error = error.localizedDescription } }
+    @ViewBuilder
+    private func groups(_ title: String, imports: [ImportSummary]) -> some View {
+        if !imports.isEmpty {
+            Section(title) {
+                ForEach(imports) { batch in
+                    if selection != nil {
+                        NavigationLink(value: batch.id) { row(batch) }
+                    } else {
+                        NavigationLink {
+                            ImportReview(api: api, batchID: batch.id)
+                        } label: { row(batch) }
+                    }
+                }
+            }
+            .listRowBackground(CollectorDesign.surface)
+        }
     }
 
     private func row(_ batch: ImportSummary) -> some View {
-        let status = batchStatus(batch)
         return VStack(alignment: .leading, spacing: 6) {
             Text(batch.label).font(.headline)
-            Label(status, systemImage: (batch.pending ?? 0) > 0 ? "clock" : "arrow.right.circle")
+            Label(batch.status, systemImage: batch.statusIcon)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.tint)
             Text(batch.paired == 1 ? "One item" : batch.total == 1 ? "1 uploaded photo" : "\(batch.total) uploaded photos")
@@ -66,20 +87,6 @@ struct ImportHistory: View {
         .padding(.vertical, 4)
     }
 
-    private func batchStatus(_ batch: ImportSummary) -> String {
-        if let pending = batch.pending, pending > 0 { return "Identification in progress" }
-        if batch.cancelled == 0 && batch.expected_photos != nil &&
-            (batch.total == 0 || batch.paired != 1 && batch.total < (batch.expected_photos ?? 0)) {
-            return "Waiting for photos"
-        }
-        let saved = batch.saved ?? 0
-        let needsReview = (batch.suggestions ?? 0) + (batch.manual ?? 0) + (batch.failed ?? 0)
-        if saved > 0 && needsReview > 0 { return "\(saved) added · \(needsReview) need attention" }
-        if needsReview > 0 { return needsReview == 1 ? "1 photo needs attention" : "\(needsReview) photos need attention" }
-        if saved > 0 { return "\(saved) added to your collection" }
-        if batch.cancelled == 1 { return "Analysis canceled" }
-        return batch.total > 0 ? "Open photo review" : "No photos uploaded"
-    }
 }
 
 struct ImportReview: View {
@@ -92,6 +99,7 @@ struct ImportReview: View {
     let batchID: String
     var expanded = false
     var previewBatch: PhotoImport? = nil
+    var resumeUpload: (() -> Void)? = nil
     @State private var batch: PhotoImport?
     @State private var edit: PendingEdit?
     @State private var error: String?
@@ -108,8 +116,8 @@ struct ImportReview: View {
                     ImportPhotoSection(api: api, photo: photo,
                                        companions: batch.paired == 1 ? batch.photos.filter { $0.id != photo.id } : [],
                                        expanded: expanded, sample: previewBatch != nil,
-                                       canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice, reference in
-                        editPhoto(photo, in: batch, suggestion: choice, reference: reference)
+                                       canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice, reference, unidentified in
+                        editPhoto(photo, in: batch, suggestion: choice, reference: reference, unidentified: unidentified)
                     } retry: {
                         Task { await update("/photos/" + photo.id + "/retry") }
                     }
@@ -117,8 +125,16 @@ struct ImportReview: View {
             } else if error == nil {
                 ProgressView("Loading photos")
             }
-            if let error { Text(error).foregroundStyle(.red) }
+            if let error {
+                Section {
+                    CollectorNotice(title: "Couldn’t refresh this import", message: error,
+                                    icon: "exclamationmark.circle", warning: true)
+                    Button("Refresh results") { poll = UUID() }
+                }
+            }
         }
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
         .navigationTitle(batch?.label ?? previewBatch?.label ?? "Photo review")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { poll = UUID() }
@@ -157,19 +173,26 @@ struct ImportReview: View {
                 .foregroundStyle(.tint)
             if saved > 0 { Text("\(saved) added to your collection") }
             if batch.awaitingPhotos {
-                Text("Return to Capture to finish uploading this import.")
+                Text("The photos stay together until the upload is complete.")
+                if let resumeUpload {
+                    Button("Resume upload", action: resumeUpload).buttonStyle(.borderedProminent)
+                } else {
+                    Text("Return to the original device to finish uploading this draft.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             } else if pending > 0 {
-                Text("Clear matches are added automatically. You can leave this screen while identification runs.")
+                CollectorNotice(title: "You can leave this screen",
+                                message: "Find the result under Capture activity in Collection.", icon: "tray")
                 ProgressView(value: Double(subjects.count - pending), total: Double(subjects.count)) {
                     Text(batch.paired == 1 ? "Reading \(batch.photos.count) \(batch.photos.count == 1 ? "photo" : "photos") of one item" :
-                         "\(subjects.count - pending) of \(subjects.count) photos processed")
+                         "\(subjects.count - pending) of \(subjects.count) items processed")
                 }
                 Button("Cancel pending analysis", role: .destructive) { confirmCancel = true }
                     .disabled(working)
             } else if needsReview > 0 && !hasUnprocessedPhotos {
                 Text(batch.paired == 1 ? "Check the identification for this item." :
-                    needsReview == 1 ? "1 photo needs attention. Check the result below." :
-                    "\(needsReview) photos need attention. Check the results below.")
+                    needsReview == 1 ? "1 item needs review. Check the result below." :
+                    "\(needsReview) items need review. Check the results below.")
             }
             if hasUnprocessedPhotos && batch.cancelled == 0 && pending == 0 {
                 Text("These photos were saved without identification. You can send them to cloud AI now.")
@@ -180,11 +203,17 @@ struct ImportReview: View {
         } footer: {
             if batch.cancelled != 0 { Text("Pending work was canceled.") }
         }
+        .listRowBackground(CollectorDesign.surface)
     }
 
-    private func editPhoto(_ photo: ImportedPhoto, in batch: PhotoImport, suggestion: PhotoCandidate?, reference: CoinCatalogMatch?) {
+    private func editPhoto(_ photo: ImportedPhoto, in batch: PhotoImport, suggestion: PhotoCandidate?,
+                           reference: CoinCatalogMatch?, unidentified: Bool) {
         guard previewBatch == nil else { return }
         var draft = suggestion?.draft(using: reference) ?? ItemDraft()
+        if unidentified {
+            draft.type = photo.candidates.first?.type ?? "coin"
+            draft.title = draft.type == "banknote" ? "Unidentified banknote" : "Unidentified coin"
+        }
         if batch.paired == 1 {
             draft.photos = batch.photos.map { source in
                 .init(photoId: source.id, side: source.side ?? "overview", crop: nil)
@@ -243,7 +272,7 @@ private struct ImportPhotoSection: View {
     let sample: Bool
     let canRetry: Bool
     let working: Bool
-    let edit: (PhotoCandidate?, CoinCatalogMatch?) -> Void
+    let edit: (PhotoCandidate?, CoinCatalogMatch?, Bool) -> Void
     let retry: () -> Void
 
     var body: some View {
@@ -263,43 +292,46 @@ private struct ImportPhotoSection: View {
             }
             if photo.canCatalog && photo.record == nil {
                 if photo.state == "review" && photo.candidates.isEmpty {
-                    Text("Try a closer photo with the year and denomination in focus.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                    CollectorNotice(title: "No match yet", message: "Add a clearer photo or enter what you can read.",
+                                    icon: "exclamationmark.circle", warning: true)
                 }
                 ForEach(photo.candidates.indices, id: \.self) { index in
-                    IdentificationChoice(suggestion: photo.candidates[index]) { edit(photo.candidates[index], $0) }
+                    IdentificationChoice(suggestion: photo.candidates[index]) { edit(photo.candidates[index], $0, false) }
                 }
                 if photo.candidates.isEmpty {
-                    Button("Enter details") { edit(nil, nil) }
+                    Button("Enter details manually") { edit(nil, nil, false) }
                         .buttonStyle(.bordered)
                 }
+                Button("Save as unidentified") { edit(nil, nil, true) }
+                    .buttonStyle(.borderless)
             }
             if photo.state == "failed" && canRetry {
                 Button("Retry identification", action: retry).disabled(working)
             }
-            if let back = companions.first(where: { $0.side == "reverse" }) {
-                HStack {
-                    sidePhoto(photo, label: "Front")
-                    sidePhoto(back, label: "Back")
+            if !companions.isEmpty || photo.side != nil {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: expanded ? 132 : 100), spacing: 8)], spacing: 12) {
+                    sidePhoto(photo, label: photo.side == "reverse" ? "Back" : "Front")
+                    ForEach(companions) { view in
+                        sidePhoto(view, label: view.side == "reverse" ? "Back" : "Detail")
+                    }
                 }
             } else {
-                sidePhoto(photo)
-            }
-            ForEach(companions.filter { $0.side != "reverse" }) { detail in
-                sidePhoto(detail, label: "Detail photo")
+                sidePhoto(photo, label: nil)
             }
         } header: {
             if photo.record != nil {
                 Label("In your collection", systemImage: "checkmark.circle.fill")
             }
         }
+        .listRowBackground(CollectorDesign.surface)
     }
 
     private func sidePhoto(_ side: ImportedPhoto, label: String? = nil) -> some View {
         VStack {
             SpecimenImage(api: api, id: sample ? nil : side.id,
                           sampleAsset: sample && side.record == nil ? "DemoNickel" : nil)
-                .frame(height: label == "Front" || label == "Back" ? (expanded ? 245 : 130) : (expanded ? 330 : 220))
+                .frame(height: label == nil ? (expanded ? 265 : 190) : (expanded ? 155 : 112))
+                .clipShape(.rect(cornerRadius: 8))
             if let label { Text(label).font(.caption).foregroundStyle(.secondary) }
         }
     }
@@ -326,6 +358,10 @@ private struct IdentificationChoice: View {
                 Text(subtitle.isEmpty ? "Check the type, date and denomination." : subtitle)
                     .font(.footnote).foregroundStyle(.secondary)
             }
+        }
+        if let missingField {
+            CollectorNotice(title: missingField, message: "Confirm it in the photos, add a clearer view or leave it blank.",
+                            icon: "questionmark.circle", warning: true)
         }
         if let front = suggestion.details?.obverseLegend, !front.isBlank {
             LabeledContent("Obverse reading", value: front).font(.footnote)
@@ -360,6 +396,21 @@ private struct IdentificationChoice: View {
                   let back = suggestion.details?.reverseLegend, !back.isBlank {
             Text("No catalog match verified for these readings.").font(.footnote).foregroundStyle(.secondary)
         }
+    }
+
+    private var missingField: String? {
+        if suggestion.issuer?.isBlank != false { return "Issuer unclear" }
+        if suggestion.denomination?.isBlank != false { return "Denomination unclear" }
+        if isRomanImperialCoin(type: suggestion.type, issuer: suggestion.issuer ?? "", title: suggestion.title) {
+            return suggestion.reference?.isBlank == false ? nil : "Exact catalog type unconfirmed"
+        }
+        if suggestion.year?.isBlank != false { return "Date unclear" }
+        let issuer = suggestion.issuer ?? ""
+        if suggestion.type == "coin", issuer.localizedCaseInsensitiveContains("United States"),
+           suggestion.details?.mintMark?.isBlank != false, (Int(suggestion.year ?? "") ?? 0) >= 1800 {
+            return "Mint mark unconfirmed"
+        }
+        return nil
     }
 }
 

@@ -22,7 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: ios
+          sparse-checkout: |
+            ios
+            .github/scripts
       - name: Verify the live photo-only identification regression
         run: |
           python3 - <<'PY'
@@ -119,3 +121,10 @@ jobs:
             -exportOptionsPlist "$signing/ExportOptions.plist" -exportPath "$RUNNER_TEMP/numiagent-export" \
             -allowProvisioningUpdates -authenticationKeyPath "$signing/AuthKey_$ASC_KEY_ID.p8" \
             -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+      - name: Make the processed build available to internal testers
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          IOS_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+        run: node .github/scripts/distribute-testflight.mjs

@@ -40,8 +40,9 @@ export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:stri
   const current = `SELECT 1 FROM photos p JOIN imports b ON b.id=p.batch_id AND b.user_id=p.user_id
     JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.user_id=? AND p.attempt=? AND p.state='running'
     AND b.auto_catalog=1 AND b.cancelled=0 AND u.deleting=0
-    AND (b.paired=0 OR EXISTS(SELECT 1 FROM photos back WHERE back.batch_id=p.batch_id AND back.user_id=p.user_id
-      AND back.pair_side='reverse' AND back.state='manual'))`
+    AND (b.paired=0 OR COALESCE(b.expected_photos,2)=1+(
+      SELECT COUNT(*) FROM photos companion WHERE companion.batch_id=p.batch_id AND companion.user_id=p.user_id
+      AND companion.id<>p.id AND companion.state='manual'))`
   const guard = [key,user,attempt]
   const timestamp = now()
   const values = [key,user,...itemValues(input),timestamp,timestamp]
@@ -54,7 +55,7 @@ export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:stri
       .bind(...values,...guard),
     env.DB.prepare(`INSERT INTO item_photos(user_id,item_id,photo_id,side,crop)
       SELECT p.user_id,?,p.id,COALESCE(p.pair_side,'overview'),? FROM photos p
-      WHERE p.user_id=? AND (p.id=? OR (?=1 AND p.batch_id=? AND p.pair_side='reverse'))
+      WHERE p.user_id=? AND (p.id=? OR (?=1 AND p.batch_id=? AND p.state='manual'))
       AND EXISTS(${current}) AND EXISTS(SELECT 1 FROM items WHERE id=? AND user_id=?)
       ON CONFLICT(item_id,photo_id,side) DO NOTHING`)
       .bind(key,!paired && crop ? JSON.stringify(crop) : null,user,key,Number(paired),photo.batch_id,...guard,key,user),
@@ -63,10 +64,10 @@ export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:stri
       .bind(candidates,timestamp,key,user,...guard,user,key,key)
   ]
   if (paired) {
-    statements.push(env.DB.prepare(`UPDATE photos SET state='saved',updated=? WHERE user_id=? AND batch_id=? AND pair_side='reverse'
+    statements.push(env.DB.prepare(`UPDATE photos SET state='saved',updated=? WHERE user_id=? AND batch_id=? AND id<>?
       AND state='manual' AND EXISTS(SELECT 1 FROM item_photos WHERE user_id=? AND item_id=? AND photo_id=photos.id)
       AND EXISTS(SELECT 1 FROM photos front WHERE front.id=? AND front.user_id=? AND front.attempt=? AND front.state='saved')`)
-      .bind(timestamp,user,photo.batch_id,user,key,key,user,attempt))
+      .bind(timestamp,user,photo.batch_id,key,user,key,key,user,attempt))
   }
   const [, , saved] = await env.DB.batch(statements)
   return saved.meta.changes > 0

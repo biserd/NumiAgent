@@ -5,7 +5,7 @@ import type { Box, Candidate, Folder, Link, Photo, RecordForm } from './api'
 import ItemFields from './ItemFields.vue'
 
 type ImportPhoto = Photo & {side?:'obverse'|'reverse'|null}
-type Batch = {id:string;label:string;analyze:number;cancelled:number;paired?:number;photos:ImportPhoto[]}
+type Batch = {id:string;label:string;analyze:number;cancelled:number;paired?:number;expected_photos?:number|null;photos:ImportPhoto[]}
 const batches=ref<{id:string;label:string;total:number;pending:number}[]>([])
 const batch=ref<Batch|null>(null)
 const folders=ref<Folder[]>([])
@@ -31,7 +31,7 @@ const pending=computed(()=>batch.value?.photos.filter(p=>['running','queued','up
 const usable=(p:Photo)=>['manual','review','saved','failed'].includes(p.state)
 const reviewable=(p:ImportPhoto)=>batch.value?.paired
   ? p.side==='obverse' && (['review','failed'].includes(p.state) || (p.state==='manual' && !!p.error))
-  : usable(p)
+  : usable(p) && !(batch.value?.expected_photos && p.state==='manual' && !p.error)
 const cropPercent=(n:number)=>Math.round(n*100)
 const rectStyle=computed(()=>({left:box.value.x*100+'%',top:box.value.y*100+'%',width:box.value.width*100+'%',height:box.value.height*100+'%'}))
 const reverseOptions=computed(()=>batch.value?.photos.filter(p=>p.id!==current.value && usable(p)) ?? [])
@@ -123,8 +123,10 @@ async function action(fn:()=>Promise<unknown>){
   try{error.value='';await fn();await refresh();await refreshList()}catch(e){error.value=message(e)}
 }
 async function save(){
-  const links:Link[]=[{photoId:current.value,side:side.value,crop:box.value}]
-  if(reverse.value) links.push({photoId:reverse.value,side:side.value==='reverse'?'obverse':'reverse'})
+  const links:Link[]=batch.value?.paired
+    ? batch.value.photos.map(photo=>({photoId:photo.id,side:photo.side ?? 'overview',crop:photo.id===current.value ? box.value : null}))
+    : [{photoId:current.value,side:side.value,crop:box.value}]
+  if(reverse.value && !batch.value?.paired) links.push({photoId:reverse.value,side:side.value==='reverse'?'obverse':'reverse'})
   await action(async()=>{
     await request('/items','POST',cleanItem({...form.value,photos:links}))
     current.value='';notice.value='Specimen added to your collection.'
@@ -159,7 +161,7 @@ async function bulk(){
     <label class="check"><input type="checkbox" v-model="keep" :disabled="busy">Keep compatible originals up to 6 MB. Other files are converted to JPEG when supported.</label>
     <div class="actions">
       <button class="primary" :disabled="!files.length || busy" @click="upload(files,true)">Start new batch{{files.length ? ' ('+files.length+')':''}}</button>
-      <button v-if="batch && !batch.cancelled && !batch.paired" :disabled="!files.length || busy" @click="upload(files,false)">Add to open batch</button>
+      <button v-if="batch && !batch.cancelled && !batch.paired && !batch.expected_photos" :disabled="!files.length || busy" @click="upload(files,false)">Add to open batch</button>
       <button v-if="failures.length" :disabled="busy" @click="upload(failures,false)">Retry {{failures.length}} uploads</button>
     </div>
     <label v-if="busy">Upload attempts {{done}} of {{total}}<progress :value="done" :max="total"></progress></label>
@@ -173,7 +175,7 @@ async function bulk(){
       <article class="photo-card" v-for="(p,index) in batch.photos" :key="p.id">
         <img v-if="p.state!=='uploading'" loading="lazy" :src="photoURL(p.id)" :alt="'Photo '+(index+1)">
         <div><span class="status">{{p.side ? (p.side==='obverse' ? 'Front' : 'Back')+' · ' : ''}}{{p.state}}</span><small v-if="p.error">{{p.error}}</small>
-          <button v-if="p.state==='failed' && p.side!=='reverse'" @click="action(()=>request('/photos/'+p.id+'/retry','POST'))">Retry analysis</button>
+          <button v-if="p.state==='failed' && (!batch.paired || p.side==='obverse')" @click="action(()=>request('/photos/'+p.id+'/retry','POST'))">Retry analysis</button>
           <template v-if="reviewable(p)">
             <button v-for="(candidate,i) in p.candidates" :key="i" @click="review(p,candidate)">{{candidate.title}} · {{Math.round(candidate.confidence*100)}}%</button>
             <button @click="review(p)">Catalog manually</button>

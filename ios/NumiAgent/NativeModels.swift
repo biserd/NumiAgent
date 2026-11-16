@@ -67,6 +67,7 @@ struct ImportSummary: Decodable, Identifiable {
     let saved: Int?
     let cancelled: Int?
     let paired: Int?
+    let expected_photos: Int?
 }
 
 struct PhotoImport: Decodable {
@@ -75,17 +76,22 @@ struct PhotoImport: Decodable {
     let analyze: Int
     let photos: [ImportedPhoto]
     var paired: Int? = nil
+    var expected_photos: Int? = nil
 
     var subjects: [ImportedPhoto] { paired == 1 ? photos.filter { $0.side == "obverse" } : photos }
-    var awaitingPair: Bool { paired == 1 && cancelled == 0 && (photos.count < 2 || subjects.first?.state == "manual" && subjects.first?.error == nil) }
+    var awaitingPhotos: Bool {
+        guard cancelled == 0, let expected = expected_photos ?? (paired == 1 ? 2 : nil) else { return false }
+        return photos.filter { $0.state != "uploading" }.count < expected ||
+            (!subjects.isEmpty && subjects.allSatisfy { $0.state == "manual" && $0.error == nil })
+    }
 
     static let demoAutomatic = PhotoImport(label: "Example photo batch", cancelled: 0, analyze: 1, photos: [
         .init(id: "demo-photo-1", state: "saved", candidates: [], error: nil,
               record: .init(id: "demo-3", title: "Bank of Canada one-dollar note", type: "banknote",
                             year: "1935", issuer: "Bank of Canada", denomination: "1 dollar")),
         .init(id: "demo-photo-2", state: "review", candidates: [
-            .init(type: "coin", title: "Roman bronze coin", ruler: nil, issuer: "Roman Empire",
-                  denomination: nil, year: nil, reference: nil, notes: nil, details: nil, confidence: 0.6, crop: nil)
+            .init(type: "coin", title: "Jefferson nickel", ruler: nil, issuer: "United States",
+                  denomination: "5 cents", year: nil, reference: nil, notes: nil, details: nil, confidence: 0.6, crop: nil)
         ], error: nil, record: nil)
     ])
 }
@@ -177,6 +183,13 @@ struct PhotoCandidate: Decodable {
         }
         return draft
     }
+}
+
+func isRomanImperialCoin(type: String, issuer: String, title: String) -> Bool {
+    type == "coin" && (issuer + " " + title).range(
+        of: #"\b(?:roman (?:empire|imperial|silver|bronze|gold)|ancient rome)\b"#,
+        options: [.regularExpression, .caseInsensitive]
+    ) != nil
 }
 
 struct CoinCatalogMatch: Decodable, Identifiable {

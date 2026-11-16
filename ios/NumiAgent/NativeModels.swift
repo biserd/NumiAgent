@@ -38,6 +38,10 @@ struct ItemDraft: Encodable {
 
     init() {}
 
+    init(photos: [PhotoLink]) {
+        self.photos = photos
+    }
+
     init(item: Specimen) {
         type = item.type
         title = item.title
@@ -68,6 +72,28 @@ struct ImportSummary: Decodable, Identifiable {
     let cancelled: Int?
     let paired: Int?
     let expected_photos: Int?
+
+    var isProcessing: Bool { cancelled != 1 && (pending ?? 0) > 0 }
+    var isWaiting: Bool {
+        guard cancelled != 1, let expected_photos else { return false }
+        return total == 0 || (paired != 1 && total < expected_photos)
+    }
+    var reviewCount: Int { (suggestions ?? 0) + (manual ?? 0) + (failed ?? 0) }
+    var requiresAttention: Bool { !isWaiting && reviewCount > 0 }
+    var status: String {
+        if isWaiting { return "Waiting for photos" }
+        if isProcessing { return "Identification in progress" }
+        if requiresAttention { return reviewCount == 1 ? "1 item needs review" : "\(reviewCount) items need review" }
+        if let saved, saved > 0 { return "\(saved) added to your collection" }
+        return cancelled == 1 ? "Analysis canceled" : "Open photo review"
+    }
+
+    var statusIcon: String {
+        if isWaiting { return "arrow.up.circle" }
+        if isProcessing { return "clock" }
+        if requiresAttention { return "exclamationmark.circle" }
+        return (saved ?? 0) > 0 ? "checkmark.circle" : "photo"
+    }
 }
 
 struct PhotoImport: Decodable {

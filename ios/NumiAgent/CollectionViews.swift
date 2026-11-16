@@ -1,26 +1,37 @@
 import SwiftUI
 
 struct CatalogScreen: View {
+    private enum AddSheet: String, Identifiable {
+        case actions, manual
+        var id: String { rawValue }
+    }
+
     let api: NumiAPI
     let demo: Bool
+    @ObservedObject var capture: CaptureDraftStore
+    @Binding var query: String
+    @Binding var openedItemID: String?
+    let openCapture: (String?) -> Void
+    let openAccount: (() -> Void)?
+    let itemCreated: (String) -> Void
+    var revision = 0
     var workspaceSelection: WorkspaceListSelection<Specimen>? = nil
-    @State private var query = ""
-    @State private var adding = false
+    @State private var addSheet: AddSheet?
     @State private var managingFolders = false
+    @State private var type = ""
+    @State private var folder = ""
+    @State private var folders: [CollectionFolder] = []
     @State private var items: [Specimen] = []
     @State private var next: Int?
     @State private var loading = false
     @State private var error: String?
-    @State private var preview: String?
 
     var body: some View {
         if workspaceSelection != nil { catalog }
         else {
             NavigationStack {
-                catalog.navigationDestination(item: $preview) { id in
-                    if let item = DemoCollection.specimens.first(where: { $0.id == id }) {
-                        SpecimenScreen(item: item, api: api, demo: demo, onChange: {})
-                    }
+                catalog.navigationDestination(item: $openedItemID) { id in
+                    ItemByIDScreen(api: api, id: id, demo: demo, onChange: reload)
                 }
             }
         }
@@ -31,63 +42,160 @@ struct CatalogScreen: View {
             if demo {
                 Text("Demo collection").font(.footnote).foregroundStyle(.secondary)
             }
-            ForEach(items) { item in
-                if workspaceSelection != nil {
-                    NavigationLink(value: item.id) { row(item) }
-                        .accessibilityIdentifier("specimen-\(item.id)")
-                } else {
-                    NavigationLink {
-                        SpecimenScreen(item: item, api: api, demo: demo, onChange: reload)
-                    } label: {
-                        row(item)
-                    }
-                }
+            if !demo, query.isEmpty, type.isEmpty, folder.isEmpty {
+                collectionStart
+                captureActivity
             }
-            if let next {
-                Button("Load more specimens") { Task { await load(page: next, query: query) } }.disabled(loading)
+            if !items.isEmpty {
+                Section {
+                    ForEach(items) { item in
+                        if workspaceSelection != nil {
+                            NavigationLink(value: item.id) { row(item) }
+                                .accessibilityIdentifier("specimen-\(item.id)")
+                        } else {
+                            NavigationLink {
+                                SpecimenScreen(item: item, api: api, demo: demo, onChange: reload)
+                            } label: {
+                                row(item)
+                            }
+                        }
+                    }
+                    if let next {
+                        Button("Load more items") { Task { await load(page: next, key: loadKey) } }.disabled(loading)
+                    }
+                } header: {
+                    Text("Items")
+                }
+                .listRowBackground(CollectorDesign.surface)
             }
             if loading { ProgressView() }
             if let error { Text(error).foregroundStyle(.red) }
-            if items.isEmpty && !loading && error == nil {
-                ContentUnavailableView(
-                    query.isEmpty ? "No specimens yet" : "No matching specimens",
-                    systemImage: "square.grid.2x2",
-                    description: Text(query.isEmpty ? "Add a specimen or capture a batch of photographs." : "Try a different name or reference.")
-                )
+            if items.isEmpty && !loading && error == nil && (!query.isEmpty || !type.isEmpty || !folder.isEmpty) {
+                ContentUnavailableView("No matching items", systemImage: "magnifyingglass",
+                                       description: Text("Try a different search or clear a filter."))
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
         .navigationTitle("Collection")
-        .searchable(text: $query, prompt: "Name, ruler, or reference")
+        .searchable(text: $query, prompt: "Name, date, issuer or reference")
         .toolbar {
+            if let openAccount {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Account", systemImage: "person.crop.circle", action: openAccount)
+                }
+            }
             if !demo {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Add specimen", systemImage: "plus") { adding = true }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Manage collections", systemImage: "folder") { managingFolders = true }
+                    Button("Add item", systemImage: "plus") { addSheet = .actions }
+                        .accessibilityIdentifier("collection-add-toolbar")
+                    filterMenu
                 }
             }
         }
-        .sheet(isPresented: $adding) { ItemEditor(api: api) { reload() } }
-        .sheet(isPresented: $managingFolders, onDismiss: reload) { CollectionFoldersScreen(api: api) }
-        .refreshable { await load(page: 0, query: query) }
-        .task(id: LoadKey(query: query, revision: workspaceSelection?.revision ?? 0)) {
-            let requestedQuery = query
-            if !requestedQuery.isEmpty {
+        .sheet(item: $addSheet) { presented in
+            if presented == .actions {
+                AddItemActions(hasDraft: capture.hasDraft) { photos in
+                    if photos {
+                        addSheet = nil
+                        openCapture(nil)
+                    } else { addSheet = .manual }
+                }
+            } else { ItemEditor(api: api, onCreated: itemCreated, onSave: reload) }
+        }
+        .sheet(isPresented: $managingFolders, onDismiss: {
+            reload()
+            Task { await loadFolders() }
+        }) { CollectionFoldersScreen(api: api) }
+        .refreshable {
+            await load(page: 0, key: loadKey)
+            if !demo { await capture.refreshActivity(api: api) }
+        }
+        .task(id: loadKey) {
+            let key = loadKey
+            if !key.query.isEmpty {
                 do { try await Task.sleep(for: .milliseconds(300)) }
                 catch { return }
             }
-            await load(page: 0, query: requestedQuery)
+            await load(page: 0, key: key)
             if workspaceSelection == nil && demo && PreviewLaunch.screen == .valuation {
-                preview = DemoCollection.specimens.first?.id
+                openedItemID = DemoCollection.specimens.first?.id
             }
+        }
+        .task {
+            guard !demo else { return }
+            await loadFolders()
+            await monitorCaptureActivity()
         }
     }
 
     private struct LoadKey: Equatable {
         let query: String
+        let type: String
+        let folder: String
         let revision: Int
+    }
+
+    private var loadKey: LoadKey {
+        .init(query: query, type: type, folder: folder, revision: workspaceSelection?.revision ?? revision)
+    }
+
+    private var collectionStart: some View {
+        Section {
+            if items.isEmpty && !loading {
+                CollectorNotice(title: "Add your first item", message: "Start with photos of a coin or banknote.",
+                                icon: "camera")
+            }
+            Button {
+                addSheet = .actions
+            } label: {
+                Label("Add item", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 30)
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("collection-add")
+        }
+        .listRowBackground(CollectorDesign.surface)
+    }
+
+    @ViewBuilder
+    private var captureActivity: some View {
+        if capture.hasDraft || !capture.activity.isEmpty {
+            Section("Capture activity") {
+                if capture.hasDraft {
+                    Button { openCapture(nil) } label: {
+                        Label(capture.uploading ? "Uploading draft" :
+                                capture.draft.submittedName == nil ? "Resume photo draft" :
+                                capture.draft.submittedAnalysis == false ? "Continue manual entry" : "Resume upload",
+                              systemImage: "photo.on.rectangle")
+                    }
+                }
+                ForEach(capture.activity) { batch in
+                    Button { openCapture(batch.id) } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label(batch.status, systemImage: batch.statusIcon).font(.headline)
+                            Text(batch.label).font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .listRowBackground(CollectorDesign.surface)
+        }
+    }
+
+    private var filterMenu: some View {
+        Menu("Filter collection", systemImage: "line.3.horizontal.decrease.circle") {
+            Picker("Item type", selection: $type) {
+                Text("All items").tag("")
+                Text("Coins").tag("coin")
+                Text("Banknotes").tag("banknote")
+            }
+            Picker("Folder", selection: $folder) {
+                Text("All folders").tag("")
+                ForEach(folders) { folder in Text(folder.name).tag(folder.id) }
+            }
+            Button("Manage folders", systemImage: "folder") { managingFolders = true }
+        }
     }
 
     private func row(_ item: Specimen) -> some View {
@@ -105,14 +213,29 @@ struct CatalogScreen: View {
     }
 
     private func reload() {
-        Task { await load(page: 0, query: query) }
+        Task { await load(page: 0, key: loadKey) }
     }
 
-    private func load(page: Int, query requestedQuery: String) async {
+    private func loadFolders() async {
+        if let result: [CollectionFolder] = try? await api.get("/collections"), !Task.isCancelled {
+            folders = result
+            if !folder.isEmpty && !result.contains(where: { $0.id == folder }) { folder = "" }
+        }
+    }
+
+    private func monitorCaptureActivity() async {
+        while !Task.isCancelled {
+            await capture.refreshActivity(api: api)
+            do { try await Task.sleep(for: capture.imports.contains(where: \.isProcessing) ? .seconds(8) : .seconds(30)) }
+            catch { return }
+        }
+    }
+
+    private func load(page: Int, key: LoadKey) async {
         if demo {
             items = DemoCollection.specimens.filter {
-                requestedQuery.isEmpty || [$0.title, $0.ruler, $0.reference].contains {
-                    $0.localizedCaseInsensitiveContains(requestedQuery)
+                key.query.isEmpty || [$0.title, $0.issuer, $0.year, $0.ruler, $0.reference].contains {
+                    $0.localizedCaseInsensitiveContains(key.query)
                 }
             }
             return
@@ -121,20 +244,56 @@ struct CatalogScreen: View {
         error = nil
         do {
             let result: CollectionPage = try await api.get("/items", query: [
-                URLQueryItem(name: "q", value: requestedQuery),
+                URLQueryItem(name: "q", value: key.query),
+                URLQueryItem(name: "type", value: key.type),
+                URLQueryItem(name: "collection", value: key.folder),
                 URLQueryItem(name: "page", value: String(page))
             ])
-            guard !Task.isCancelled, requestedQuery == query else { return }
+            guard !Task.isCancelled, key == loadKey else { return }
             items = page == 0 ? result.items : items + result.items.filter { resultItem in
                 !items.contains(where: { $0.id == resultItem.id })
             }
             next = result.next
             loading = false
         } catch {
-            guard !Task.isCancelled, requestedQuery == query else { return }
+            guard !Task.isCancelled, key == loadKey else { return }
             self.error = error.localizedDescription
             loading = false
         }
+    }
+}
+
+struct ItemByIDScreen: View {
+    let api: NumiAPI
+    let id: String
+    let demo: Bool
+    var expanded = false
+    let onChange: () -> Void
+    @State private var item: Specimen?
+    @State private var error: String?
+
+    var body: some View {
+        Group {
+            if let item {
+                SpecimenScreen(item: item, api: api, demo: demo, expanded: expanded, onChange: onChange)
+            } else if let error {
+                ContentUnavailableView {
+                    Label("Couldn’t open the item", systemImage: "exclamationmark.circle")
+                } description: {
+                    Text(error)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                }
+            } else { ProgressView("Opening item") }
+        }
+        .task(id: id) { await load() }
+    }
+
+    private func load() async {
+        error = nil
+        if demo { item = DemoCollection.specimens.first(where: { $0.id == id }); return }
+        do { item = try await api.get("/items/" + id) }
+        catch { if !Task.isCancelled { self.error = error.localizedDescription } }
     }
 }
 
@@ -198,22 +357,20 @@ struct SpecimenScreen: View {
     var body: some View {
         List {
             if !previewingValuation {
-                let sample = demo ? DemoCollection.photo(for: item) : nil
-                if let photos = item.photos, !photos.isEmpty {
-                    if expanded {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 205), spacing: 12)], spacing: 12) {
-                            ForEach(photos) { photo in galleryPhoto(photo, height: 220) }
-                        }
-                        .padding(.vertical, 8)
-                    } else {
-                        ForEach(photos) { photo in galleryPhoto(photo, height: 180) }
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(item.type == "banknote" ? "Banknote" : "Coin",
+                              systemImage: item.type == "banknote" ? "banknote" : "circle")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(CollectorDesign.tint)
+                        Text(item.title).font(.title2.bold()).accessibilityAddTraits(.isHeader)
+                        if !item.subtitle.isEmpty { Text(item.subtitle).foregroundStyle(.secondary) }
                     }
-                } else if item.photo != nil || sample != nil {
-                    SpecimenImage(api: api, id: item.photo, sampleAsset: sample)
-                        .frame(height: expanded ? 300 : 200)
-                        .listRowInsets(EdgeInsets())
+                    .padding(.vertical, 6)
+                    photosSection
                 }
-                Section("Specimen") {
+                .listRowBackground(CollectorDesign.surface)
+                if !demo { itemActions }
+                Section("Identification") {
                     field("Issuer", item.issuer)
                     field("Ruler", item.ruler)
                     field("Denomination", item.denomination)
@@ -227,12 +384,17 @@ struct SpecimenScreen: View {
                     field("Grade", item.grade)
                     field("Metal", item.details?.metal ?? "")
                     field("Mint", item.details?.mint ?? "")
+                    field("Mint mark", item.details?.mintMark ?? "")
+                    field("Series", item.details?.series ?? "")
+                    field("Serial number", item.details?.serial ?? "")
+                    field("Signatures", item.details?.signatures ?? "")
                     field("Obverse legend", item.details?.obverseLegend ?? "")
                     field("Reverse legend", item.details?.reverseLegend ?? "")
                     if !item.notes.isEmpty { Text(item.notes) }
                 }
+                .listRowBackground(CollectorDesign.surface)
             }
-            Section("Auction valuation") {
+            Section("Sale evidence") {
                 if let valuation {
                     if let range = valuation.range {
                         Text(range.low, format: .currency(code: valuation.currency)) +
@@ -241,13 +403,14 @@ struct SpecimenScreen: View {
                         Text(demo ? "Illustrative prices" : "Range includes the buyer’s premium.").font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("Insufficient comparable sales").foregroundStyle(.secondary)
+                        Text(valuation.evidence.isEmpty ? "No verified sales yet" : "More comparable sales are needed for a range.")
+                            .foregroundStyle(.secondary)
                     }
                     ForEach(valuation.evidence) { sale in
                         let row = VStack(alignment: .leading, spacing: 4) {
                             Text("\(sale.house) · Lot \(sale.lot)").font(.headline)
                             Text(sale.amount, format: .currency(code: sale.currency))
-                            Text("\(sale.date) · \(sale.basis == "hammer" ? "Hammer" : "With premium")")
+                            Text("\(sale.date) · \(sale.basis == "hammer" ? "Hammer price" : "Includes buyer’s premium")")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }
                         if demo { row }
@@ -259,17 +422,15 @@ struct SpecimenScreen: View {
                 } else {
                     ProgressView()
                 }
-            }
-            if !demo {
-                Section("Sale evidence") {
-                    Button("Add realized sale") { saleEditor = true }
-                    NavigationLink("Find comparable sales") {
-                        SaleResearchScreen(api: api, item: item) { Task { await loadValuation() } }
-                    }
+                if !demo {
+                    Button("Add a completed sale", systemImage: "plus") { saleEditor = true }
                 }
             }
+            .listRowBackground(CollectorDesign.surface)
             if let detailError { Text(detailError).foregroundStyle(.red) }
         }
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
         .navigationTitle(item.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -335,12 +496,50 @@ struct SpecimenScreen: View {
         }
     }
 
+    @ViewBuilder
+    private var photosSection: some View {
+        let sample = demo ? DemoCollection.photo(for: item) : nil
+        if let photos = item.photos, !photos.isEmpty {
+            let minimum: CGFloat = expanded ? 158 : 116
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: minimum), spacing: 10)], spacing: 12) {
+                ForEach(photos) { photo in
+                    galleryPhoto(photo, height: expanded ? 205 : 126)
+                }
+            }
+            .padding(.vertical, 6)
+        } else if item.photo != nil || sample != nil {
+            SpecimenImage(api: api, id: item.photo, sampleAsset: sample)
+                .frame(height: expanded ? 245 : 180)
+                .clipShape(.rect(cornerRadius: 12))
+        }
+    }
+
+    private var itemActions: some View {
+        Section {
+            NavigationLink {
+                SaleResearchScreen(api: api, item: item) { Task { await loadValuation() } }
+            } label: {
+                Label("Find comparable sales", systemImage: "chart.bar")
+            }
+            NavigationLink {
+                ThemesScreen(api: api, demo: false, embedded: true)
+            } label: {
+                Label("See checklist progress", systemImage: "checklist")
+            }
+            if loaded {
+                Button("Edit identification", systemImage: "square.and.pencil") { editing = true }
+            }
+        }
+        .listRowBackground(CollectorDesign.surface)
+    }
+
     private func galleryPhoto(_ photo: PhotoLink, height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil)
                 .frame(height: height)
                 .clipShape(.rect(cornerRadius: 8))
-            Text(photo.side.capitalized).font(.caption).foregroundStyle(.secondary)
+            Text(photo.side == "obverse" ? "Front" : photo.side == "reverse" ? "Back" : "Detail")
+                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
         }
     }
 
@@ -476,7 +675,10 @@ private struct SpecimenMergeSheet: View {
 struct ThemesScreen: View {
     let api: NumiAPI
     let demo: Bool
+    var embedded = false
     var workspaceSelection: WorkspaceListSelection<ThemeSummary>? = nil
+    var captureForSlot: ((String) -> Void)? = nil
+    var findForSlot: ((String) -> Void)? = nil
     @State private var adding = false
     @State private var themes: [ThemeSummary] = []
     @State private var loading = true
@@ -484,7 +686,7 @@ struct ThemesScreen: View {
     @State private var preview: String?
 
     var body: some View {
-        if workspaceSelection != nil { checklists }
+        if workspaceSelection != nil || embedded { checklists }
         else {
             NavigationStack {
                 checklists.navigationDestination(item: $preview) { _ in
@@ -501,7 +703,8 @@ struct ThemesScreen: View {
                     NavigationLink(theme.name, value: theme.id)
                 } else {
                     NavigationLink(theme.name) {
-                        ThemeScreen(api: api, theme: theme, demo: demo, onChange: { Task { await load() } })
+                        ThemeScreen(api: api, theme: theme, demo: demo, onChange: { Task { await load() } },
+                                    captureForSlot: captureForSlot, findForSlot: findForSlot)
                     }
                 }
             }
@@ -513,6 +716,8 @@ struct ThemesScreen: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
         .navigationTitle("Checklists")
         .toolbar {
             if !demo {
@@ -544,6 +749,8 @@ struct ThemeScreen: View {
     let demo: Bool
     let onChange: () -> Void
     var onDelete: (() -> Void)? = nil
+    var captureForSlot: ((String) -> Void)? = nil
+    var findForSlot: ((String) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var editing = false
     @State private var deleting = false
@@ -562,27 +769,38 @@ struct ThemeScreen: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                 }
-                Section("Checklist") {
-                    ForEach(details.slots.indices, id: \.self) { index in
-                        let slot = details.slots[index]
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label(slot.label, systemImage: slot.owned.isEmpty ? "circle" : "checkmark.circle.fill")
-                                .font(.headline)
-                            if slot.owned.isEmpty {
-                                Text("Missing").foregroundStyle(.secondary)
-                            } else {
-                                ForEach(slot.owned) { match in
-                                    Text(match.title).foregroundStyle(.secondary)
+                .listRowBackground(CollectorDesign.surface)
+                let missing = details.slots.filter { $0.owned.isEmpty }
+                let owned = details.slots.filter { !$0.owned.isEmpty }
+                if !missing.isEmpty {
+                    Section("Still needed") {
+                        ForEach(missing.indices, id: \.self) { index in
+                            missingSlot(missing[index])
+                        }
+                    }
+                    .listRowBackground(CollectorDesign.surface)
+                }
+                if !owned.isEmpty {
+                    Section("Owned") {
+                        ForEach(owned.indices, id: \.self) { index in
+                            let slot = owned[index]
+                            Label(slot.label, systemImage: "checkmark.circle.fill").font(.headline)
+                            ForEach(slot.owned) { match in
+                                NavigationLink(match.title) {
+                                    ItemByIDScreen(api: api, id: match.id, demo: demo, onChange: onChange)
                                 }
                             }
                         }
                     }
+                    .listRowBackground(CollectorDesign.surface)
                 }
             } else if error == nil {
                 ProgressView()
             }
             if let error { Text(error).foregroundStyle(.red) }
         }
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
         .navigationTitle(details?.name ?? theme.name)
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -614,6 +832,26 @@ struct ThemeScreen: View {
                         if let onDelete { onDelete() }
                         else { onChange(); dismiss() }
                     } catch { self.error = error.localizedDescription }
+                }
+            }
+        }
+    }
+
+    private func missingSlot(_ slot: ThemeDetails.Slot) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(slot.label, systemImage: "circle").font(.headline)
+            Text("Missing").font(.subheadline).foregroundStyle(.secondary)
+            if !demo {
+                if let captureForSlot {
+                    Button("Add a photo for this slot", systemImage: "camera") { captureForSlot(slot.label) }
+                        .buttonStyle(.borderless)
+                }
+                if let findForSlot {
+                    Button("Find an item in Collection", systemImage: "magnifyingglass") {
+                        // Search the most specific single field supported by the collection search.
+                        findForSlot(slot.rule?.reference ?? slot.rule?.year ?? slot.rule?.ruler ?? slot.rule?.issuer ?? slot.label)
+                    }
+                    .buttonStyle(.borderless)
                 }
             }
         }

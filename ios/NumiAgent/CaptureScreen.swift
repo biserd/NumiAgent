@@ -3,10 +3,11 @@ import SwiftUI
 import UIKit
 import Vision
 
-private struct CaptureDraft: Codable {
+struct CaptureDraft: Codable {
     var id = UUID()
     var photos: [UUID] = []
     var uploaded: Set<UUID> = []
+    var uploadedIDs: [UUID: String]?
     var submittedName: String?
     var submittedAnalysis: Bool?
     var submittedAutoCatalog: Bool?
@@ -16,14 +17,37 @@ private struct CaptureDraft: Codable {
     var lastUploadedBatch: String?
 
     var oneItem: Bool { paired ?? photos.isEmpty }
+
+    func side(at index: Int) -> String? {
+        guard oneItem else { return nil }
+        switch index {
+        case 0: return "obverse"
+        case 1: return "reverse"
+        default: return nil
+        }
+    }
+
+    func role(at index: Int) -> String {
+        guard oneItem else { return "Item \(index + 1)" }
+        switch index {
+        case 0: return "Front"
+        case 1: return "Back"
+        default: return index == 2 ? "Detail" : "Detail \(index - 1)"
+        }
+    }
 }
 
 @MainActor
-private final class CaptureDraftStore: ObservableObject {
+final class CaptureDraftStore: ObservableObject {
     static let maximumPhotos = 20
     static let maximumItemPhotos = 5
     @Published private(set) var draft = CaptureDraft()
     @Published private(set) var error: String?
+    @Published private(set) var uploading = false
+    @Published private(set) var imports: [ImportSummary] = []
+    @Published private(set) var activityError: String?
+    @Published private(set) var submittedError: String?
+    private var refreshing = false
     private let directory: URL?
 
     init(account: Account?) {
@@ -58,6 +82,33 @@ private final class CaptureDraftStore: ObservableObject {
                                               appropriateFor: nil, create: true)
         return root.appending(path: "CaptureDrafts", directoryHint: .isDirectory)
             .appending(path: id.uuidString, directoryHint: .isDirectory)
+    }
+
+    var hasDraft: Bool { !draft.photos.isEmpty }
+    var draftBatchID: String? { draft.submittedName == nil ? nil : draft.id.uuidString.lowercased() }
+    var activity: [ImportSummary] {
+        let otherImports = imports.filter { $0.id != draftBatchID }
+        let pending = otherImports.filter { $0.requiresAttention || $0.isProcessing || $0.isWaiting }
+        let recentlySaved = otherImports.first { ($0.saved ?? 0) > 0 && Date.now.timeIntervalSince1970 - $0.created < 86_400 }
+        let result = Array(pending.prefix(3))
+        return result.isEmpty && recentlySaved != nil ? [recentlySaved].compactMap { $0 } : result
+    }
+
+    func refreshActivity(api: NumiAPI) async {
+        guard directory != nil, !refreshing else { return }
+        #if DEBUG
+        if PreviewLaunch.screen != nil { return }
+        #endif
+        refreshing = true
+        defer { refreshing = false }
+        do {
+            let result: [ImportSummary] = try await api.get("/imports")
+            guard !Task.isCancelled else { return }
+            imports = result
+            activityError = nil
+        } catch {
+            if !Task.isCancelled { activityError = error.localizedDescription }
+        }
     }
 
     static func remove(accountID: String) throws {
@@ -148,7 +199,33 @@ private final class CaptureDraftStore: ObservableObject {
         if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
     }
 
-    func upload(api: NumiAPI) async throws -> String {
+    func move(_ id: UUID, offset: Int) throws {
+        guard draft.submittedName == nil, let current = draft.photos.firstIndex(of: id),
+              draft.photos.indices.contains(current + offset) else { return }
+        var updated = draft
+        updated.photos.swapAt(current, current + offset)
+        try save(updated)
+    }
+
+    struct Submission {
+        let batchID: String
+        let manualPhotos: [PhotoLink]?
+    }
+
+    func upload(api: NumiAPI, analyze: Bool = true) async throws -> Submission {
+        guard !uploading, hasDraft else { throw CaptureError.storage }
+        uploading = true
+        submittedError = nil
+        defer { uploading = false }
+        do {
+            return try await submit(api: api, analyze: analyze)
+        } catch {
+            submittedError = error.localizedDescription
+            throw error
+        }
+    }
+
+    private func submit(api: NumiAPI, analyze: Bool) async throws -> Submission {
         var updated = draft
         if updated.submittedName == nil {
             var seen = Set<Data>()
@@ -158,33 +235,54 @@ private final class CaptureDraftStore: ObservableObject {
             }
             let label = updated.oneItem ? "One item" : "Photo import"
             updated.submittedName = label + " · " + Date.now.formatted(date: .abbreviated, time: .shortened)
-            updated.submittedAnalysis = true
-            updated.submittedAutoCatalog = true
-            updated.expectedPhotos = updated.photos.count
+            updated.submittedAnalysis = analyze
+            updated.submittedAutoCatalog = analyze
+            updated.expectedPhotos = analyze ? updated.photos.count : nil
             try save(updated)
         }
         guard let batchName = updated.submittedName, let batchAnalysis = updated.submittedAnalysis else {
             throw CaptureError.storage
         }
+        let isAnalysisPair = batchAnalysis && updated.paired == true
         try await api.createImport(id: updated.id, name: batchName, analyze: batchAnalysis,
-                                   autoCatalog: updated.submittedAutoCatalog ?? false, paired: updated.paired == true,
+                                   autoCatalog: updated.submittedAutoCatalog ?? false, paired: isAnalysisPair,
                                    expectedPhotos: updated.expectedPhotos)
-        for (index, id) in updated.photos.enumerated() where !updated.uploaded.contains(id) {
+        for (index, id) in updated.photos.enumerated() {
+            if updated.uploaded.contains(id), batchAnalysis || updated.uploadedIDs?[id] != nil { continue }
             guard let photo = photo(id) else { throw CaptureError.storage }
-            let side = updated.paired == true ? ["obverse", "reverse"].dropFirst(index).first : nil
-            try await api.uploadPhoto(Data(contentsOf: photo), batch: updated.id, side: side)
+            let side = isAnalysisPair ? updated.side(at: index) : nil
+            let uploadedID = try await api.uploadPhoto(Data(contentsOf: photo), batch: updated.id, side: side)
+            if !batchAnalysis {
+                var ids = updated.uploadedIDs ?? [:]
+                ids[id] = uploadedID
+                updated.uploadedIDs = ids
+            }
             updated.uploaded.insert(id)
             try save(updated)
         }
         let batchID = updated.id.uuidString.lowercased()
-        try save(CaptureDraft(lastUploadedBatch: batchID))
-        for id in updated.photos {
-            if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
+        if !batchAnalysis {
+            let links = try updated.photos.enumerated().map { index, id -> PhotoLink in
+                guard let key = updated.uploadedIDs?[id] else { throw CaptureError.storage }
+                return .init(photoId: key, side: updated.side(at: index) ?? "overview", crop: nil)
+            }
+            return Submission(batchID: batchID, manualPhotos: links)
         }
-        return batchID
+        try complete(batchID: batchID)
+        await refreshActivity(api: api)
+        return Submission(batchID: batchID, manualPhotos: nil)
     }
 
-    private static func jpeg(_ image: UIImage) throws -> Data {
+    func complete(batchID: String) throws {
+        guard draftBatchID == batchID else { return }
+        let photos = draft.photos
+        try save(CaptureDraft(lastUploadedBatch: batchID))
+        for id in photos {
+            if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
+        }
+    }
+
+    static func jpeg(_ image: UIImage) throws -> Data {
         let size = image.size
         guard size.width > 0, size.height > 0 else { throw CaptureError.unsupported }
         let ratio = min(1, 2048 / max(size.width, size.height))
@@ -218,32 +316,30 @@ private enum CaptureError: LocalizedError {
 struct CaptureScreen: View {
     let api: NumiAPI
     let account: Account?
+    @ObservedObject var store: CaptureDraftStore
+    @Binding var reviewID: String?
     let onUpload: ((String) -> Void)?
-    @StateObject private var store: CaptureDraftStore
+    let onSave: (String) -> Void
+    var checklistLabel: String? = nil
     @State private var selection: [PhotosPickerItem] = []
     @State private var camera = false
     @State private var retakingPhoto: UUID?
     @State private var capturedPhoto: UIImage?
     @State private var busy = false
     @State private var error: String?
-    @State private var uploadedBatch: String?
+    @State private var manualSubmission: CaptureDraftStore.Submission?
+    @State private var showManualEditor = false
     @State private var previewDraft = false
     @State private var demoPhoto = PreviewLaunch.screen == .capture
     @State private var demoResult = PreviewLaunch.screen == .capture
-
-    init(api: NumiAPI, account: Account?, onUpload: ((String) -> Void)? = nil) {
-        self.api = api
-        self.account = account
-        self.onUpload = onUpload
-        _store = StateObject(wrappedValue: CaptureDraftStore(account: account))
-    }
 
     var body: some View {
         if onUpload != nil { captureForm }
         else {
             NavigationStack {
-                captureForm.navigationDestination(item: $uploadedBatch) { id in
-                    ImportReview(api: api, batchID: id, previewBatch: previewDraft ? PhotoImport.demoAutomatic : nil)
+                captureForm.navigationDestination(item: $reviewID) { id in
+                    ImportReview(api: api, batchID: id, previewBatch: account == nil ? PhotoImport.demoAutomatic : nil,
+                                 resumeUpload: store.draftBatchID == id ? { reviewID = nil } : nil)
                 }
             }
         }
@@ -251,7 +347,7 @@ struct CaptureScreen: View {
 
     private var captureForm: some View {
         List {
-            if account == nil && !previewDraft {
+            if account == nil && !previewDraft && !store.hasDraft {
                 if PreviewLaunch.screen == .photoReview {
                     NavigationLink("Open example photo batch") {
                         ImportReview(api: api, batchID: "demo-photo-batch", previewBatch: PhotoImport.demoAutomatic)
@@ -281,64 +377,27 @@ struct CaptureScreen: View {
                     }
                 }
             } else {
-                Section {
-                    Picker("Photos are of", selection: Binding(get: { store.draft.oneItem }, set: { oneItem in
-                        record { try store.setOneItem(oneItem) }
-                    })) {
-                        Text("One item").tag(true)
-                        Text("Different items").tag(false)
+                if let checklistLabel {
+                    Section {
+                        CollectorNotice(title: "Checklist target", message: checklistLabel, icon: "checklist")
                     }
-                    .pickerStyle(.segmented)
-                    .disabled(busy || store.draft.submittedName != nil || store.draft.photos.count > CaptureDraftStore.maximumItemPhotos)
-                    Text(store.draft.oneItem ? "Add the front, back, or close-ups of one coin or banknote." :
-                         "Add one photo per coin or banknote.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                        Button("Take photo", systemImage: "camera") { startCamera() }
-                            .disabled(!canAddPhotos)
-                    }
-                    PhotosPicker(selection: $selection, maxSelectionCount: max(1, store.available),
-                                 selectionBehavior: .ordered, matching: .images) {
-                        Label("Add photos", systemImage: "photo.on.rectangle")
-                    }
-                    .disabled(!canAddPhotos)
-                    #if DEBUG
-                    if previewDraft {
-                        Button("Add a sample close-up") {
-                            record { try store.append(previewImage(size: 600, tint: .systemGreen)) }
-                        }.disabled(!canAddPhotos)
-                    }
-                    #endif
-                } header: {
-                    Text("Coins and banknotes")
-                } footer: {
-                    Text("Use even light and focus on the lettering and date. Include the whole coin or note in the first photo.")
+                    .listRowBackground(CollectorDesign.surface)
                 }
-                if !store.draft.photos.isEmpty {
-                    Section(store.draft.submittedName == nil ? "Photo draft" : "Photos") {
-                        ForEach(Array(store.draft.photos.enumerated()), id: \.element) { index, id in
-                            draftRow(id, number: index + 1)
-                        }
-                    }
-                }
+                captureControls
+                draftPhotos
                 if onUpload == nil {
                     Section {
-                        if let last = store.draft.lastUploadedBatch {
-                            NavigationLink {
-                                ImportReview(api: api, batchID: last)
-                            } label: {
-                                Label("View latest import", systemImage: "arrow.right.circle.fill")
-                            }
-                            .disabled(busy)
-                        }
-                        NavigationLink("All photo imports") { ImportHistory(api: api) }.disabled(busy)
+                        NavigationLink("Capture activity") { ImportHistory(api: api, store: store) }.disabled(busy)
                     }
+                    .listRowBackground(CollectorDesign.surface)
                 }
             }
             if busy && store.draft.submittedName == nil { ProgressView("Preparing photos") }
             if store.draft.photos.isEmpty, let message = error ?? store.error { Text(message).foregroundStyle(.red) }
         }
-        .navigationTitle(onUpload == nil ? "Capture" : "New photo import")
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
+        .navigationTitle("Capture")
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !store.draft.photos.isEmpty { identifyBar }
         }
@@ -353,42 +412,125 @@ struct CaptureScreen: View {
             guard !picks.isEmpty else { return }
             Task { await addPhotos(picks) }
         }
+        .sheet(isPresented: $showManualEditor) {
+            if let submission = manualSubmission, let photos = submission.manualPhotos {
+                let item = ItemDraft(photos: photos)
+                ItemEditor(api: api, draft: item, onCreated: { id in
+                    record { try store.complete(batchID: submission.batchID) }
+                    onSave(id)
+                }) {}
+            }
+        }
     }
 
-    private var canAddPhotos: Bool { !busy && store.draft.submittedName == nil && store.available > 0 }
+    private var captureControls: some View {
+        Section {
+            Picker("Photos are of", selection: Binding(get: { store.draft.oneItem }, set: { oneItem in
+                record { try store.setOneItem(oneItem) }
+            })) {
+                Text("One item").tag(true)
+                Text("Several items").tag(false)
+            }
+            .pickerStyle(.segmented)
+            .disabled(busy || store.draft.submittedName != nil || store.draft.photos.count > CaptureDraftStore.maximumItemPhotos)
+            Text(store.draft.oneItem ? "Add the front, back or close-ups of one coin or banknote." :
+                 "Add one photo per coin or banknote. Each photo becomes a separate item.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button("Take photo", systemImage: "camera") { startCamera() }
+                    .disabled(!canAddPhotos)
+            }
+            PhotosPicker(selection: $selection, maxSelectionCount: max(1, store.available),
+                         selectionBehavior: .ordered, matching: .images) {
+                Label("Add photos", systemImage: "photo.on.rectangle")
+            }
+            .disabled(!canAddPhotos)
+            #if DEBUG
+            if previewDraft {
+                Button("Add a sample close-up") {
+                    record { try store.append(previewImage(size: 600, tint: .systemGreen)) }
+                }.disabled(!canAddPhotos)
+            }
+            #endif
+        } header: {
+            Text("Coins and banknotes")
+        } footer: {
+            Text("Photograph the full item first. Use even light and focus on the lettering and date.")
+        }
+        .listRowBackground(CollectorDesign.surface)
+    }
+
+    @ViewBuilder
+    private var draftPhotos: some View {
+        if store.hasDraft {
+            Section {
+                ForEach(Array(store.draft.photos.enumerated()), id: \.element) { index, id in
+                    draftRow(id, index: index)
+                }
+            } header: {
+                Text(store.draft.submittedName == nil ? "Draft on this device" : "Photos")
+            }
+            .listRowBackground(CollectorDesign.surface)
+        }
+    }
+
+    private var canAddPhotos: Bool { !busy && !store.uploading && store.draft.submittedName == nil && store.available > 0 }
 
     private var identifyBar: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let message = error ?? store.error { Text(message).font(.footnote).foregroundStyle(.red) }
-            if busy, store.draft.submittedName != nil {
+            if let message = error ?? store.submittedError ?? store.error {
+                Text(message).font(.footnote).foregroundStyle(.red)
+            }
+            if store.uploading {
                 ProgressView(value: Double(store.draft.uploaded.count), total: Double(store.draft.photos.count)) {
                     Text("Uploading \(store.draft.uploaded.count) of \(store.draft.photos.count) photos")
                 }
             } else {
                 let count = store.draft.photos.count
-                Text(count == 1 ? "1 photo in this draft" : "\(count) photos in this draft")
+                let items = store.draft.oneItem ? 1 : count
+                Text("\(items) \(items == 1 ? "item" : "items") · \(count) \(count == 1 ? "photo" : "photos")")
                     .font(.subheadline.weight(.semibold))
-                Text("Identify uploads your photos for AI and saves clear matches.").font(.footnote).foregroundStyle(.secondary)
-                Button {
-                    startIdentification()
-                } label: {
-                    Label(store.draft.submittedName == nil ? "Identify" : "Resume identification", systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent).disabled(busy)
+                    .accessibilityIdentifier("capture-draft-count")
+                identifyActions(items: items)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20).padding(.vertical, 12)
-        .background(.regularMaterial)
+        .background(CollectorDesign.surface)
     }
 
-    private func draftRow(_ id: UUID, number: Int) -> some View {
-        DraftPhotoRow(number: number, file: store.photo(id), uploaded: store.draft.uploaded.contains(id),
+    @ViewBuilder
+    private func identifyActions(items: Int) -> some View {
+        if store.draft.submittedAnalysis == false {
+            Button("Continue manual entry") { Task { await upload(analyze: false) } }
+                .buttonStyle(.borderedProminent).disabled(busy)
+        } else {
+            Text(store.draft.submittedName == nil ? "Identify uploads these photos for analysis and saves clear matches." :
+                    "Your draft is safe. Resume to upload the remaining photos.")
+                .font(.footnote).foregroundStyle(.secondary)
+            Button {
+                startIdentification()
+            } label: {
+                Label(store.draft.submittedName == nil ? (items == 1 ? "Identify 1 item" : "Identify \(items) items") :
+                        "Resume upload", systemImage: "sparkles")
+                    .frame(maxWidth: .infinity, minHeight: 30)
+            }
+            .buttonStyle(.borderedProminent).disabled(busy)
+            if account != nil, store.draft.oneItem, store.draft.submittedName == nil {
+                Button("Upload photos without AI") { Task { await upload(analyze: false) } }
+                    .buttonStyle(.bordered).disabled(busy)
+            }
+        }
+    }
+
+    private func draftRow(_ id: UUID, index: Int) -> some View {
+        DraftPhotoRow(number: index + 1, role: store.draft.role(at: index), file: store.photo(id), uploaded: store.draft.uploaded.contains(id),
                       warning: store.draft.warnings?[id], editable: store.draft.submittedName == nil, busy: busy,
                       remove: { record { try store.removePhoto(id) } },
                       replace: { pick in await replacePhoto(id, with: pick) },
-                      retake: { startCamera(replacing: id) })
+                      retake: { startCamera(replacing: id) },
+                      moveEarlier: index > 0 ? { record { try store.move(id, offset: -1) } } : nil,
+                      moveLater: index + 1 < store.draft.photos.count ? { record { try store.move(id, offset: 1) } } : nil)
     }
 
     private func startCamera(replacing id: UUID? = nil) {
@@ -419,7 +561,7 @@ struct CaptureScreen: View {
         error = nil
         for pick in picks {
             do {
-                let image = try await loadImage(pick)
+                let image = try await loadCaptureImage(pick)
                 try store.append(image)
             } catch {
                 self.error = error.localizedDescription
@@ -434,18 +576,19 @@ struct CaptureScreen: View {
         busy = true
         error = nil
         defer { busy = false }
-        do { try store.replace(id, with: try await loadImage(pick)) }
+        do { try store.replace(id, with: try await loadCaptureImage(pick)) }
         catch { self.error = error.localizedDescription }
     }
 
     private func startIdentification() {
         #if DEBUG
         if previewDraft {
-            uploadedBatch = "demo-photo-batch"
+            if let onUpload { onUpload("demo-photo-batch") }
+            else { reviewID = "demo-photo-batch" }
             return
         }
         #endif
-        Task { await upload() }
+        Task { await upload(analyze: true) }
     }
 
     #if DEBUG
@@ -460,20 +603,22 @@ struct CaptureScreen: View {
     }
     #endif
 
-    private func upload() async {
-        guard !busy, !store.draft.photos.isEmpty else { return }
-        busy = true
+    private func upload(analyze: Bool) async {
+        guard !busy, !store.uploading, store.hasDraft else { return }
         error = nil
-        defer { busy = false }
         do {
-            let id = try await store.upload(api: api)
-            if let onUpload { onUpload(id) }
-            else { uploadedBatch = id }
+            let result = try await store.upload(api: api, analyze: analyze)
+            if result.manualPhotos != nil {
+                manualSubmission = result
+                showManualEditor = true
+            } else if let onUpload { onUpload(result.batchID) }
+            else { reviewID = result.batchID }
         } catch { self.error = error.localizedDescription }
     }
 }
 
-private func loadImage(_ pick: PhotosPickerItem) async throws -> UIImage {
+@MainActor
+func loadCaptureImage(_ pick: PhotosPickerItem) async throws -> UIImage {
     guard let data = try await pick.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
         throw CaptureError.unsupported
     }
@@ -525,8 +670,9 @@ private enum PhotoClarity {
             for y in 8..<(size - 8) {
                 for x in 8..<(size - 8) {
                     let i = y * size + x
-                    let laplacian = abs(4 * Int(gray[i]) - Int(gray[i - 1]) - Int(gray[i + 1]) -
-                                        Int(gray[i - size]) - Int(gray[i + size]))
+                    let horizontal = Int(gray[i - 1]) + Int(gray[i + 1])
+                    let vertical = Int(gray[i - size]) + Int(gray[i + size])
+                    let laplacian = abs(4 * Int(gray[i]) - horizontal - vertical)
                     if laplacian > 20 { edges += 1 }
                 }
             }
@@ -537,6 +683,7 @@ private enum PhotoClarity {
 
 private struct DraftPhotoRow: View {
     let number: Int
+    let role: String
     let file: URL?
     let uploaded: Bool
     let warning: String?
@@ -545,7 +692,10 @@ private struct DraftPhotoRow: View {
     let remove: () -> Void
     let replace: (PhotosPickerItem) async -> Void
     let retake: () -> Void
+    let moveEarlier: (() -> Void)?
+    let moveLater: (() -> Void)?
     @State private var selection: PhotosPickerItem?
+    @State private var showReplacement = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -555,13 +705,26 @@ private struct DraftPhotoRow: View {
                         .frame(width: 64, height: 56).clipShape(.rect(cornerRadius: 6)).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading) {
-                    Text("Photo \(number)").font(.headline).accessibilityIdentifier("draft-photo-\(number)")
+                    Text(role).font(.headline).accessibilityIdentifier("draft-photo-\(number)")
                     Text(uploaded ? "Uploaded" : "On this device").font(.footnote).foregroundStyle(.secondary)
                 }
                 Spacer()
                 if editable {
-                    Button("Remove photo \(number)", systemImage: "trash", role: .destructive, action: remove)
-                        .labelStyle(.iconOnly).buttonStyle(.borderless).disabled(busy)
+                    Menu {
+                        Button("Replace from photo library", systemImage: "photo.on.rectangle") {
+                            showReplacement = true
+                        }
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            Button("Retake photo", systemImage: "camera", action: retake)
+                        }
+                        if let moveEarlier { Button("Move earlier", systemImage: "arrow.up", action: moveEarlier) }
+                        if let moveLater { Button("Move later", systemImage: "arrow.down", action: moveLater) }
+                        Button("Remove photo", systemImage: "trash", role: .destructive, action: remove)
+                    } label: {
+                        Label("Actions for \(role)", systemImage: "ellipsis.circle")
+                            .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+                    }
+                    .buttonStyle(.borderless).disabled(busy)
                 }
             }
             if let warning, editable {
@@ -577,6 +740,7 @@ private struct DraftPhotoRow: View {
                 .font(.subheadline).buttonStyle(.borderless).disabled(busy)
             }
         }
+        .photosPicker(isPresented: $showReplacement, selection: $selection, matching: .images)
         .onChange(of: selection) { _, pick in
             guard let pick else { return }
             Task {

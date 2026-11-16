@@ -63,17 +63,21 @@ final class PhoneSignInAndReviewTests: XCTestCase {
         let preview = app.buttons["Preview a photo draft"]
         XCTAssertTrue(preview.waitForExistence(timeout: 15))
         preview.tap()
-        XCTAssertTrue(app.staticTexts["2 photos in this draft"].firstMatch.waitForExistence(timeout: 10))
+        let count = app.staticTexts["capture-draft-count"].firstMatch
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.label, "1 item · 2 photos")
         app.buttons["Add a sample close-up"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["3 photos in this draft"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(count.label, "1 item · 3 photos")
         XCTAssertFalse(app.navigationBars["Example photo batch"].exists)
-        let identify = app.buttons["Identify"].firstMatch
+        let identify = app.buttons["Identify 1 item"].firstMatch
         XCTAssertTrue(identify.isHittable)
 
         app.swipeUp()
         XCTAssertTrue(app.descendants(matching: .any)["replace-photo-1"].firstMatch.exists)
         XCTAssertFalse(app.descendants(matching: .any)["replace-photo-2"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["draft-photo-3"].firstMatch.exists)
+        XCTAssertEqual(app.staticTexts["draft-photo-1"].firstMatch.label, "Front")
+        XCTAssertEqual(app.staticTexts["draft-photo-2"].firstMatch.label, "Back")
+        XCTAssertEqual(app.staticTexts["draft-photo-3"].firstMatch.label, "Detail")
         identify.tap()
         XCTAssertTrue(app.navigationBars["Example photo batch"].firstMatch.waitForExistence(timeout: 10))
     }
@@ -91,6 +95,15 @@ final class PhoneSignInAndReviewTests: XCTestCase {
         XCTAssertTrue(app.buttons["Explore the demo"].firstMatch.isHittable)
         app.buttons["I already have a link"].firstMatch.tap()
         XCTAssertTrue(app.secureTextFields["Paste sign-in link"].firstMatch.waitForExistence(timeout: 10))
+        let email = app.textFields["Email address"].firstMatch
+        email.tap()
+        email.typeText("collector@example.com\n")
+        XCTAssertTrue(app.staticTexts["Check your email"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Open email"].firstMatch.exists)
+        app.buttons["Paste sign-in link"].firstMatch.tap()
+        XCTAssertTrue(app.secureTextFields["Paste sign-in link"].firstMatch.exists)
+        app.buttons["Change email address"].firstMatch.tap()
+        XCTAssertTrue(app.textFields["Email address"].firstMatch.waitForExistence(timeout: 10))
 
         app.terminate()
         app.launchArguments = ["--preview-photo-review"]

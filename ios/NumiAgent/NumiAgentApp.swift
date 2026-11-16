@@ -1,6 +1,84 @@
 import SwiftUI
 import UIKit
 
+enum CollectorDesign {
+    static let tint = adaptive(0x1E5745, dark: 0xA9DBBF)
+    static let background = adaptive(0xF6F3EB, dark: 0x181E1A)
+    static let surface = adaptive(0xFFFDF7, dark: 0x252E28)
+    static let highlight = adaptive(0xE0ECE2, dark: 0x283E32)
+    static let warning = adaptive(0xFAEAC8, dark: 0x453619)
+    static let forest = Color(red: 0.08, green: 0.23, blue: 0.19)
+
+    private static func adaptive(_ light: Int, dark: Int) -> Color {
+        Color(uiColor: UIColor { traits in
+            let rgb = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: CGFloat(rgb >> 16 & 255) / 255,
+                           green: CGFloat(rgb >> 8 & 255) / 255,
+                           blue: CGFloat(rgb & 255) / 255, alpha: 1)
+        })
+    }
+}
+
+struct CollectorNotice: View {
+    let title: String
+    let message: String
+    let icon: String
+    var warning = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Label(title, systemImage: icon).font(.headline)
+            Text(message).font(.subheadline).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(warning ? CollectorDesign.warning : CollectorDesign.highlight, in: .rect(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct AddItemActions: View {
+    @Environment(\.dismiss) private var dismiss
+    let hasDraft: Bool
+    let choose: (Bool) -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        choose(true)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label(hasDraft ? "Resume photo draft" : "Add photos", systemImage: "camera").font(.headline)
+                            Text("Use the front, back and detail views of one coin or banknote.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    Button {
+                        choose(false)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Enter details manually", systemImage: "square.and.pencil").font(.headline)
+                            Text("Create a collection record from what you already know.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                .listRowBackground(CollectorDesign.surface)
+            }
+            .scrollContentBackground(.hidden)
+            .background(CollectorDesign.background)
+            .navigationTitle("Add item")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
 @MainActor
 final class AppSession: ObservableObject {
     enum Phase: Equatable {
@@ -54,7 +132,7 @@ struct NumiAgentApp: App {
     var body: some Scene {
         WindowGroup {
             root
-                .tint(Color(red: 0.45, green: 0.30, blue: 0.14))
+                .tint(CollectorDesign.tint)
                 .task {
                     if PreviewLaunch.screen != nil { session.openDemo() }
                     else { await session.refresh() }
@@ -124,7 +202,7 @@ enum CollectorTab: Hashable, CaseIterable, Identifiable {
         case .collection: return "Collection"
         case .capture: return "Capture"
         case .checklists: return "Checklists"
-        case .settings: return "Settings"
+        case .settings: return "Account"
         }
     }
     var icon: String {
@@ -132,7 +210,7 @@ enum CollectorTab: Hashable, CaseIterable, Identifiable {
         case .collection: return "square.grid.2x2"
         case .capture: return "camera"
         case .checklists: return "checklist"
-        case .settings: return "gearshape"
+        case .settings: return "person.crop.circle"
         }
     }
 }
@@ -167,31 +245,42 @@ private struct SignInScreen: View {
     @ObservedObject var session: AppSession
     @FocusState private var emailFocused: Bool
     @State private var email = ""
-    @State private var requested = false
+    @State private var requestedAddress: String?
     @State private var showLinkEntry = false
     @State private var pastedLink = ""
     @State private var busy = false
     @State private var error: String?
+    @Environment(\.openURL) private var openURL
+    @AccessibilityFocusState private var inboxFocused: Bool
+
+    private var previewing: Bool { PreviewLaunch.screen == .signIn }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 24) {
-                        banner.frame(minWidth: 280, maxWidth: 370)
-                        signInCard.frame(minWidth: 320, maxWidth: 460)
+                if let requestedAddress {
+                    inbox(address: requestedAddress)
+                        .frame(maxWidth: 480)
+                        .padding(24)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 24) {
+                            banner.frame(minWidth: 280, maxWidth: 370)
+                            signInCard.frame(minWidth: 320, maxWidth: 460)
+                        }
+                        VStack(spacing: 18) {
+                            banner
+                            signInCard
+                        }
+                        .frame(maxWidth: 480)
                     }
-                    VStack(spacing: 18) {
-                        banner
-                        signInCard
-                    }
-                    .frame(maxWidth: 480)
+                    .padding(20)
+                    .frame(maxWidth: 900)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(20)
-                .frame(maxWidth: 900)
-                .frame(maxWidth: .infinity)
             }
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(CollectorDesign.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
         }
     }
@@ -201,19 +290,17 @@ private struct SignInScreen: View {
             Label("NumiAgent", systemImage: "circle.hexagongrid.fill")
                 .font(.headline)
                 .foregroundStyle(Color(red: 1, green: 0.78, blue: 0.40))
-            Text("Your collection, in focus.")
+            Text("Start with one coin or banknote")
                 .font(.system(.largeTitle, design: .serif, weight: .semibold))
                 .accessibilityAddTraits(.isHeader)
-            Text("Identify coins and banknotes, compare auction sales, and keep track of the pieces you’re missing.")
+            Text("Identify it from photos and keep what you learn with the item.")
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.88))
         }
         .foregroundStyle(.white)
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LinearGradient(colors: [
-            Color(red: 0.06, green: 0.24, blue: 0.20), Color(red: 0.12, green: 0.32, blue: 0.23)
-        ], startPoint: .topLeading, endPoint: .bottomTrailing), in: .rect(cornerRadius: 22))
+        .background(CollectorDesign.forest, in: .rect(cornerRadius: 22))
     }
 
     private var signInCard: some View {
@@ -223,7 +310,9 @@ private struct SignInScreen: View {
             if session.phase == .unavailable {
                 Button("Retry connection") { Task { await session.refresh() } }.buttonStyle(.bordered)
             }
-            TextField("Email address", text: $email)
+            Text("Email address").font(.subheadline.weight(.semibold))
+            TextField("you@example.com", text: $email)
+                .accessibilityLabel("Email address")
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
@@ -241,17 +330,8 @@ private struct SignInScreen: View {
                     .frame(maxWidth: .infinity, minHeight: 32)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Color(red: 0.08, green: 0.34, blue: 0.25))
             .disabled(busy)
 
-            if requested {
-                Label("Check your inbox. Open the link on this device or paste it below. It expires in 10 minutes.",
-                      systemImage: "envelope.badge.shield.half.filled")
-                    .font(.subheadline)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.green.opacity(0.12), in: .rect(cornerRadius: 10))
-            }
             if let error {
                 Label(error, systemImage: "exclamationmark.circle.fill")
                     .font(.footnote).foregroundStyle(.red)
@@ -264,16 +344,7 @@ private struct SignInScreen: View {
                     .frame(maxWidth: .infinity, minHeight: 28)
             }
             .buttonStyle(.bordered)
-            if showLinkEntry {
-                SecureField("Paste sign-in link", text: $pastedLink)
-                    .textContentType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
-                Button("Open sign-in link") { Task { await signIn() } }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(busy || pastedLink.isBlank)
-            }
+            if showLinkEntry { pasteLink }
             Button {
                 session.openDemo()
             } label: {
@@ -284,11 +355,58 @@ private struct SignInScreen: View {
             Link("Privacy policy", destination: NumiAPI.url("/privacy")).font(.footnote)
         }
         .padding(20)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 22))
+        .background(CollectorDesign.surface, in: .rect(cornerRadius: 22))
+    }
+
+    private func inbox(address: String) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Image(systemName: "envelope").font(.largeTitle).foregroundStyle(.tint)
+            Text("Check your email").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                .accessibilityFocused($inboxFocused)
+            Text("We sent a sign-in link to \(address). Open it on this device within 10 minutes.")
+            Button {
+                // The standard Mail URL opens the app when it is available.
+                guard let mail = URL(string: "message://") else { return }
+                openURL(mail) { accepted in
+                    if !accepted { error = "Open your email app to find the sign-in link, then return here." }
+                }
+            } label: {
+                Label("Open email", systemImage: "envelope").frame(maxWidth: .infinity, minHeight: 32)
+            }
+            .buttonStyle(.borderedProminent)
+            Button("Paste sign-in link") { showLinkEntry.toggle() }.buttonStyle(.bordered)
+            if showLinkEntry { pasteLink }
+            CollectorNotice(title: "Didn’t get the email?",
+                            message: "Check spam or send a new link.", icon: "envelope.badge")
+            Button("Resend link") { Task { await requestLink() } }.disabled(busy)
+            Button("Change email address") {
+                requestedAddress = nil
+                showLinkEntry = false
+                error = nil
+            }
+            .disabled(busy)
+            if let error { Text(error).font(.footnote).foregroundStyle(.secondary) }
+        }
+        .padding(20)
+        .background(CollectorDesign.surface, in: .rect(cornerRadius: 22))
+        .onAppear { inboxFocused = true }
+    }
+
+    private var pasteLink: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SecureField("Paste sign-in link", text: $pastedLink)
+                .textContentType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .textFieldStyle(.roundedBorder)
+            Button("Open sign-in link") { Task { await signIn() } }
+                .buttonStyle(.borderedProminent)
+                .disabled(busy || pastedLink.isBlank)
+        }
     }
 
     private func requestLink() async {
-        let address = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let address = requestedAddress ?? email.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !busy else { return }
         guard address.contains("@"), address.count <= 250 else {
             error = "Enter a valid email address."
@@ -298,11 +416,12 @@ private struct SignInScreen: View {
         emailFocused = false
         busy = true
         error = nil
-        requested = false
         defer { busy = false }
         do {
-            try await session.api.requestSignIn(email: address)
-            requested = true
+            if !previewing { try await session.api.requestSignIn(email: address) }
+            if requestedAddress != nil { error = "Link sent again. Check your inbox." }
+            requestedAddress = address
+            showLinkEntry = false
         } catch { self.error = error.localizedDescription }
     }
 
@@ -323,25 +442,71 @@ private struct SignInScreen: View {
 private struct CollectorTabs: View {
     @ObservedObject var session: AppSession
     let account: Account?
+    @StateObject private var capture: CaptureDraftStore
     @State private var selectedTab = PreviewLaunch.tab
+    @State private var reviewID: String?
+    @State private var openedItemID: String?
+    @State private var search = ""
+    @State private var showAccount = false
+    @State private var checklistLabel: String?
+    @State private var catalogRevision = 0
 
     private var demo: Bool { account == nil }
 
+    init(session: AppSession, account: Account?) {
+        self.session = session
+        self.account = account
+        _capture = StateObject(wrappedValue: CaptureDraftStore(account: account))
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
-            CatalogScreen(api: session.api, demo: demo)
+            CatalogScreen(api: session.api, demo: demo, capture: capture, query: $search,
+                          openedItemID: $openedItemID, openCapture: openCapture,
+                          openAccount: { showAccount = true }, itemCreated: openNewItem, revision: catalogRevision)
                 .tabItem { Label(CollectorTab.collection.title, systemImage: CollectorTab.collection.icon) }
                 .tag(CollectorTab.collection)
-            CaptureScreen(api: session.api, account: account)
+            CaptureScreen(api: session.api, account: account, store: capture, reviewID: $reviewID,
+                          onUpload: nil, onSave: openNewItem, checklistLabel: checklistLabel)
                 .tabItem { Label(CollectorTab.capture.title, systemImage: CollectorTab.capture.icon) }
                 .tag(CollectorTab.capture)
-            ThemesScreen(api: session.api, demo: demo)
+            ThemesScreen(api: session.api, demo: demo, captureForSlot: captureForSlot, findForSlot: findForSlot)
                 .tabItem { Label(CollectorTab.checklists.title, systemImage: CollectorTab.checklists.icon) }
                 .tag(CollectorTab.checklists)
-            AccountScreen(session: session, account: account)
-                .tabItem { Label(CollectorTab.settings.title, systemImage: CollectorTab.settings.icon) }
-                .tag(CollectorTab.settings)
         }
+        .sheet(isPresented: $showAccount) {
+            NavigationStack {
+                AccountScreen(session: session, account: account, showClose: true)
+            }
+        }
+        .onChange(of: selectedTab) { _, new in
+            if new == .collection { catalogRevision += 1 }
+        }
+    }
+
+    private func openCapture(_ batchID: String?) {
+        checklistLabel = nil
+        reviewID = batchID
+        selectedTab = .capture
+    }
+
+    private func captureForSlot(_ label: String) {
+        openCapture(nil)
+        checklistLabel = label
+    }
+
+    private func findForSlot(_ term: String) {
+        search = term
+        openedItemID = nil
+        selectedTab = .collection
+    }
+
+    private func openNewItem(_ id: String) {
+        checklistLabel = nil
+        search = ""
+        openedItemID = id
+        catalogRevision += 1
+        selectedTab = .collection
     }
 }
 
@@ -349,12 +514,14 @@ struct AccountScreen: View {
     @ObservedObject var session: AppSession
     let account: Account?
     var inWorkspace = false
+    var showClose = false
+    @Environment(\.dismiss) private var dismiss
     @State private var delete = false
     @State private var busy = false
     @State private var error: String?
 
     var body: some View {
-        if inWorkspace { form }
+        if inWorkspace || showClose { form }
         else { NavigationStack { form } }
     }
 
@@ -381,7 +548,14 @@ struct AccountScreen: View {
                 Link("Terms of service", destination: NumiAPI.url("/terms"))
             }
         }
-        .navigationTitle("Settings")
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
+        .navigationTitle("Account")
+        .toolbar {
+            if showClose {
+                ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+            }
+        }
         .confirmationDialog("Delete your NumiAgent account?", isPresented: $delete, titleVisibility: .visible) {
             Button("Delete account permanently", role: .destructive) {
                 Task { await endSession(deleteAccount: true) }

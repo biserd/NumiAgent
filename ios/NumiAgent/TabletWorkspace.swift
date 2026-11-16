@@ -25,6 +25,7 @@ struct TabletWorkspace: View {
 
     @ObservedObject var session: AppSession
     let account: Account?
+    @StateObject private var capture: CaptureDraftStore
     @State private var section: CollectorTab? = PreviewLaunch.tab
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var compactColumn: NavigationSplitViewColumn = .content
@@ -35,6 +36,9 @@ struct TabletWorkspace: View {
     @State private var catalogRevision = 0
     @State private var checklistRevision = 0
     @State private var importsRevision = 0
+    @State private var search = ""
+    @State private var openedItemID: String?
+    @State private var checklistLabel: String?
 
     private var demo: Bool { account == nil }
     private var activeSection: CollectorTab { section ?? .collection }
@@ -42,6 +46,7 @@ struct TabletWorkspace: View {
     init(session: AppSession, account: Account?) {
         self.session = session
         self.account = account
+        _capture = StateObject(wrappedValue: CaptureDraftStore(account: account))
         if account == nil {
             switch PreviewLaunch.screen {
             case .collection, .valuation:
@@ -76,7 +81,12 @@ struct TabletWorkspace: View {
         }
         .navigationSplitViewStyle(.balanced)
         .onChange(of: section) { _, newValue in
-            if newValue != nil { compactColumn = .content }
+            if newValue == .collection {
+                catalogRevision += 1
+                compactColumn = specimen == nil ? .content : .detail
+            } else if newValue == .capture {
+                compactColumn = importID == nil && !capture.hasDraft ? .content : .detail
+            } else if newValue != nil { compactColumn = .content }
         }
     }
 
@@ -84,10 +94,12 @@ struct TabletWorkspace: View {
     private var workspaceList: some View {
         switch activeSection {
         case .collection:
-            CatalogScreen(api: session.api, demo: demo,
+            CatalogScreen(api: session.api, demo: demo, capture: capture, query: $search,
+                          openedItemID: $openedItemID, openCapture: openCapture, openAccount: nil,
+                          itemCreated: openNewItem,
                           workspaceSelection: .init(item: $specimen, revision: catalogRevision))
         case .capture:
-            ImportHistory(api: session.api, selection: $importID, revision: importsRevision, demo: demo) {
+            ImportHistory(api: session.api, store: capture, selection: $importID, revision: importsRevision, demo: demo) {
                 importID = nil
                 compactColumn = .detail
             }
@@ -101,7 +113,7 @@ struct TabletWorkspace: View {
                     NavigationLink(value: SettingsPage.exports) { Label("Account and exports", systemImage: "square.and.arrow.up") }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("Account")
         }
     }
 
@@ -117,15 +129,22 @@ struct TabletWorkspace: View {
                     catalogRevision += 1
                     compactColumn = .content
                 }
+            } else if let openedItemID {
+                ItemByIDScreen(api: session.api, id: openedItemID, demo: demo, expanded: true) {
+                    catalogRevision += 1
+                }
             } else {
                 ContentUnavailableView("Select a specimen", systemImage: CollectorTab.collection.icon,
                                        description: Text("Choose a coin or banknote to see its photos and valuation."))
             }
         case .capture:
             if let importID {
-                ImportReview(api: session.api, batchID: importID, expanded: true)
+                ImportReview(api: session.api, batchID: importID, expanded: true,
+                             previewBatch: demo ? PhotoImport.demoAutomatic : nil,
+                             resumeUpload: capture.draftBatchID == importID ? { openCapture(nil) } : nil)
             } else {
-                CaptureScreen(api: session.api, account: account, onUpload: receivedUpload)
+                CaptureScreen(api: session.api, account: account, store: capture, reviewID: $importID,
+                              onUpload: receivedUpload, onSave: openNewItem, checklistLabel: checklistLabel)
             }
         case .checklists:
             if let checklist {
@@ -135,7 +154,7 @@ struct TabletWorkspace: View {
                     self.checklist = nil
                     checklistRevision += 1
                     compactColumn = .content
-                })
+                }, captureForSlot: captureForSlot, findForSlot: findForSlot)
             } else {
                 ContentUnavailableView("Select a checklist", systemImage: CollectorTab.checklists.icon,
                                        description: Text("Choose a checklist to see what you own and which pieces are missing."))
@@ -151,7 +170,7 @@ struct TabletWorkspace: View {
 
     private var detailRoute: String {
         switch activeSection {
-        case .collection: return "collection/" + (specimen?.id ?? "")
+        case .collection: return "collection/" + (specimen?.id ?? openedItemID ?? "")
         case .capture: return "capture/" + (importID ?? "")
         case .checklists: return "checklists/" + (checklist?.id ?? "")
         case .settings: return "settings/" + (settingsPage ?? .account).rawValue
@@ -163,6 +182,44 @@ struct TabletWorkspace: View {
         if importID == nil {
             importID = id
             if activeSection == .capture { compactColumn = .detail }
+        }
+    }
+
+    private func openCapture(_ batchID: String?) {
+        checklistLabel = nil
+        importID = batchID
+        section = .capture
+        compactColumn = .detail
+    }
+
+    private func captureForSlot(_ label: String) {
+        openCapture(nil)
+        checklistLabel = label
+    }
+
+    private func findForSlot(_ term: String) {
+        search = term
+        specimen = nil
+        openedItemID = nil
+        section = .collection
+        compactColumn = .content
+    }
+
+    private func openNewItem(_ id: String) {
+        checklistLabel = nil
+        search = ""
+        specimen = nil
+        openedItemID = id
+        section = .collection
+        compactColumn = .detail
+        catalogRevision += 1
+        Task {
+            if let result: Specimen = try? await session.api.get("/items/" + id),
+               activeSection == .collection, openedItemID == id, specimen == nil {
+                specimen = result
+                openedItemID = nil
+                compactColumn = .detail
+            }
         }
     }
 }

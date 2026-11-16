@@ -56,19 +56,26 @@ final class TabletWorkspaceTests: XCTestCase {
 
 final class PhoneSignInAndReviewTests: XCTestCase {
     @MainActor
-    func testPhotoQualityOnlyOffersReplacementForFlaggedSide() {
+    func testPhotoDraftAcceptsAnotherViewBeforeIdentification() {
         let app = XCUIApplication()
         app.launchArguments = ["--preview-photo-review"]
         app.launch()
-        let preview = app.buttons["Preview a small front photo"]
+        let preview = app.buttons["Preview a photo draft"]
         XCTAssertTrue(preview.waitForExistence(timeout: 15))
         preview.tap()
-        let replaceFront = app.descendants(matching: .any)["replace-front-photo"].firstMatch
-        XCTAssertTrue(replaceFront.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.descendants(matching: .any)["replace-back-photo"].exists)
-        let backReady = app.descendants(matching: .any)["back-photo-ready"].firstMatch
-        if !backReady.exists { app.swipeUp() }
-        XCTAssertTrue(backReady.exists)
+        XCTAssertTrue(app.staticTexts["2 photos in this draft"].firstMatch.waitForExistence(timeout: 10))
+        app.buttons["Add a sample close-up"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["3 photos in this draft"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.navigationBars["Example photo batch"].exists)
+        let identify = app.buttons["Identify"].firstMatch
+        XCTAssertTrue(identify.isHittable)
+
+        app.swipeUp()
+        XCTAssertTrue(app.descendants(matching: .any)["replace-photo-1"].firstMatch.exists)
+        XCTAssertFalse(app.descendants(matching: .any)["replace-photo-2"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["draft-photo-3"].firstMatch.exists)
+        identify.tap()
+        XCTAssertTrue(app.navigationBars["Example photo batch"].firstMatch.waitForExistence(timeout: 10))
     }
 
     @MainActor

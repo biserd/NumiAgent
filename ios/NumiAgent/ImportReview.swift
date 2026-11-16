@@ -60,7 +60,7 @@ struct ImportHistory: View {
             Label(status, systemImage: (batch.pending ?? 0) > 0 ? "clock" : "arrow.right.circle")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.tint)
-            Text(batch.paired == 1 ? "Two-sided import" : batch.total == 1 ? "1 uploaded photo" : "\(batch.total) uploaded photos")
+            Text(batch.paired == 1 ? "One item" : batch.total == 1 ? "1 uploaded photo" : "\(batch.total) uploaded photos")
                 .font(.footnote).foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
@@ -68,6 +68,10 @@ struct ImportHistory: View {
 
     private func batchStatus(_ batch: ImportSummary) -> String {
         if let pending = batch.pending, pending > 0 { return "Identification in progress" }
+        if batch.cancelled == 0 && batch.expected_photos != nil &&
+            (batch.total == 0 || batch.paired != 1 && batch.total < (batch.expected_photos ?? 0)) {
+            return "Waiting for photos"
+        }
         let saved = batch.saved ?? 0
         let needsReview = (batch.suggestions ?? 0) + (batch.manual ?? 0) + (batch.failed ?? 0)
         if saved > 0 && needsReview > 0 { return "\(saved) added · \(needsReview) need attention" }
@@ -100,8 +104,9 @@ struct ImportReview: View {
         List {
             if let batch = batch ?? previewBatch {
                 progressSection(batch)
-                ForEach(batch.awaitingPair ? [] : batch.subjects) { photo in
-                    ImportPhotoSection(api: api, photo: photo, companion: batch.photos.first { $0.side == "reverse" },
+                ForEach(batch.awaitingPhotos ? [] : batch.subjects) { photo in
+                    ImportPhotoSection(api: api, photo: photo,
+                                       companions: batch.paired == 1 ? batch.photos.filter { $0.id != photo.id } : [],
                                        expanded: expanded, sample: previewBatch != nil,
                                        canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice, reference in
                         editPhoto(photo, in: batch, suggestion: choice, reference: reference)
@@ -127,7 +132,7 @@ struct ImportReview: View {
         }
         .sheet(item: $edit) { edit in
             ItemEditor(api: api, draft: edit.draft,
-                       pairing: batch?.photos.filter { $0.canCatalog } ?? []) { poll = UUID() }
+                       pairing: batch?.paired == 1 ? [] : batch?.photos.filter { $0.canCatalog } ?? []) { poll = UUID() }
         }
         .confirmationDialog("Cancel pending work in this import?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Cancel pending analysis", role: .destructive) {
@@ -141,8 +146,9 @@ struct ImportReview: View {
         let pending = subjects.filter(\.isPending).count
         let saved = subjects.filter { $0.state == "saved" }.count
         let needsReview = subjects.filter(\.canCatalog).count
-        let hasUnprocessedPhotos = batch.paired != 1 && subjects.contains { $0.state == "manual" && $0.error == nil }
-        let title = batch.awaitingPair ? "Waiting for both sides" : pending > 0 ? "Identifying photos" :
+        let hasUnprocessedPhotos = batch.expected_photos == nil && batch.paired != 1 &&
+            subjects.contains { $0.state == "manual" && $0.error == nil }
+        let title = batch.awaitingPhotos ? "Waiting for photos" : pending > 0 ? "Identifying photos" :
             batch.photos.isEmpty ? "No photos in this import" : saved > 0 ? "Collection updated" :
             needsReview > 0 ? "Check these results" : "Import complete"
         return Section {
@@ -150,12 +156,13 @@ struct ImportReview: View {
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.tint)
             if saved > 0 { Text("\(saved) added to your collection") }
-            if batch.awaitingPair {
+            if batch.awaitingPhotos {
                 Text("Return to Capture to finish uploading this import.")
             } else if pending > 0 {
                 Text("Clear matches are added automatically. You can leave this screen while identification runs.")
                 ProgressView(value: Double(subjects.count - pending), total: Double(subjects.count)) {
-                    Text(batch.paired == 1 ? "Reading the front and back" : "\(subjects.count - pending) of \(subjects.count) photos processed")
+                    Text(batch.paired == 1 ? "Reading \(batch.photos.count) \(batch.photos.count == 1 ? "photo" : "photos") of one item" :
+                         "\(subjects.count - pending) of \(subjects.count) photos processed")
                 }
                 Button("Cancel pending analysis", role: .destructive) { confirmCancel = true }
                     .disabled(working)
@@ -179,8 +186,8 @@ struct ImportReview: View {
         guard previewBatch == nil else { return }
         var draft = suggestion?.draft(using: reference) ?? ItemDraft()
         if batch.paired == 1 {
-            draft.photos = batch.photos.compactMap { source in
-                source.side.map { .init(photoId: source.id, side: $0, crop: nil) }
+            draft.photos = batch.photos.map { source in
+                .init(photoId: source.id, side: source.side ?? "overview", crop: nil)
             }
         } else {
             draft.photos = [.init(photoId: photo.id, side: "overview", crop: suggestion?.crop)]
@@ -231,7 +238,7 @@ struct ImportReview: View {
 private struct ImportPhotoSection: View {
     let api: NumiAPI
     let photo: ImportedPhoto
-    let companion: ImportedPhoto?
+    let companions: [ImportedPhoto]
     let expanded: Bool
     let sample: Bool
     let canRetry: Bool
@@ -270,13 +277,16 @@ private struct ImportPhotoSection: View {
             if photo.state == "failed" && canRetry {
                 Button("Retry identification", action: retry).disabled(working)
             }
-            if let companion {
+            if let back = companions.first(where: { $0.side == "reverse" }) {
                 HStack {
                     sidePhoto(photo, label: "Front")
-                    sidePhoto(companion, label: "Back")
+                    sidePhoto(back, label: "Back")
                 }
             } else {
                 sidePhoto(photo)
+            }
+            ForEach(companions.filter { $0.side != "reverse" }) { detail in
+                sidePhoto(detail, label: "Detail photo")
             }
         } header: {
             if photo.record != nil {
@@ -288,8 +298,8 @@ private struct ImportPhotoSection: View {
     private func sidePhoto(_ side: ImportedPhoto, label: String? = nil) -> some View {
         VStack {
             SpecimenImage(api: api, id: sample ? nil : side.id,
-                          sampleAsset: sample && side.record == nil ? "DemoCoin" : nil)
-                .frame(height: companion == nil ? (expanded ? 330 : 220) : (expanded ? 245 : 130))
+                          sampleAsset: sample && side.record == nil ? "DemoNickel" : nil)
+                .frame(height: label == "Front" || label == "Back" ? (expanded ? 245 : 130) : (expanded ? 330 : 220))
             if let label { Text(label).font(.caption).foregroundStyle(.secondary) }
         }
     }
@@ -395,9 +405,10 @@ struct SpecimenIdentificationSheet: View {
                             }
                         }
                     } else if error == nil {
-                        ProgressView("Reading both sides and checking catalog references")
+                        ProgressView("Reading the photos and checking available references")
                     }
-                    if item.type == "coin", candidates != nil || error != nil {
+                    if isRomanImperialCoin(type: item.type, issuer: item.issuer, title: item.title),
+                       candidates != nil || error != nil {
                         Section {
                             TextField("Obverse legend", text: $obverseLegend).textInputAutocapitalization(.characters)
                                 .autocorrectionDisabled()

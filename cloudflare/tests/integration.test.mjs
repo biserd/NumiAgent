@@ -206,6 +206,7 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.deepEqual(accepted.record,{id:goodPhoto.id,title:'2007 Jefferson nickel',type:'coin',year:'2007',issuer:'United States',denomination:'5 cents'})
     const nickel=await json(await api('/items/'+accepted.record.id,a))
     assert.deepEqual(nickel.photos,[{photoId:goodPhoto.id,side:'overview',crop:null}])
+    assert.equal((await api('/imports/refine/'+nickel.id,a,'POST',{legends:{obverseLegend:'LIBERTY',reverseLegend:'FIVE CENTS'}})).status,400)
     assert.equal((await api('/items/'+nickel.id,b)).status,404)
     assert.deepEqual(await json(await api('/imports/'+automatic+'/photos',a,'PUT',complete)),{id:goodPhoto.id,state:'saved'})
     assert.equal((await json(await api('/items?q=Jefferson',a))).items.length,1)
@@ -240,6 +241,47 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.deepEqual((await json(await api('/items/'+front.id,a))).photos,pairedCoin.photos)
     await json(await api(pairRoute+'/photos?side=reverse',a,'PUT',fixture(172)))
     assert.equal((await json(await api('/items?q=1998 Hong Kong',a))).items.length,1)
+    const grouped = randomUUID()
+    const groupedRoute = '/imports/'+grouped
+    const planned = {...registration,id:grouped,paired:true,expectedPhotos:3}
+    await json(await api('/imports',a,'POST',planned),201)
+    assert.equal((await api('/imports',a,'POST',{...planned,expectedPhotos:2})).status,409)
+    const groupedFront=await json(await api(groupedRoute+'/photos?side=obverse',a,'PUT',complete),201)
+    const groupedBack=await json(await api(groupedRoute+'/photos?side=reverse',a,'PUT',fixture(184)),201)
+    assert.deepEqual((await json(await api(groupedRoute,a))).photos.map(photo=>photo.state),['manual','manual'])
+    assert.equal((await api(groupedRoute+'/analyze',a,'POST',{consent:true})).status,409)
+    assert.equal((await api('/items/'+groupedFront.id,a)).status,404)
+    const detail=await json(await api(groupedRoute+'/photos',a,'PUT',fixture(185)),201)
+    assert.equal((await api(groupedRoute+'/photos',a,'PUT',fixture(186))).status,429)
+    let group
+    for(let j=0;j<30;j++) {
+      group=await json(await api(groupedRoute,a))
+      if (group.photos.every(photo=>photo.state==='saved')) break
+      await wait(1000)
+    }
+    assert.deepEqual(group.photos.map(photo=>photo.record?.id),Array(3).fill(groupedFront.id),server.logs().slice(-2000))
+    assert.equal(group.photos.find(photo=>photo.id===groupedFront.id).record.denomination,'5 cents')
+    const groupedCoin=await json(await api('/items/'+groupedFront.id,a))
+    assert.deepEqual(Object.fromEntries(groupedCoin.photos.map(photo=>[photo.side,photo.photoId])),
+      {obverse:groupedFront.id,reverse:groupedBack.id,overview:detail.id})
+    assert.equal((await api('/items/'+detail.id,a)).status,404)
+    await json(await api(groupedRoute+'/photos',a,'PUT',fixture(185)))
+    assert.equal((await json(await api('/items?q=Jefferson',a))).items.length,1)
+
+    const different = randomUUID()
+    await json(await api('/imports',a,'POST',{...registration,id:different,expectedPhotos:2}),201)
+    const differentRoute = '/imports/'+different
+    const firstItem=await json(await api(differentRoute+'/photos',a,'PUT',complete),201)
+    assert.equal(firstItem.state,'manual')
+    const secondItem=await json(await api(differentRoute+'/photos',a,'PUT',uncertain),201)
+    let differentBatch
+    for(let j=0;j<30;j++) {
+      differentBatch=await json(await api(differentRoute,a))
+      if (differentBatch.photos.every(photo=>['saved','review'].includes(photo.state))) break
+      await wait(1000)
+    }
+    assert.equal(differentBatch.photos.find(photo=>photo.id===firstItem.id).record?.id,firstItem.id)
+    assert.equal(differentBatch.photos.find(photo=>photo.id===secondItem.id).state,'review')
     const saved=await json(await api('/items',a,'POST',{title:'Trajan denarius',ruler:'Trajan',type:'coin',grade:'VF',details:{metal:'Silver'},
       photos:[{photoId:ids[0],side:'obverse'},{photoId:ids[1],side:'reverse'}]}),201)
     const foreign=await json(await api('/items',b,'POST',{title:'Other private specimen',type:'coin'}),201)

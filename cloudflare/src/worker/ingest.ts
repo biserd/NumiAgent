@@ -13,7 +13,7 @@ import { cropCoinJpeg } from './coinCloseup'
 
 const maxBytes = 6 * 1024 * 1024
 type Photo = {id:string;user_id:string;batch_id:string;mime:string;bytes:number;state:string;candidates:string|null;error:string|null;attempt:number;pair_side:'obverse'|'reverse'|null}
-type Batch = {id:string;label:string;created:number;cancelled:number;analyze:number;auto_catalog:number;paired:number}
+type Batch = {id:string;label:string;created:number;cancelled:number;analyze:number;auto_catalog:number;paired:number;expected_photos:number|null}
 const path = (user:string,key:string) => user + '/' + key
 const owner = (env:Env,user:string,key:string) => one<Photo>(env,'SELECT * FROM photos WHERE id=? AND user_id=?',key,user)
 const readBatch = (env:Env,user:string,key:string) => one<Batch>(env,'SELECT * FROM imports WHERE id=? AND user_id=?',key,user)
@@ -31,26 +31,30 @@ async function enqueue(env:Env,job:Job) {
 }
 
 export const imports = router()
-imports.get('/',async c=>c.json(await all(c.env,`SELECT b.id,b.label,b.created,b.cancelled,b.paired,COUNT(p.id) AS total,
+imports.get('/',async c=>c.json(await all(c.env,`SELECT b.id,b.label,b.created,b.cancelled,b.paired,b.expected_photos,COUNT(p.id) AS total,
   SUM(CASE WHEN p.state IN ('queued','running','uploading') THEN 1 ELSE 0 END) AS pending,
   SUM(CASE WHEN p.state='review' AND COALESCE(p.candidates,'[]')<>'[]' THEN 1 ELSE 0 END) AS suggestions,
   SUM(CASE WHEN p.state='manual' OR (p.state='review' AND COALESCE(p.candidates,'[]')='[]') THEN 1 ELSE 0 END) AS manual,
   SUM(CASE WHEN p.state='failed' THEN 1 ELSE 0 END) AS failed,
   SUM(CASE WHEN p.state='saved' THEN 1 ELSE 0 END) AS saved
-  FROM imports b LEFT JOIN photos p ON p.batch_id=b.id AND p.pair_side IS NOT 'reverse'
+  FROM imports b LEFT JOIN photos p ON p.batch_id=b.id AND (b.paired=0 OR p.pair_side='obverse')
   WHERE b.user_id=? GROUP BY b.id ORDER BY b.created DESC LIMIT 60`,c.get('user').id)))
 imports.post('/',async c=>{
   const input = await body(c,z.object({id,label:z.string().trim().min(1).max(100),analyze:z.boolean(),consent:z.boolean(),
-    autoCatalog:z.boolean().default(false),paired:z.boolean().default(false)}))
+    autoCatalog:z.boolean().default(false),paired:z.boolean().default(false),expectedPhotos:z.number().int().min(1).max(20).optional()}))
+  const expected = input.expectedPhotos ?? null
   if (input.analyze && !input.consent) return fail(400,'Consent is required before analysis')
   if (input.autoCatalog && !input.analyze) return fail(400,'Automatic cataloging requires photo identification')
   if (input.paired && !input.autoCatalog) return fail(400,'Two-sided imports require automatic cataloging')
+  if (expected !== null && (!input.analyze || (input.paired && expected > 5))) return fail(400,'Invalid photo count for this import')
   await limit(c.env,'import',c.get('user').id,100)
   const user = c.get('user').id
-  await run(c.env,`INSERT INTO imports(id,user_id,label,analyze,created,auto_catalog,paired) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`,
-    input.id,user,input.label,Number(input.analyze),now(),Number(input.autoCatalog),Number(input.paired))
+  await run(c.env,`INSERT INTO imports(id,user_id,label,analyze,created,auto_catalog,paired,expected_photos)
+    VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`,
+    input.id,user,input.label,Number(input.analyze),now(),Number(input.autoCatalog),Number(input.paired),expected)
   const batch = await readBatch(c.env,user,input.id)
-  if (!batch || batch.analyze!==Number(input.analyze) || batch.auto_catalog!==Number(input.autoCatalog) || batch.paired!==Number(input.paired)) return fail(409,'Import identifier already in use')
+  if (!batch || batch.analyze!==Number(input.analyze) || batch.auto_catalog!==Number(input.autoCatalog) ||
+      batch.paired!==Number(input.paired) || batch.expected_photos!==expected) return fail(409,'Import identifier already in use')
   return c.json(batch,201)
 })
 imports.get('/:id',async c=>{
@@ -65,7 +69,7 @@ imports.get('/:id',async c=>{
     ) AND i.user_id=p.user_id WHERE p.user_id=? AND p.batch_id=? ORDER BY p.created,p.id`,user,batch.id)
   const front = batch.paired ? photos.find(photo=>photo.pair_side==='obverse') : undefined
   return c.json({...batch,photos:photos.map(({id,state,candidates,error,itemId,title,type,year,issuer,denomination,pair_side})=>({
-    id,state:pair_side==='reverse' && front ? front.state : state,candidates:candidates ? JSON.parse(candidates):[],error,side:pair_side,
+    id,state:state!=='uploading' && pair_side!=='obverse' && front ? front.state : state,candidates:candidates ? JSON.parse(candidates):[],error,side:pair_side,
     record:itemId ? {id:itemId,title,type,year,issuer,denomination} : null
   }))})
 })
@@ -75,6 +79,7 @@ imports.post('/:id/analyze',async c=>{
   const key = c.req.param('id')
   const batch = await readBatch(c.env,user,key)
   if (!batch || batch.cancelled) return fail(404,'Import unavailable')
+  if (batch.expected_photos !== null) return fail(409,'Identification starts after all photos in this import upload')
   if (batch.paired) return fail(409,'Identification starts automatically after both sides upload')
   if (!c.env.AI && !(c.env.APP_MODE==='test' && isLocal(c.env))) return fail(503,'Photo identification is unavailable right now')
   await limit(c.env,'import_analyze',user,60)
@@ -103,7 +108,8 @@ imports.post('/:id/cancel',async c=>{
   await c.env.DB.batch([
     c.env.DB.prepare('UPDATE imports SET cancelled=1 WHERE user_id=? AND id=?').bind(user,key),
     c.env.DB.prepare(`UPDATE photos SET state='cancelled',updated=? WHERE user_id=? AND batch_id=?
-      AND (state IN ('queued','running','uploading') OR (pair_side IS NOT NULL AND state='manual'))`).bind(now(),user,key)
+      AND (state IN ('queued','running','uploading') OR (state='manual' AND EXISTS(
+        SELECT 1 FROM imports b WHERE b.id=photos.batch_id AND (b.paired=1 OR b.expected_photos IS NOT NULL))))`).bind(now(),user,key)
   ])
   return c.body(null,204)
 })
@@ -116,12 +122,37 @@ async function queuePair(env:Env,user:string,batch:string) {
   if (pending) await enqueue(env,pending)
 }
 
+async function queuePlannedImport(env:Env,user:string,batch:Batch) {
+  const jobs = await all<Job>(env,`UPDATE photos SET state='queued',updated=?
+    WHERE user_id=? AND batch_id=? AND state='manual' AND error IS NULL AND attempt=0
+    AND (?=0 OR pair_side='obverse')
+    AND EXISTS(SELECT 1 FROM imports b JOIN users u ON u.id=b.user_id
+      WHERE b.id=photos.batch_id AND b.user_id=photos.user_id AND b.cancelled=0 AND b.analyze=1 AND u.deleting=0
+      AND b.expected_photos=(SELECT COUNT(*) FROM photos p WHERE p.batch_id=b.id)
+      AND NOT EXISTS(SELECT 1 FROM photos p WHERE p.batch_id=b.id AND p.state IN ('uploading','cancelled'))
+      AND (b.paired=0 OR b.expected_photos=1 OR EXISTS(
+        SELECT 1 FROM photos p WHERE p.batch_id=b.id AND p.pair_side='reverse')))
+    RETURNING id,attempt`,now(),user,batch.id,batch.paired)
+  if (jobs.length) {
+    try { await env.IDENTIFY.sendBatch(jobs.map(job=>({body:job}))) }
+    catch { console.warn('Queue send failed. Pending jobs will be recovered by the scheduler.') }
+  }
+}
+
+async function queueAfterUpload(env:Env,user:string,batch:Batch) {
+  if (batch.expected_photos !== null) await queuePlannedImport(env,user,batch)
+  else if (batch.paired) await queuePair(env,user,batch.id)
+}
+
 imports.put('/:id/photos',async c=>{
   const user = c.get('user').id
   const batch = await readBatch(c.env,user,c.req.param('id'))
   if (!batch || batch.cancelled) return fail(404,'Import is unavailable or cancelled')
   const side = c.req.query('side') ?? null
-  if (batch.paired ? (side!=='obverse' && side!=='reverse') : side!==null) return fail(400,'Choose a front and back photo for a two-sided import')
+  const expected = batch.expected_photos
+  const validSide = !batch.paired ? side===null : side==='obverse' ||
+    (side==='reverse' && (expected===null || expected>=2)) || (side===null && expected!==null && expected>2)
+  if (!validSide) return fail(400,'Use the front and back slots before adding detail photos')
   await limit(c.env,'upload_requests',user,650)
   if (Number(c.req.header('Content-Length')) > maxBytes) return fail(413,'Photos must be 6 MB or smaller')
   const bytes = await boundedBody(c.req.raw,maxBytes)
@@ -133,15 +164,18 @@ imports.put('/:id/photos',async c=>{
   const existing = await owner(c.env,user,key)
   if (existing && existing.pair_side!==side) return fail(409,'Choose two different photos')
   if (existing && existing.state!=='uploading') {
-    if (batch.paired) await queuePair(c.env,user,batch.id)
+    await queueAfterUpload(c.env,user,batch)
     return c.json({id:key,state:existing.state})
   }
   await run(c.env,`INSERT INTO photos(id,user_id,batch_id,mime,bytes,sha,state,created,updated,pair_side)
     SELECT ?,?,?,?,?,?,'uploading',?,?,? WHERE EXISTS (SELECT 1 FROM imports
     JOIN users ON users.id=imports.user_id WHERE imports.id=? AND cancelled=0 AND deleting=0)
-    AND (SELECT COUNT(*) FROM photos WHERE batch_id=?) < 300
+    AND (SELECT COUNT(*) FROM photos WHERE batch_id=?) < ?
+    AND (?=0 OR ? IS NOT NULL OR (
+      SELECT COUNT(*) FROM photos WHERE batch_id=? AND pair_side IS NULL)<COALESCE(?-2,0))
     AND (SELECT COALESCE(SUM(bytes),0) FROM photos WHERE user_id=?) + ? <= 2147483648
-    ON CONFLICT DO NOTHING`,key,user,batch.id,mime,bytes.length,sha,now(),now(),side,batch.id,batch.id,user,bytes.length)
+    ON CONFLICT DO NOTHING`,key,user,batch.id,mime,bytes.length,sha,now(),now(),side,
+    batch.id,batch.id,expected ?? 300,batch.paired,side,batch.id,expected,user,bytes.length)
   const registered = await owner(c.env,user,key)
   if (registered && registered.pair_side!==side) return fail(409,'Choose two different photos')
   if (!registered) {
@@ -151,11 +185,11 @@ imports.put('/:id/photos',async c=>{
     return fail(429,'Photo storage or batch limit reached')
   }
   await c.env.PHOTOS.put(path(user,key),bytes,{httpMetadata:{contentType:mime},onlyIf:{etagDoesNotMatch:'*'}})
-  const state = batch.analyze && !batch.paired ? 'queued' : 'manual'
+  const state = batch.analyze && !batch.paired && expected===null ? 'queued' : 'manual'
   const updated = await run(c.env,`UPDATE photos SET state=?,updated=? WHERE id=? AND user_id=? AND state='uploading' AND
     EXISTS(SELECT 1 FROM users WHERE id=? AND deleting=0)`,state,now(),key,user,user)
-  if (batch.paired) await queuePair(c.env,user,batch.id)
-  else if (state==='queued' && updated.meta.changes) await enqueue(c.env,{id:key,attempt:0})
+  await queueAfterUpload(c.env,user,batch)
+  if (state==='queued' && updated.meta.changes) await enqueue(c.env,{id:key,attempt:0})
   const result = await owner(c.env,user,key)
   if (!result) {
     await c.env.PHOTOS.delete(path(user,key))
@@ -202,7 +236,8 @@ const identificationInstructions = [
   'Cross-check the denomination against the identified person’s period. Leave it blank if the denomination is uncertain.',
   'Required fields: type (coin or banknote), title, confidence (0 to 1), visibleDate (boolean). Set visibleDate true only for an actual year of issue legible on the item and copy it to year. For undated ancient coins leave year blank.',
   'Other optional text fields: issuer, ruler, denomination, year, notes, and details (metal, mint, serial, signatures, series, inscriptions, mintMark, variant). Do not supply a catalog number, grade, authenticity judgment or price.',
-  'A crop is optional only for isolated single photos. Use fractional x,y,width,height in the image. If no specimen is visible, return [].'
+  'A crop is optional only for isolated single photos. Use fractional x,y,width,height in the image. If no specimen is visible, return [].',
+  'For modern coins read the country, face value, year and mint mark as printed. A portrait alone does not determine the issuing country or year. For banknotes use the issuing authority, currency, face value and printed series; a serial number or commemorative date is not an issue year.'
 ].join(' ')
 
 export function photoImage(bytes:Uint8Array,mime:string) {
@@ -240,15 +275,14 @@ async function runVision(env:Env,user:string,images:ReturnType<typeof photoImage
   return response.response ?? response.choices?.[0]?.message?.content ?? ''
 }
 
-async function identify(env:Env,photo:Photo,companion?:Photo|null) {
-  const queuedPair=companion===undefined && photo.pair_side==='obverse'
-  const back = queuedPair
-    ? await one<Photo>(env,"SELECT * FROM photos WHERE user_id=? AND batch_id=? AND pair_side='reverse' AND state='manual'",photo.user_id,photo.batch_id)
-    : companion ?? null
-  if (queuedPair && !back) throw new Error('Both sides are required for identification')
+async function identify(env:Env,photo:Photo,companions?:Photo[]) {
+  const queuedGroup=companions===undefined && photo.pair_side==='obverse'
+  const batch = queuedGroup || env.APP_MODE==='test' ? await readBatch(env,photo.user_id,photo.batch_id) : null
+  const otherPhotos = queuedGroup ? await all<Photo>(env,`SELECT * FROM photos WHERE user_id=? AND batch_id=? AND id<>? AND state='manual'
+    ORDER BY CASE pair_side WHEN 'reverse' THEN 0 ELSE 1 END,created,id LIMIT 4`,photo.user_id,photo.batch_id,photo.id) : companions ?? []
+  if (queuedGroup && otherPhotos.length+1 !== (batch?.expected_photos ?? 2)) throw new Error('The photos for this item are incomplete')
   if (env.APP_MODE==='test' && isLocal(env)) {
-    const batch = await readBatch(env,photo.user_id,photo.batch_id)
-    if (back) return resultSchema.parse([
+    if (otherPhotos.length && (batch?.expected_photos===null || !queuedGroup && otherPhotos.length===1)) return resultSchema.parse([
       {type:'coin',title:'1998 Hong Kong 1 dollar',issuer:'Hong Kong',denomination:'1 dollar',year:'1998',confidence:.98,visibleDate:true}
     ])
     if (batch?.label === 'Automatic catalog fixture' && photo.bytes%2 === 0) return resultSchema.parse([
@@ -259,21 +293,21 @@ async function identify(env:Env,photo:Photo,companion?:Photo|null) {
     ])
   }
   if (!env.AI) return null
-  const images = await Promise.all((back ? [photo,back] : [photo]).map(side=>imageBlock(env,side)))
+  const images = await Promise.all([photo,...otherPhotos].map(side=>imageBlock(env,side)))
   return identifyImageEvidence(env,photo.user_id,images)
 }
 
 export async function identifyImageEvidence(env:Env,user:string,images:ReturnType<typeof photoImage>[]) {
-  const paired=images.length===2
-  const instruction = paired
+  const multiView=images.length>1
+  const instruction = images.length===2
     ? 'The two images are opposite sides of one physical item, in either order. Identify both sides and combine the evidence into one candidate. Return [] if the sides conflict or either image shows more than one item. Do not include a crop. '
-    : ''
+    : multiView ? 'These photos show one physical item. Use the full views first and then use closeups or alternate angles to read extra details. Combine the evidence into one candidate. Return [] if the photos conflict. Do not include a crop. ' : ''
   const raw=await runVision(env,user,images,instruction+identificationInstructions)
   const parsed = parsePhotoCandidates(raw)
   const [roman] = parsed
-  if (paired && parsed.length===1 && isRomanCoin(roman) && (!roman.details?.obverseLegend || !roman.details.reverseLegend)) {
+  if (multiView && parsed.length===1 && isRomanCoin(roman) && (!roman.details?.obverseLegend || !roman.details.reverseLegend)) {
     try {
-      const closeups=images.map(coinCloseup)
+      const closeups=images.slice(0,2).map(coinCloseup)
       if (closeups.some((image,index)=>image!==images[index])) {
         const transcriptions=await Promise.all(closeups.map(async detail=>parseRomanLegends(await runVision(env,user,[detail],
           'Transcribe only the letters physically present around this ancient coin rim, starting where the inscription begins. '+
@@ -307,7 +341,7 @@ imports.post('/refine/:itemId',async c=>{
     obverseLegend:z.string().trim().min(5).max(180),reverseLegend:z.string().trim().min(4).max(180)
   }).optional()}))
   if (input.legends) {
-    if (specimen.type!=='coin') return fail(400,'Roman catalog lookup is for coins')
+    if (!isRomanCoin(candidate.parse({...specimen,confidence:0}))) return fail(400,'This record is outside the Roman imperial catalog')
     await limit(c.env,'roman_catalog',user,25)
     await limit(c.env,'roman_catalog','global',300)
     const observation=candidate.parse({...specimen,issuer:'Roman Empire',reference:'',confidence:0,
@@ -315,12 +349,16 @@ imports.post('/refine/:itemId',async c=>{
     const result=await matchOcreLegends(observation)
     return c.json({candidates:result.catalogMatches?.length ? [result] : []})
   }
-  const photos=await Promise.all([...new Set(specimen.photos.map(link=>link.photoId))].slice(0,2)
+  const ordered = [...specimen.photos].sort((a,b)=>{
+    const sides = ['obverse','reverse','overview']
+    return sides.indexOf(a.side)-sides.indexOf(b.side)
+  })
+  const photos=await Promise.all([...new Set(ordered.map(link=>link.photoId))].slice(0,5)
     .map(key=>owner(c.env,user,key)))
-  const [front,back]=photos
+  const [front,...companions]=photos.filter((photo):photo is Photo=>!!photo)
   if (!front) return fail(400,'Attach a photo to this record before identifying it')
   let observations
-  try { observations=await identify(c.env,front,back ?? null) }
+  try { observations=await identify(c.env,front,companions) }
   catch(error) {
     if (error instanceof HTTPException) throw error
     return fail(503,'Identification could not finish. Try again in a moment.')
@@ -346,7 +384,8 @@ export class PhotoWorkflow extends WorkflowEntrypoint<Env,Job> {
         ? [await step.do('Match Roman inscriptions',async()=>matchOcreLegends(observations[0]))]
         : observations
       await step.do('Persist review state',async()=> {
-        const catalog = refined && automaticCatalogCandidate(refined,photo.pair_side==='obverse')
+        const batch = photo.pair_side==='obverse' ? await readBatch(this.env,photo.user_id,photo.batch_id) : null
+        const catalog = refined && automaticCatalogCandidate(refined,photo.pair_side==='obverse' && batch?.expected_photos!==1)
         const candidates = JSON.stringify(refined ?? [])
         if (catalog && await saveIdentifiedPhoto(this.env,photo,item.parse(catalog),catalog.crop,candidates)) return
         await run(this.env,`UPDATE photos SET state=?,candidates=?,updated=?,error=? WHERE id=? AND attempt=? AND state='running'`,

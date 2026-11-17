@@ -133,7 +133,7 @@ export const sitePages:Record<string,SitePage> = {
         'Your uploaded photographs and catalog are private to your account. When you consent to AI analysis for a batch, Cloudflare Workers AI processes the photographs for identification suggestions. You can also catalog them manually.'
       ]},
       {title:'Services and connected tools',paragraphs:[
-        'Cloudflare hosts the site, stores app data, checks for abuse, and delivers sign-in email. An AI theme preview sends your collecting request to Workers AI. When you choose to search with Syllogeum, we send up to two saved photos of that coin to Syllogeum for visual comparison. OCRE lookups send a coin type identifier. ECB lookups send currency codes and a date. Auction searches and comparable-sale lookups can send your search terms or reference to configured providers.',
+        'Cloudflare hosts the site, stores app data, checks for abuse, and delivers sign-in email. An AI theme preview sends your collecting request to Workers AI. When you choose Syllogeum or Google photo search, we send up to two photos of that coin to the service you select. Syllogeum compares coin designs. Google Cloud Vision finds related web pages. OCRE lookups send a coin type identifier. ECB lookups send currency codes and a date. Auction searches and comparable-sale lookups can send your search terms or reference to configured providers.',
         'Your browser requests site typefaces from Google Fonts. A connected agent or API integration can read records within the access you grant it. NumiAgent stores a hash of each API key and retains its label, scope, and expiry while the key is active.'
       ]},
       {title:'Support requests',paragraphs:[

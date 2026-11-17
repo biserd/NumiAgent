@@ -10,6 +10,33 @@ import { normalizeEbay } from '../src/worker/ebay.ts'
 import { parseThemeDraft } from '../src/worker/themePlanning.ts'
 import { automaticCatalogCandidate, parsePhotoCandidates, parseRomanLegends } from '../src/worker/vision.ts'
 import { searchSyllogeum } from '../src/worker/syllogeum.ts'
+import { searchGoogleVision } from '../src/worker/googleVision.ts'
+
+test('Google Web Detection sends only coin images with the server key and presents sourced web pages',async()=>{
+  const front={bytes:Uint8Array.of(1),mime:'image/png'}
+  const back={bytes:Uint8Array.of(2),mime:'image/png'}
+  const result=await searchGoogleVision([front,back],'test-vision-key',async (url,init)=>{
+    assert.equal(url,'https://vision.googleapis.com/v1/images:annotate')
+    assert.equal(init.redirect,'error')
+    assert.equal(init.headers['x-goog-api-key'],'test-vision-key')
+    assert.deepEqual(JSON.parse(init.body),{requests:['AQ==','Ag=='].map(content=>({
+      image:{content},features:[{type:'WEB_DETECTION',maxResults:10}]
+    }))})
+    return Response.json({responses:[
+      {webDetection:{pagesWithMatchingImages:[{url:'http://example.test/front',pageTitle:'<b>Front</b>'},
+        {url:'https://example.test/front'},{url:'javascript:alert(1)'}]}},
+      {webDetection:{pagesWithMatchingImages:[{url:'https://example.test/back'}],
+        visuallySimilarImages:[{url:'https://example.test/image'}]}}
+    ]})
+  })
+  assert.deepEqual(result,{photoCount:2,matches:[
+    {source:'https://example.test/front',label:'Front',attribution:'Google Cloud Vision',obverse:'',reverse:''},
+    {source:'https://example.test/back',label:'example.test',attribution:'Google Cloud Vision',obverse:'',reverse:''}
+  ]})
+  await assert.rejects(searchGoogleVision([front],'test-vision-key',async()=>Response.json({
+    responses:[{error:{code:7}}]
+  })),/could not process/)
+})
 
 test('Visual coin search tries both orientations and returns unique, attributed reference links',async()=>{
   const front={bytes:Uint8Array.of(1),mime:'image/png'}

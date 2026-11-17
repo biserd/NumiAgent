@@ -21,7 +21,7 @@ export type RecordForm = {
   type:'coin'|'banknote';title:string;issuer:string;ruler:string;denomination:string;year:string;reference:string;
   grade:string;notes:string;tags:string;collection_id:string|null;details:Record<string,string|number|undefined>;photos?:Link[]
 }
-export type Specimen = RecordForm & {id:string;photo:string|null;duplicates?:{id:string;title:string}[]}
+export type Specimen = RecordForm & {id:string;photo:string|null;duplicates?:{id:string;title:string}[];googleVisionAvailable?:boolean}
 export type Candidate = Partial<RecordForm> & {type:'coin'|'banknote';title:string;confidence:number;crop?:Box;model?:string;
   referenceMatches?:{source:string;label:string;kind:string;attribution:string;license:string}[]}
 export const emptyItem = ():RecordForm => ({type:'coin',title:'',issuer:'',ruler:'',denomination:'',year:'',reference:'',grade:'',notes:'',tags:'',collection_id:null,details:{}})

@@ -24,6 +24,16 @@ For a licensed realized-sale provider, configure `NUMIS_SALE_FEED_URL`, the orig
 
 ECB dated reference conversions and OCRE exact-type lookups use public endpoints with separate per-user and global quotas. They send currency/date or type ID only. OCRE labels and metadata are credited to ANS and NYU ISAW under ODbL 1.0. The app stores a source link when the collector attaches a reference.
 
+## Google photo search
+
+Enable the [Cloud Vision API](https://docs.cloud.google.com/vision/docs/before-you-begin) in a billing-enabled Google Cloud project. Create an API key restricted to the Cloud Vision API, then enter it at the Wrangler prompt from the Cloudflare directory.
+
+```sh
+npx wrangler secret put GOOGLE_VISION_API_KEY --config wrangler.deploy.json
+```
+
+The inventory photo search offers Google after a Syllogeum attempt. It sends up to two saved photos when the collector chooses Google and displays links to matching web pages. The Worker limits the fallback to 25 searches per user and 300 globally per UTC day. [Web Detection documentation](https://docs.cloud.google.com/vision/docs/detecting-web)
+
 ## Limits and cost
 
 Current caps are 300 unique images per batch, 6 MB per individual image, 2 GiB stored photo bytes per user, 650 upload requests per user per UTC day, 400 AI invocations per user and 4,000 globally per UTC day, and 30 market calls per user and 300 globally per UTC day. AI retries consume quota. The default per-user AI limit accommodates a batch of 100–300 under light retry load. Cloudflare's own service limits apply independently.

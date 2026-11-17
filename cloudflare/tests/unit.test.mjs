@@ -17,7 +17,7 @@ import { rankScanLeads, researchScan, scanQuery } from '../src/worker/scanResear
 test('An observed gazelle can launch discovery and a bull facing left separates the Carian references',()=>{
   const observed={type:'coin',details:{reverse:'Head of a gazelle facing left, with ringed horns'}}
   const query=scanQuery(observed)
-  assert.match(query,/\bgazelle\b/)
+  assert.equal(query,'ancient coin gazelle head left')
   assert.doesNotMatch(query,/Caria|obol|CNG|287|203/i)
   const references=[
     {source:'https://www.wildwinds.com/example/right',label:'Timeline 696',attribution:'Fixture',obverse:'Bull right',reverse:'Gazelle head left'},

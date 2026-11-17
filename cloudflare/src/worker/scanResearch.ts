@@ -22,6 +22,8 @@ const webResponse = z.object({success:z.literal(true),data:z.object({web:z.array
   url:z.string(),title:z.string().optional(),description:z.string().optional()
 })).max(15).optional()})})
 const stopwords = new Set('a an the and of or to is on in from with facing appears possibly image photo coin worn lettering inscription visible'.split(' '))
+const directional=/\b(left|right)\b/i
+const familiar=/\b(?:gazelle|bull|lion|eagle|horse|ram|stag|goat|owl|dolphin|crab|elephant|portrait|bust)\b/i
 
 function clean(value:string) {
   return value.normalize('NFKC').replace(/[^\p{L}\p{N}\s'-]/gu,' ').replace(/\s+/g,' ').trim()
@@ -30,6 +32,14 @@ function words(value:string) {
   return clean(value.toLowerCase().replace(/\bantelopes?\b/g,'gazelle')).split(' ')
     .filter(word=>word.length>1 && !stopwords.has(word))
 }
+function motifWords(value:string) {
+  const tokens=words(value)
+  const motif=tokens.find(word=>familiar.test(word))
+  const direction=tokens.find(word=>directional.test(word))
+  if (!motif) return tokens.slice(0,5)
+  const form=tokens.find(word=>['head','forepart','standing','seated','running'].includes(word))
+  return [motif,form,direction].filter(Boolean) as string[]
+}
 
 export function scanQuery(entry:Observation|undefined) {
   if (!entry) return ''
@@ -37,14 +47,14 @@ export function scanQuery(entry:Observation|undefined) {
   const legend=[detail?.obverseLegend,detail?.reverseLegend]
     .flatMap(value=>value?.split('?').map(clean).filter(part=>part.length>=4).map(part=>'"'+part+'"') ?? [])
     .slice(0,2)
-  const motifs=[detail?.obverse,detail?.reverse].flatMap(value=>value ? words(value).slice(0,7) : [])
+  const motifs=[detail?.obverse,detail?.reverse].flatMap(value=>value ? motifWords(value) : [])
   if (entry.type==='banknote' || entry.visibleDate) {
     const printed=[entry.issuer,entry.denomination,entry.visibleDate ? entry.year : '',detail?.mintMark,detail?.series]
       .filter(value=>!!value).map(value=>clean(value ?? '')).join(' ')
     return printed ? (printed+' '+entry.type).slice(0,170) : ''
   }
   if (!legend.length && !motifs.length) return ''
-  return [...legend,...new Set(motifs),'ancient coin'].join(' ').slice(0,170)
+  return ['ancient coin',...legend,...new Set(motifs)].join(' ').slice(0,170)
 }
 
 export function rankScanLeads(leads:ScanLead[],entry:Observation|undefined) {
@@ -52,8 +62,6 @@ export function rankScanLeads(leads:ScanLead[],entry:Observation|undefined) {
   const front=data?.obverse ?? ''
   const back=data?.reverse ?? ''
   const allWords=new Set(words([front,back,data?.obverseLegend,data?.reverseLegend].filter(Boolean).join(' ')))
-  const directional=/\b(left|right)\b/i
-  const familiar=/\b(?:gazelle|bull|lion|eagle|horse|ram|stag|portrait|bust)\b/i
   const keys=new Set<string>()
   return leads.flatMap(hit=>{
     const url=new URL(hit.source)
@@ -64,7 +72,9 @@ export function rankScanLeads(leads:ScanLead[],entry:Observation|undefined) {
     const compare=words([hit.label,hit.excerpt,hit.obverse,hit.reverse].filter(Boolean).join(' '))
     const supports=[...new Set(compare.filter(word=>allWords.has(word)))].slice(0,5)
     const conflicts=[]
-    for (const [visible,reference] of [[front,hit.obverse],[back,hit.reverse]]) {
+    const described=hit.excerpt?.split(' / ')
+    const describedSides=described?.length===2 && described.every(description=>familiar.test(description)) ? described : []
+    for (const [visible,reference] of [[front,hit.obverse ?? describedSides[0]],[back,hit.reverse ?? describedSides[1]]]) {
       if (!reference || !visible) continue
       const first=clean(visible.toLowerCase()).replace('antelope','gazelle')
       const second=clean(reference.toLowerCase()).replace('antelope','gazelle')
@@ -75,7 +85,9 @@ export function rankScanLeads(leads:ScanLead[],entry:Observation|undefined) {
         conflicts.push(motif+' faces '+referenceDirection+' in this reference')
       }
     }
-    return [{lead:{...hit,source:url.href,supports,conflicts},score:supports.length-conflicts.length*5}]
+    const support=supports.reduce((score,word)=>score+(familiar.test(word) ? 4 : directional.test(word) ? 0 : 1),0)
+    if (hit.attribution==='Catalog web search' && allWords.size>=2 && support===0) return []
+    return [{lead:{...hit,source:url.href,supports,conflicts},score:support-conflicts.length*7}]
   }).sort((a,b)=>b.score-a.score).slice(0,6).map(row=>row.lead)
 }
 

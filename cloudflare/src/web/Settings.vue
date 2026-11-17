@@ -9,17 +9,31 @@ const usage=ref<{resetsAt:string;meters:{action:string;used:number;limit:number}
 const labels:Record<string,string>={upload_requests:'Upload requests',ai:'Vision requests',market:'Marketplace searches'}
 const error=ref('')
 const confirmation=ref('')
+const externalPhotoSearch=ref<boolean|null>(null)
+const savingPhotoSearch=ref(false)
 const stamp=(value:number)=>new Date(value*1000).toLocaleString()
 async function action(fn:()=>Promise<void>){try {error.value='';await fn()}catch(e){error.value=message(e)}}
 async function load(){
-  const [active,meters]=await Promise.all([request<Session[]>('/me/sessions'),request<typeof usage.value>('/me/usage')])
+  const [active,meters,preference]=await Promise.all([request<Session[]>('/me/sessions'),request<typeof usage.value>('/me/usage'),
+    request<{enabled:boolean}>('/me/photo-search')])
   sessions.value=active
   usage.value=meters
+  externalPhotoSearch.value=preference.enabled
 }
 onMounted(()=>action(load))
 async function logout(){await request('/me/signout','POST');location.assign('/app')}
 async function revoke(s:Session){await request('/me/sessions/'+s.id,'DELETE');if(s.current)location.assign('/app');else await load()}
 async function remove(){await request('/me','DELETE',{confirm:confirmation.value});location.assign('/')}
+async function setPhotoSearch(event:Event){
+  const checkbox=event.target as HTMLInputElement
+  const enabled=checkbox.checked
+  savingPhotoSearch.value=true
+  await action(async()=>{
+    externalPhotoSearch.value=(await request<{enabled:boolean}>('/me/photo-search','PUT',{enabled})).enabled
+  })
+  checkbox.checked=!!externalPhotoSearch.value
+  savingPhotoSearch.value=false
+}
 </script>
 <template>
   <h1>Settings</h1><p v-if="error" class="error" role="alert">{{error}}</p>
@@ -29,6 +43,10 @@ async function remove(){await request('/me','DELETE',{confirm:confirmation.value
   </ul></section>
   <section class="panel"><h2>Developer access</h2><p>Create and revoke REST API keys and manage MCP connections.</p>
     <a href="/app#developer">Open developer access</a>
+  </section>
+  <section class="panel" v-if="externalPhotoSearch!==null"><h2>Photo identification</h2>
+    <label class="check"><input type="checkbox" :checked="externalPhotoSearch" :disabled="savingPhotoSearch" @change="setPhotoSearch">Search with external photos</label>
+    <p>When enabled, NumiAgent can send tightly cropped coin photos to Syllogeum and Google Cloud Vision to look for similar coins.</p>
   </section>
   <section class="panel"><h2>Privacy and export</h2><p>Download your account records. Open individual photographs in the catalog to save copies.</p>
     <a href="/api/v1/me/export" download>Export account JSON</a> · <a href="/api/v1/items/export.csv" download>Export collection CSV</a>

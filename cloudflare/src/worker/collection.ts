@@ -34,36 +34,40 @@ export async function findItem(env: Env,user:string,key:string) {
 const itemValues = (i:Input) => [i.collection_id ?? null,i.type,i.title,i.issuer,i.ruler,i.denomination,i.year,i.reference,
   i.grade,i.notes,i.tags,JSON.stringify(i.details ?? {})]
 
-export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:string;attempt:number;batch_id:string;pair_side?:string|null}, input:Input,
-  crop: z.infer<typeof photoLink>['crop'], candidates:string) {
+export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:string;attempt:number;batch_id:string;pair_side?:string|null;scan_slot?:number|null}, input:Input,
+  crop: z.infer<typeof photoLink>['crop'], candidates:string,reviewed=false) {
   const {id:key,user_id:user,attempt} = photo
+  if (input.collection_id) await requireCollection(env,user,input.collection_id)
   const current = `SELECT 1 FROM photos p JOIN imports b ON b.id=p.batch_id AND b.user_id=p.user_id
-    JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.user_id=? AND p.attempt=? AND p.state='running'
-    AND b.auto_catalog=1 AND b.cancelled=0 AND u.deleting=0
+    JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.user_id=? AND p.attempt=?
+    AND u.deleting=0
+    AND ((?=1 AND p.scan_slot%5=0 AND (p.state IN ('review','failed') OR (p.state='manual' AND p.error IS NOT NULL)))
+      OR (?=0 AND p.state='running' AND b.auto_catalog=1 AND b.cancelled=0))
     AND (b.paired=0 OR COALESCE(b.expected_photos,2)=1+(
       SELECT COUNT(*) FROM photos companion WHERE companion.batch_id=p.batch_id AND companion.user_id=p.user_id
       AND companion.id<>p.id AND companion.state='manual'))`
-  const guard = [key,user,attempt]
+  const guard = [key,user,attempt,Number(reviewed),Number(reviewed)]
   const timestamp = now()
   const values = [key,user,...itemValues(input),timestamp,timestamp]
   const placeholders = values.map(()=>'?').join(',')
   // One stable item key per photo. The transaction commits the record, link and status together.
   const paired = photo.pair_side==='obverse'
+  const anchor=photo.scan_slot ?? null
   const statements = [
     env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated)
       SELECT ${placeholders} WHERE EXISTS(${current}) ON CONFLICT(id) DO NOTHING`)
       .bind(...values,...guard),
     env.DB.prepare(`INSERT INTO item_photos(user_id,item_id,photo_id,side,crop)
-      SELECT p.user_id,?,p.id,COALESCE(p.pair_side,'overview'),? FROM photos p
-      WHERE p.user_id=? AND (p.id=? OR (?=1 AND p.batch_id=? AND p.state='manual'))
+      SELECT p.user_id,?,p.id,COALESCE(p.pair_side,CASE p.scan_slot%5 WHEN 0 THEN 'obverse' WHEN 1 THEN 'reverse' END,'overview'),? FROM photos p
+      WHERE p.user_id=? AND (p.id=? OR (p.batch_id=? AND p.state='manual' AND (?=1 OR p.scan_slot BETWEEN ? AND ?)))
       AND EXISTS(${current}) AND EXISTS(SELECT 1 FROM items WHERE id=? AND user_id=?)
       ON CONFLICT(item_id,photo_id,side) DO NOTHING`)
-      .bind(key,!paired && crop ? JSON.stringify(crop) : null,user,key,Number(paired),photo.batch_id,...guard,key,user),
+      .bind(key,!paired && anchor===null && crop ? JSON.stringify(crop) : null,user,key,photo.batch_id,Number(paired),anchor,anchor===null?null:anchor+4,...guard,key,user),
     env.DB.prepare(`UPDATE photos SET state='saved',candidates=?,error=NULL,updated=? WHERE id=? AND user_id=?
       AND EXISTS(${current}) AND EXISTS(SELECT 1 FROM item_photos WHERE user_id=? AND item_id=? AND photo_id=?)`)
       .bind(candidates,timestamp,key,user,...guard,user,key,key)
   ]
-  if (paired) {
+  if (paired || anchor!==null) {
     statements.push(env.DB.prepare(`UPDATE photos SET state='saved',updated=? WHERE user_id=? AND batch_id=? AND id<>?
       AND state='manual' AND EXISTS(SELECT 1 FROM item_photos WHERE user_id=? AND item_id=? AND photo_id=photos.id)
       AND EXISTS(SELECT 1 FROM photos front WHERE front.id=? AND front.user_id=? AND front.attempt=? AND front.state='saved')`)
@@ -252,6 +256,31 @@ items.post('/:id/merge',async c=>{
   const user = c.get('user').id
   await mergeItems(c.env,user,key,sourceId)
   return c.json(await findItem(c.env,user,key))
+})
+items.post('/:id/photo-links',async c=>{
+  const user=c.get('user').id
+  const specimen=c.req.param('id')
+  const {photoId,side}=await body(c,photoLink.pick({photoId:true,side:true}))
+  await findItem(c.env,user,specimen)
+  const photo=await one(c.env,"SELECT 1 FROM photos WHERE id=? AND user_id=? AND state IN ('manual','review','saved','failed')",photoId,user)
+  if (!photo) return fail(404,'Photo unavailable')
+  const [inserted]=await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT INTO item_photos(user_id,item_id,photo_id,side,crop)
+      SELECT ?,?,?,?,NULL WHERE EXISTS(SELECT 1 FROM items WHERE id=? AND user_id=?)
+      AND (SELECT COUNT(*) FROM item_photos WHERE user_id=? AND item_id=?)<12
+      AND NOT EXISTS(SELECT 1 FROM item_photos l JOIN photos p ON p.id=l.photo_id
+        WHERE l.user_id=? AND l.item_id=? AND p.sha=(SELECT sha FROM photos WHERE id=? AND user_id=?))
+      `).bind(user,specimen,photoId,side,specimen,user,user,specimen,user,specimen,photoId,user),
+    c.env.DB.prepare(`UPDATE photos SET state='saved',updated=? WHERE id=? AND user_id=?
+      AND EXISTS(SELECT 1 FROM item_photos WHERE user_id=? AND item_id=? AND photo_id=?)`)
+      .bind(now(),photoId,user,user,specimen,photoId)
+  ])
+  if (!inserted.meta.changes) {
+    const linked=await one(c.env,`SELECT 1 FROM item_photos l JOIN photos p ON p.id=l.photo_id
+      WHERE l.user_id=? AND l.item_id=? AND p.sha=(SELECT sha FROM photos WHERE id=? AND user_id=?)`,user,specimen,photoId,user)
+    if (!linked) return fail(409,'This specimen has reached its photo limit')
+  }
+  return c.json({id:specimen},201)
 })
 items.put('/:id',async c=>{
   const input = await body(c,record)

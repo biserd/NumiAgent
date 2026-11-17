@@ -93,6 +93,7 @@ struct ImportReview: View {
     private struct PendingEdit: Identifiable {
         let id = UUID()
         let draft: ItemDraft
+        let scanPhotoID: String?
     }
 
     let api: NumiAPI
@@ -107,14 +108,24 @@ struct ImportReview: View {
     @State private var confirmCancel = false
     @State private var notice: String?
     @State private var poll = UUID()
+    @State private var selectedItem: String?
 
     var body: some View {
         List {
             if let batch = batch ?? previewBatch {
                 progressSection(batch)
-                ForEach(batch.awaitingPhotos ? [] : batch.subjects) { photo in
+                if expanded && batch.subjects.count > 1 && !batch.awaitingPhotos {
+                    Picker("Item to review", selection: $selectedItem) {
+                        Text("All items").tag(String?.none)
+                        ForEach(Array(batch.subjects.enumerated()), id: \.element.id) { index, photo in
+                            Text(photo.record?.title ?? "Item \(index + 1)").tag(Optional(photo.id))
+                        }
+                    }
+                    .listRowBackground(CollectorDesign.surface)
+                }
+                ForEach(batch.awaitingPhotos ? [] : batch.subjects.filter { !expanded || selectedItem == nil || $0.id == selectedItem }) { photo in
                     ImportPhotoSection(api: api, photo: photo,
-                                       companions: batch.paired == 1 ? batch.photos.filter { $0.id != photo.id } : [],
+                                       companions: batch.companions(of: photo),
                                        expanded: expanded, sample: previewBatch != nil,
                                        canRetry: batch.analyze != 0 && batch.cancelled == 0, working: working) { choice, reference, unidentified in
                         editPhoto(photo, in: batch, suggestion: choice, reference: reference, unidentified: unidentified)
@@ -147,8 +158,9 @@ struct ImportReview: View {
             }
         }
         .sheet(item: $edit) { edit in
-            ItemEditor(api: api, draft: edit.draft,
-                       pairing: batch?.paired == 1 ? [] : batch?.photos.filter { $0.canCatalog } ?? []) { poll = UUID() }
+            ItemEditor(api: api, scanPhotoID: edit.scanPhotoID, draft: edit.draft,
+                       pairing: batch?.paired == 1 ? [] : batch?.photos.filter { $0.slot == nil && $0.canCatalog } ?? [],
+                       allowsPhotoUpload: edit.scanPhotoID == nil) { poll = UUID() }
         }
         .confirmationDialog("Cancel pending work in this import?", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Cancel pending analysis", role: .destructive) {
@@ -214,14 +226,14 @@ struct ImportReview: View {
             draft.type = photo.candidates.first?.type ?? "coin"
             draft.title = draft.type == "banknote" ? "Unidentified banknote" : "Unidentified coin"
         }
-        if batch.paired == 1 {
-            draft.photos = batch.photos.map { source in
+        if batch.paired == 1 || photo.slot != nil {
+            draft.photos = ([photo] + batch.companions(of: photo)).map { source in
                 .init(photoId: source.id, side: source.side ?? "overview", crop: nil)
             }
         } else {
             draft.photos = [.init(photoId: photo.id, side: "overview", crop: suggestion?.crop)]
         }
-        edit = PendingEdit(draft: draft)
+        edit = PendingEdit(draft: draft, scanPhotoID: photo.slot == nil ? nil : photo.id)
     }
 
     private func analyzeSavedPhotos() async {
@@ -291,14 +303,16 @@ private struct ImportPhotoSection: View {
                 Label(photo.statusLabel, systemImage: photo.isPending ? "clock" : "photo")
             }
             if photo.canCatalog && photo.record == nil {
-                if photo.state == "review" && photo.candidates.isEmpty {
+                if let scan = photo.scan, scan.stage == "complete" {
+                    ScanReferenceRows(scan: scan)
+                } else if photo.state == "review" && photo.candidates.isEmpty {
                     CollectorNotice(title: "No match yet", message: "Add a clearer photo or enter what you can read.",
                                     icon: "exclamationmark.circle", warning: true)
                 }
                 ForEach(photo.candidates.indices, id: \.self) { index in
                     IdentificationChoice(suggestion: photo.candidates[index]) { edit(photo.candidates[index], $0, false) }
                 }
-                if photo.candidates.isEmpty {
+                if photo.candidates.isEmpty && photo.scan == nil {
                     Button("Enter details manually") { edit(nil, nil, false) }
                         .buttonStyle(.bordered)
                 }
@@ -309,10 +323,22 @@ private struct ImportPhotoSection: View {
                 Button("Retry identification", action: retry).disabled(working)
             }
             if !companions.isEmpty || photo.side != nil {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: expanded ? 132 : 100), spacing: 8)], spacing: 12) {
-                    sidePhoto(photo, label: photo.side == "reverse" ? "Back" : "Front")
-                    ForEach(companions) { view in
-                        sidePhoto(view, label: view.side == "reverse" ? "Back" : "Detail")
+                if !expanded && !companions.isEmpty {
+                    TabView {
+                        sidePhoto(photo, label: "Front")
+                        ForEach(companions) { view in
+                            sidePhoto(view, label: view.side == "reverse" ? "Back" : "Detail")
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .always))
+                    .indexViewStyle(.page(backgroundDisplayMode: .always))
+                    .frame(height: 180)
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: expanded ? 132 : 100), spacing: 8)], spacing: 12) {
+                        sidePhoto(photo, label: photo.side == "reverse" ? "Back" : "Front")
+                        ForEach(companions) { view in
+                            sidePhoto(view, label: view.side == "reverse" ? "Back" : "Detail")
+                        }
                     }
                 }
             } else {
@@ -336,6 +362,36 @@ private struct ImportPhotoSection: View {
         }
     }
 
+}
+
+private struct ScanReferenceRows: View {
+    let scan: ScanReview
+
+    var body: some View {
+        if let next = scan.next { Text(next).font(.subheadline).foregroundStyle(.secondary) }
+        if scan.providers.values.contains("unavailable") {
+            Label("Some reference sources were unavailable", systemImage: "info.circle")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        if !scan.leads.isEmpty {
+            Text("Possible references").font(.headline)
+            ForEach(scan.leads) { lead in
+                VStack(alignment: .leading, spacing: 5) {
+                    Link(lead.label, destination: lead.source)
+                    Text(lead.attribution).font(.caption).foregroundStyle(.secondary)
+                    if let obverse = lead.obverse, !obverse.isBlank { Text("Front · \(obverse)").font(.footnote) }
+                    if let reverse = lead.reverse, !reverse.isBlank { Text("Back · \(reverse)").font(.footnote) }
+                    if let excerpt = lead.excerpt, !excerpt.isBlank { Text(excerpt).font(.footnote) }
+                    if let supports = lead.supports, !supports.isEmpty {
+                        Text("Shared details · \(supports.joined(separator: ", "))").font(.caption)
+                    }
+                    if let conflicts = lead.conflicts, !conflicts.isEmpty {
+                        Text(conflicts.joined(separator: ". ")).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
 }
 
 private struct IdentificationChoice: View {
@@ -415,22 +471,8 @@ private struct IdentificationChoice: View {
 }
 
 struct SpecimenIdentificationSheet: View {
-    private struct Result: Decodable { let candidates: [PhotoCandidate] }
-    private struct Search: Encodable { let legends: [String: String]? }
-    private enum VisualProvider: String, Encodable { case syllogeum, google }
-    private struct VisualQuery: Encodable {
-        var consent = true
-        let provider: VisualProvider
-    }
-    private struct VisualResult: Decodable {
-        struct Match: Decodable, Identifiable {
-            let source: URL
-            let label, attribution, obverse, reverse: String
-            var id: URL { source }
-        }
-        let photoCount: Int
-        let matches: [Match]
-    }
+    private struct Result: Decodable { let candidates: [PhotoCandidate]; let scan: ScanReview? }
+    private struct Search: Encodable { let legends: [String: String]?; let searchReferences: Bool }
     let api: NumiAPI
     let item: Specimen
     let onSave: () -> Void
@@ -442,10 +484,7 @@ struct SpecimenIdentificationSheet: View {
     @State private var reverseLegend = ""
     @State private var enteredLegends = false
     @State private var searching = false
-    @State private var visualResult: VisualResult?
-    @State private var visualError: String?
-    @State private var visualSearching = false
-    @State private var visualProvider: VisualProvider = .syllogeum
+    @State private var scan: ScanReview?
 
     var body: some View {
         if let draft {
@@ -453,57 +492,8 @@ struct SpecimenIdentificationSheet: View {
         } else {
             NavigationStack {
                 List {
-                    if item.type == "coin" {
-                        Section {
-                            Button("Search with Syllogeum", systemImage: "photo.on.rectangle.angled") {
-                                Task { await searchCoinPhotos() }
-                            }
-                            .disabled(visualSearching)
-                            if item.googleVisionAvailable == true,
-                               visualResult != nil || visualError != nil || visualProvider == .google {
-                                Button("Search the web with Google", systemImage: "globe") {
-                                    Task { await searchCoinPhotos(provider: .google) }
-                                }
-                                .disabled(visualSearching)
-                                Text("This sends the saved coin photos to Google Cloud Vision to find related web pages.")
-                                    .font(.footnote).foregroundStyle(.secondary)
-                            }
-                            if visualSearching { ProgressView("Comparing coin photos") }
-                            if let visualError {
-                                Text(visualError).font(.footnote).foregroundStyle(.secondary)
-                            }
-                            if let visualResult {
-                                if visualProvider == .google {
-                                    Text(visualResult.matches.isEmpty ? "Google returned no matching web pages." :
-                                        "Open a source and check its attribution against your coin.")
-                                        .font(.footnote).foregroundStyle(.secondary)
-                                } else {
-                                    Text(visualResult.matches.isEmpty ? "No visual suggestions were returned." :
-                                        "Compare the designs before updating your identification.")
-                                        .font(.footnote).foregroundStyle(.secondary)
-                                }
-                                if visualResult.photoCount == 1 {
-                                    Text("For a stronger comparison, add the other side and label the photos Front and Back.")
-                                        .font(.footnote).foregroundStyle(.secondary)
-                                }
-                                ForEach(visualResult.matches) { hit in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Link(hit.label, destination: hit.source)
-                                        let details = [hit.obverse, hit.reverse, hit.attribution]
-                                        ForEach(details.indices, id: \.self) { index in
-                                            let detail = details[index]
-                                            if !detail.isEmpty {
-                                                Text(detail).font(.footnote).foregroundStyle(.secondary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } header: {
-                            Text("Ancient coin photo search")
-                        } footer: {
-                            Text("Search sends the saved photo of each available side to Syllogeum for visual comparison.")
-                        }
+                    if let scan {
+                        Section { ScanReferenceRows(scan: scan) }
                     }
                     if let error {
                         Text(error).foregroundStyle(.secondary)
@@ -555,19 +545,6 @@ struct SpecimenIdentificationSheet: View {
         }
     }
 
-    private func searchCoinPhotos(provider: VisualProvider = .syllogeum) async {
-        guard !visualSearching else { return }
-        visualSearching = true
-        visualProvider = provider
-        visualResult = nil
-        visualError = nil
-        defer { visualSearching = false }
-        do {
-            let result: VisualResult = try await api.post("/imports/visual-search/" + item.id, payload: VisualQuery(provider: provider))
-            if !Task.isCancelled { visualResult = result }
-        } catch { if !Task.isCancelled { visualError = error.localizedDescription } }
-    }
-
     private func identify(useLegends: Bool = false) async {
         searching = true
         enteredLegends = useLegends
@@ -575,10 +552,12 @@ struct SpecimenIdentificationSheet: View {
         defer { searching = false }
         do {
             let legends = useLegends ? ["obverseLegend": obverseLegend, "reverseLegend": reverseLegend] : nil
-            let result: Result = try await api.post("/imports/refine/" + item.id, payload: Search(legends: legends))
+            let result: Result = try await api.post("/imports/refine/" + item.id,
+                                                   payload: Search(legends: legends, searchReferences: !useLegends))
             guard !Task.isCancelled else { return }
             candidates = result.candidates
             if !useLegends {
+                scan = result.scan
                 obverseLegend = result.candidates.first?.details?.obverseLegend ?? item.details?.obverseLegend ?? ""
                 reverseLegend = result.candidates.first?.details?.reverseLegend ?? item.details?.reverseLegend ?? ""
             }

@@ -104,7 +104,20 @@ struct PhotoImport: Decodable {
     var paired: Int? = nil
     var expected_photos: Int? = nil
 
-    var subjects: [ImportedPhoto] { paired == 1 ? photos.filter { $0.side == "obverse" } : photos }
+    var subjects: [ImportedPhoto] {
+        photos.filter { photo in
+            if let slot = photo.slot { return slot % 5 == 0 }
+            return paired != 1 || photo.side == "obverse"
+        }
+    }
+
+    func companions(of photo: ImportedPhoto) -> [ImportedPhoto] {
+        photos.filter { other in
+            guard other.id != photo.id else { return false }
+            if let slot = photo.slot, let otherSlot = other.slot { return slot / 5 == otherSlot / 5 }
+            return paired == 1
+        }
+    }
     var awaitingPhotos: Bool {
         guard cancelled == 0, let expected = expected_photos ?? (paired == 1 ? 2 : nil) else { return false }
         return photos.filter { $0.state != "uploading" }.count < expected ||
@@ -137,15 +150,17 @@ struct ImportedPhoto: Decodable, Identifiable {
     let error: String?
     let record: ImportedRecord?
     var side: String? = nil
+    var slot: Int? = nil
+    var scan: ScanReview? = nil
 
     var isPending: Bool { ["queued", "running", "uploading"].contains(state) }
     var canCatalog: Bool { ["review", "manual", "failed"].contains(state) }
     var statusLabel: String {
         switch state {
-        case "queued": return "Waiting for AI"
-        case "running": return "Analyzing photo"
+        case "queued": return "Waiting to identify"
+        case "running": return scan?.stage == "references" ? "Checking references" : "Reading photos"
         case "uploading": return "Uploading"
-        case "review": return candidates.isEmpty ? "No identification found" : "Needs review"
+        case "review": return candidates.isEmpty && scan?.leads.isEmpty != false ? "Needs another look" : "Review possible matches"
         case "manual": return "Awaiting identification"
         case "failed": return "Identification couldn’t finish"
         case "saved": return record == nil ? "Cataloged previously" : "In your collection"
@@ -153,6 +168,21 @@ struct ImportedPhoto: Decodable, Identifiable {
         default: return state.capitalized
         }
     }
+}
+
+struct ScanReview: Decodable {
+    struct Lead: Decodable, Identifiable {
+        let source: URL
+        let label, attribution: String
+        let excerpt, obverse, reverse: String?
+        let supports, conflicts: [String]?
+        var id: URL { source }
+    }
+
+    let stage: String
+    let leads: [Lead]
+    let providers: [String: String]
+    let next: String?
 }
 
 struct PhotoCandidate: Decodable {

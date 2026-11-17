@@ -131,6 +131,15 @@ export async function deleteAccount(env: Env, user: string) {
 }
 export const profile = router()
 profile.get('/', c => c.json({id:c.get('user').id,email:c.get('user').email}))
+profile.get('/photo-search', async c => {
+  const row=await one<{external_photo_search:number}>(c.env,'SELECT external_photo_search FROM users WHERE id=?',c.get('user').id)
+  return c.json({enabled:row?.external_photo_search===1})
+})
+profile.put('/photo-search', async c => {
+  const {enabled}=await body(c,z.object({enabled:z.boolean()}))
+  await run(c.env,'UPDATE users SET external_photo_search=? WHERE id=? AND deleting=0',Number(enabled),c.get('user').id)
+  return c.json({enabled})
+})
 profile.get('/usage',async c=>{
   const meters = await all<{action:string;count:number}>(c.env,
     "SELECT action,count FROM limits WHERE subject=? AND window=? AND action IN ('upload_requests','ai','market')",c.get('user').id,usageWindow())

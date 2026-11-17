@@ -274,6 +274,56 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     await json(await api(groupedRoute+'/photos',a,'PUT',fixture(185)))
     assert.equal((await json(await api('/items?q=Jefferson',a))).items.length,1)
 
+    assert.deepEqual(await json(await api('/me/photo-search',a)),{enabled:false})
+    assert.deepEqual(await json(await api('/me/photo-search',a,'PUT',{enabled:true})),{enabled:true})
+    assert.deepEqual(await json(await api('/me/photo-search',a)),{enabled:true})
+    assert.deepEqual(await json(await api('/me/photo-search',b)),{enabled:false})
+    await json(await api('/me/photo-search',a,'PUT',{enabled:false}))
+    const trayId=randomUUID()
+    const trayRoute='/imports/'+trayId
+    const tray={...registration,id:trayId,label:'Grouped scan fixture',scanPlan:[2,1,2]}
+    await json(await api('/imports',a,'POST',tray),201)
+    assert.equal((await api('/imports',a,'POST',{...tray,scanPlan:[1,2,2]})).status,409)
+    assert.equal((await api(trayRoute+'/photos?slot=4',a,'PUT',fixture(190))).status,400)
+    const trayPhotos=[]
+    for (const [index,slot] of [1,0,5,11,10].entries()) {
+      const response=await json(await api(trayRoute+'/photos?slot='+slot,a,'PUT',fixture(190+index)),201)
+      trayPhotos.push(response.id)
+    }
+    await json(await api(trayRoute+'/photos?slot=1',a,'PUT',fixture(190)))
+    let trayResults
+    for(let j=0;j<30;j++) {
+      trayResults=await json(await api(trayRoute,a))
+      if (trayResults.photos.every(photo=>photo.state==='saved')) break
+      await wait(1000)
+    }
+    assert.deepEqual(trayResults.photos.map(photo=>photo.slot),[0,1,5,10,11])
+    assert.deepEqual(trayResults.photos.map(photo=>photo.record?.id),[trayPhotos[1],trayPhotos[1],trayPhotos[2],trayPhotos[4],trayPhotos[4]],
+      server.logs().slice(-2400))
+    assert.equal((await json(await api('/items/'+trayPhotos[4],a))).photos.length,2)
+    const link={photoId:trayPhotos[3],side:'reverse'}
+    await json(await api('/items/'+trayPhotos[2]+'/photo-links',a,'POST',link),201)
+    await json(await api('/items/'+trayPhotos[2]+'/photo-links',a,'POST',link),201)
+    assert.equal((await json(await api('/items/'+trayPhotos[2],a))).photos.length,2)
+    assert.equal((await api('/items/'+trayPhotos[2]+'/photo-links',b,'POST',link)).status,404)
+
+    const reviewId=randomUUID()
+    await json(await api('/imports',a,'POST',{...registration,id:reviewId,scanPlan:[2]}),201)
+    const reviewRoute='/imports/'+reviewId
+    const reviewAnchor=await json(await api(reviewRoute+'/photos?slot=0',a,'PUT',fixture(196)),201)
+    const reviewBack=await json(await api(reviewRoute+'/photos?slot=1',a,'PUT',fixture(197)),201)
+    for(let j=0;j<30;j++) {
+      const batch=await json(await api(reviewRoute,a))
+      if (batch.photos[0].state==='review') break
+      await wait(1000)
+    }
+    const reviewed={type:'coin',title:'Reviewed fixture'}
+    assert.equal((await api('/photos/'+reviewBack.id+'/save',a,'POST',reviewed)).status,404)
+    for(const response of await Promise.all(Array.from({length:2},()=>api('/photos/'+reviewAnchor.id+'/save',a,'POST',reviewed)))) {
+      assert.equal((await json(response,201)).id,reviewAnchor.id)
+    }
+    assert.equal((await json(await api('/items/'+reviewAnchor.id,a))).photos.length,2)
+
     const different = randomUUID()
     await json(await api('/imports',a,'POST',{...registration,id:different,expectedPhotos:2}),201)
     const differentRoute = '/imports/'+different

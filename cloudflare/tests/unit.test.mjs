@@ -11,6 +11,24 @@ import { parseThemeDraft } from '../src/worker/themePlanning.ts'
 import { automaticCatalogCandidate, parsePhotoCandidates, parseRomanLegends } from '../src/worker/vision.ts'
 import { searchSyllogeum } from '../src/worker/syllogeum.ts'
 import { searchGoogleVision } from '../src/worker/googleVision.ts'
+import { rankScanLeads, scanQuery } from '../src/worker/scanResearch.ts'
+
+test('An observed gazelle can launch discovery and a bull facing left separates the Carian references',()=>{
+  const observed={type:'coin',details:{reverse:'Head of a gazelle facing left, with ringed horns'}}
+  const query=scanQuery(observed)
+  assert.match(query,/\bgazelle\b/)
+  assert.doesNotMatch(query,/Caria|obol|CNG|287|203/i)
+  const references=[
+    {source:'https://www.wildwinds.com/example/right',label:'Timeline 696',attribution:'Fixture',obverse:'Bull right',reverse:'Gazelle head left'},
+    {source:'https://www.wildwinds.com/example/left',label:'CNG 287, lot 203',attribution:'Fixture',obverse:'Bull left',reverse:'Gazelle head left'}
+  ]
+  assert.deepEqual(rankScanLeads(references,observed).map(hit=>hit.conflicts),[[],[]])
+  const pair={...observed,details:{...observed.details,obverse:'Forepart of a bull facing left'}}
+  const ranked=rankScanLeads(references,pair)
+  assert.equal(ranked[0].label,'CNG 287, lot 203')
+  assert.deepEqual(ranked[1].conflicts,['bull faces right in this reference'])
+  assert.doesNotMatch(scanQuery({type:'banknote',issuer:'Bank of Canada',denomination:'1 dollar',details:{serial:'B340595B'}}),/B340595B/)
+})
 
 test('Google Web Detection sends only coin images with the server key and presents sourced web pages',async()=>{
   const front={bytes:Uint8Array.of(1),mime:'image/png'}

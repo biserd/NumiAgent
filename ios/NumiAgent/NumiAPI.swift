@@ -269,7 +269,15 @@ final class NumiAPI {
         return data
     }
 
-    func createImport(id: UUID, name: String, analyze: Bool, autoCatalog: Bool, paired: Bool, expectedPhotos: Int?) async throws {
+    struct PhotoSearchPreference: Codable { let enabled: Bool }
+
+    func setExternalPhotoSearch(_ enabled: Bool) async throws {
+        let payload = try JSONEncoder().encode(PhotoSearchPreference(enabled: enabled))
+        _ = try await send("/me/photo-search", method: "PUT", body: payload)
+    }
+
+    func createImport(id: UUID, name: String, analyze: Bool, autoCatalog: Bool, paired: Bool,
+                      expectedPhotos: Int?, scanPlan: [Int]? = nil) async throws {
         struct Batch: Encodable {
             let id: String
             let label: String
@@ -278,15 +286,18 @@ final class NumiAPI {
             let autoCatalog: Bool
             let paired: Bool
             let expectedPhotos: Int?
+            let scanPlan: [Int]?
         }
         let registration = Batch(id: id.uuidString.lowercased(), label: name, analyze: analyze,
-                                 consent: analyze, autoCatalog: autoCatalog, paired: paired, expectedPhotos: expectedPhotos)
+                                 consent: analyze, autoCatalog: autoCatalog, paired: paired,
+                                 expectedPhotos: expectedPhotos, scanPlan: scanPlan)
         _ = try await send("/imports", method: "POST", body: JSONEncoder().encode(registration))
     }
 
-    func uploadPhoto(_ photo: Data, batch: UUID, side: String? = nil) async throws -> String {
+    func uploadPhoto(_ photo: Data, batch: UUID, side: String? = nil, slot: Int? = nil) async throws -> String {
         let path = "/imports/" + batch.uuidString.lowercased() + "/photos"
-        let query = side.map { [URLQueryItem(name: "side", value: $0)] } ?? []
+        var query = side.map { [URLQueryItem(name: "side", value: $0)] } ?? []
+        if let slot { query.append(URLQueryItem(name: "slot", value: String(slot))) }
         let (data, _) = try await send(path, method: "PUT", query: query, body: photo, type: "image/jpeg")
         return try JSONDecoder().decode(APIIdentifier.self, from: data).id
     }

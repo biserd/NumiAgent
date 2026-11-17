@@ -74,6 +74,7 @@ struct CollectionFoldersScreen: View {
 struct ItemEditor: View {
     let api: NumiAPI
     var itemID: String?
+    let scanPhotoID: String?
     var pairing: [ImportedPhoto]
     let onSave: () -> Void
     let onCreated: ((String) -> Void)?
@@ -85,11 +86,12 @@ struct ItemEditor: View {
     @State private var busy = false
     @State private var selectedPhoto: PhotosPickerItem?
 
-    init(api: NumiAPI, itemID: String? = nil, draft: ItemDraft = .init(),
+    init(api: NumiAPI, itemID: String? = nil, scanPhotoID: String? = nil, draft: ItemDraft = .init(),
          pairing: [ImportedPhoto] = [], allowsPhotoUpload: Bool = true, onCreated: ((String) -> Void)? = nil,
          onSave: @escaping () -> Void) {
         self.api = api
         self.itemID = itemID
+        self.scanPhotoID = scanPhotoID
         self.pairing = pairing
         self.onSave = onSave
         self.onCreated = onCreated
@@ -250,7 +252,8 @@ struct ItemEditor: View {
             if let itemID {
                 try await api.write("/items/" + itemID, method: "PUT", payload: draft)
             } else {
-                let record: APIIdentifier = try await api.post("/items", payload: draft)
+                let path = scanPhotoID.map { "/photos/" + $0 + "/save" } ?? "/items"
+                let record: APIIdentifier = try await api.post(path, payload: draft)
                 onCreated?(record.id)
             }
             onSave()

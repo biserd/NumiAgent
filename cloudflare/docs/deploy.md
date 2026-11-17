@@ -32,7 +32,9 @@ Enable the [Cloud Vision API](https://docs.cloud.google.com/vision/docs/before-y
 npx wrangler secret put GOOGLE_VISION_API_KEY --config wrangler.deploy.json
 ```
 
-The inventory photo search offers Google after a Syllogeum attempt. It sends up to two saved photos when the collector chooses Google and displays links to matching web pages. The Worker limits the fallback to 25 searches per user and 300 globally per UTC day. [Web Detection documentation](https://docs.cloud.google.com/vision/docs/detecting-web)
+Collectors can enable external image lookup in **Settings → Photo identification**. The scan sends cropped coin views to Syllogeum for specialist image search on uncertain ancient coins. If the evidence is still weak or the provider is unavailable, the Worker can send those views to Google Cloud Vision. The output appears as possible references and requires collector review. Up to two views are searched per item, with limits of 25 searches per user and 300 overall per UTC day for each provider. [Web Detection documentation](https://docs.cloud.google.com/vision/docs/detecting-web)
+
+Set the optional `FIRECRAWL_API_KEY` secret to enable catalog web discovery from visible motifs, inscriptions and printed identifying fields. It uses text queries and returns links and search excerpts, with no photo upload or automated sale attribution. Both providers are optional for deployments that use the core scan and OCRE checks.
 
 ## Limits and cost
 

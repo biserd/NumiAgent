@@ -21,6 +21,10 @@ const uploadBatch=ref('')
 const attachPhoto=ref('')
 const attachSide=ref<Link['side']>('obverse')
 const photosChanged=ref(false)
+type VisualSearch={photoCount:number;matches:{source:string;label:string;attribution:string;obverse:string;reverse:string}[]}
+const visualSearch=ref<VisualSearch|null>(null)
+const visualSearching=ref(false)
+const visualError=ref('')
 const next=ref<number|null>(null)
 const query=ref('')
 const type=ref('')
@@ -73,6 +77,7 @@ async function open(id:string){
   estimate.value=null;sale.value={...newSale(),grade:specimen.grade};useRate.value=false;ecbContext.value=''
   ocreId.value=specimen.details?.referenceUrl?.toString() ?? '';ocreType.value=null;saleImport.value=[];attestImport.value=false;saleResearch.value=null
   photosChanged.value=false;uploadBatch.value='';attachPhoto.value='';uploadPhotos.value=[]
+  visualSearch.value=null;visualError.value=''
   await refreshValue()
 }
 function create(){
@@ -137,6 +142,18 @@ async function lookupRate(){
 async function lookupOcre(){
   ocreType.value=null
   ocreType.value=await request('/references/ocre?id='+encodeURIComponent(ocreId.value))
+}
+async function searchCoinPhotos(){
+  const id=detail.value?.id
+  if (!id || visualSearching.value) return
+  visualSearching.value=true
+  visualSearch.value=null;visualError.value=''
+  try {
+    const result=await request<VisualSearch>('/imports/visual-search/'+id,'POST',{consent:true})
+    if (active.value===id) visualSearch.value=result
+  } catch (e) {
+    if (active.value===id) visualError.value=message(e)
+  } finally { visualSearching.value=false }
 }
 function useOcre(){
   if(!ocreType.value) return
@@ -268,6 +285,24 @@ async function importNumisGraph(event:Event) {
     </details>
     <p v-if="detail?.duplicates?.length">Same catalog reference on {{detail.duplicates.length}} other specimen(s).</p>
     <p v-if="form.details.referenceUrl"><a :href="String(form.details.referenceUrl)" target="_blank" rel="noopener noreferrer">Open the linked catalog reference ↗</a></p>
+    <details v-if="detail?.type==='coin' && detail.photos?.length" :key="detail.id">
+      <summary>Search ancient coin photos</summary>
+      <p>Search sends the saved photo of each available side to Syllogeum for visual comparison.</p>
+      <button type="button" :disabled="visualSearching || photosChanged" @click="searchCoinPhotos">Search with Syllogeum</button>
+      <p v-if="visualSearching" role="status">Comparing coin photos…</p>
+      <p v-if="visualError" role="alert">{{visualError}}</p>
+      <div v-if="visualSearch" aria-live="polite">
+        <p>{{visualSearch.matches.length ? 'Compare the designs before updating your identification.' : 'No visual suggestions were returned.'}}</p>
+        <p v-if="visualSearch.photoCount===1">For a stronger comparison, attach the other side and label the photos Obverse and Reverse.</p>
+        <ul v-if="visualSearch.matches.length">
+          <li v-for="hit in visualSearch.matches" :key="hit.source">
+            <a :href="hit.source" target="_blank" rel="noopener noreferrer">{{hit.label}}</a>
+            <span v-if="hit.attribution"> · {{hit.attribution}}</span>
+            <div v-if="hit.obverse">{{hit.obverse}}</div><div v-if="hit.reverse">{{hit.reverse}}</div>
+          </li>
+        </ul>
+      </div>
+    </details>
     <details v-if="form.type==='coin'"><summary>Look up a Roman coin type in OCRE</summary>
       <form class="inline" @submit.prevent="action(lookupOcre)">
         <label>OCRE identifier or record URL<input v-model.trim="ocreId" maxlength="180" required placeholder="ric.1(2).aug.208"></label>

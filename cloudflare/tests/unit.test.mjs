@@ -9,6 +9,43 @@ import { findCircularRim } from '../src/worker/coinCloseup.ts'
 import { normalizeEbay } from '../src/worker/ebay.ts'
 import { parseThemeDraft } from '../src/worker/themePlanning.ts'
 import { automaticCatalogCandidate, parsePhotoCandidates, parseRomanLegends } from '../src/worker/vision.ts'
+import { searchSyllogeum } from '../src/worker/syllogeum.ts'
+
+test('Visual coin search tries both orientations and returns unique, attributed reference links',async()=>{
+  const front={bytes:Uint8Array.of(1),mime:'image/png'}
+  const back={bytes:Uint8Array.of(2),mime:'image/png'}
+  const forms=[]
+  const fetchFixture=async (url,init)=>{
+    assert.equal(url,'https://syllogeum.org/search')
+    assert.equal(init.redirect,'error')
+    const uploaded=async side=>new Uint8Array(await init.body.get(side).arrayBuffer())[0]
+    const orientation=[await uploaded('obverse'),await uploaded('reverse')]
+    forms.push(orientation)
+    return Response.json({results:[
+      {type_label:'Reference type',type_url:'http://numismatics.org/type/id',attribution:'Museum',
+        type_card:{obv_desc:'Bull facing left',rev_desc:'Gazelle head left'},score:.7},
+      {type_label:'Unsafe link',source_url:'javascript:alert(1)',score:.99},
+      {type_label:'Malformed result'},
+    ]})
+  }
+  assert.deepEqual(await searchSyllogeum([front,back],fetchFixture),{photoCount:2,matches:[
+    {label:'Reference type',source:'https://numismatics.org/type/id',attribution:'Museum',obverse:'Bull facing left',reverse:'Gazelle head left'},
+  ]})
+  assert.deepEqual(forms.sort(),[[1,2],[2,1]])
+})
+
+test('Visual coin search handles one face and distinguishes provider failure from an empty response',async()=>{
+  const image={bytes:Uint8Array.of(1),mime:'image/png'}
+  const slots=[]
+  const result=await searchSyllogeum([image],async (_url,{body})=>{
+    slots.push(...[...body.keys()].filter(key=>key!=='k'))
+    return Response.json({results:[]})
+  })
+  assert.deepEqual(result,{photoCount:1,matches:[]})
+  assert.deepEqual(slots.sort(),['obverse','reverse'])
+  await assert.rejects(searchSyllogeum([image],async (_url,{body})=>
+    body.has('obverse') ? new Response(null,{status:503}) : Response.json({results:[]})),/unavailable/)
+})
 
 test('Photo review keeps an identifiable coin when Gemma returns null, numeric text, or an unusable crop',()=>{
   const response = JSON.stringify([

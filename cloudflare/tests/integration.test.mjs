@@ -236,6 +236,10 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.deepEqual(Object.fromEntries(pairedCoin.photos.map(photo=>[photo.side,photo.photoId])),{obverse:front.id,reverse:back.id})
     assert.equal((await api('/items/'+back.id,a)).status,404)
     assert.equal((await api('/imports/refine/'+front.id,b,'POST',{})).status,404)
+    const visualRoute='/imports/visual-search/'+front.id
+    assert.equal((await api(visualRoute,null,'POST',{consent:true})).status,401)
+    assert.equal((await api(visualRoute,b,'POST',{consent:true})).status,404)
+    assert.equal((await api(visualRoute,a,'POST',{consent:false})).status,400)
     const refined=await json(await api('/imports/refine/'+front.id,a,'POST',{}))
     assert.equal(refined.candidates[0].title,pairedCoin.title)
     assert.deepEqual((await json(await api('/items/'+front.id,a))).photos,pairedCoin.photos)

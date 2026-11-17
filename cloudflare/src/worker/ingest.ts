@@ -10,6 +10,7 @@ import { automaticCatalogCandidate, isRomanCoin, parsePhotoCandidates, parseRoma
 import { findItem, saveIdentifiedPhoto } from './collection'
 import { matchOcreLegends } from './ocreIdentification'
 import { cropCoinJpeg } from './coinCloseup'
+import { searchSyllogeum } from './syllogeum'
 
 const maxBytes = 6 * 1024 * 1024
 type Photo = {id:string;user_id:string;batch_id:string;mime:string;bytes:number;state:string;candidates:string|null;error:string|null;attempt:number;pair_side:'obverse'|'reverse'|null}
@@ -333,6 +334,29 @@ export async function identifyImageEvidence(env:Env,user:string,images:ReturnTyp
       confidenceKind:'model_self_reported'}
   })
 }
+
+imports.post('/visual-search/:itemId',async c=>{
+  const user=c.get('user').id
+  const specimen=await findItem(c.env,user,c.req.param('itemId'))
+  await body(c,z.object({consent:z.literal(true)}))
+  if (specimen.type!=='coin') return fail(400,'Syllogeum searches ancient coins.')
+  const front=specimen.photos.find(photo=>photo.side==='obverse')
+  const back=specimen.photos.find(photo=>photo.side==='reverse' && photo.photoId!==front?.photoId)
+  const first=front ?? back ?? specimen.photos[0]
+  if (!first) return fail(400,'Attach a photo to this coin before searching.')
+  await limit(c.env,'syllogeum',user,25)
+  await limit(c.env,'syllogeum','global',300)
+  const load=async (photoId:string)=>{
+    const photo=await owner(c.env,user,photoId)
+    if (!photo || photo.state==='uploading') return fail(404,'Coin photo is unavailable.')
+    const object=await c.env.PHOTOS.get(path(user,photoId))
+    if (!object) return fail(404,'Coin photo is unavailable.')
+    return {bytes:new Uint8Array(await object.arrayBuffer()),mime:photo.mime}
+  }
+  const [firstImage,secondImage]=await Promise.all([load(first.photoId),front && back ? load(back.photoId) : undefined])
+  try { return c.json(await searchSyllogeum([firstImage,secondImage])) }
+  catch { return fail(503,'Syllogeum photo search is temporarily unavailable. Try again in a moment.') }
+})
 
 imports.post('/refine/:itemId',async c=>{
   const user=c.get('user').id

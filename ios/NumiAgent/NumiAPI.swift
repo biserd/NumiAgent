@@ -33,6 +33,7 @@ struct Specimen: Decodable, Identifiable {
     var tags: String?
     var collection_id: String?
     var photos: [PhotoLink]?
+    var googleVisionAvailable: Bool? = nil
 
     var subtitle: String {
         [ruler.isEmpty ? issuer : ruler, year].filter { !$0.isEmpty }.joined(separator: " · ")

@@ -242,7 +242,10 @@ items.post('/import/numisgraph',async c=>{
   const legacyPhotoLinks = input.coins.reduce((count,coin)=>count+Number(!!coin.obvImageId)+Number(!!coin.revImageId),0)
   return c.json({imported,skipped:input.coins.length-imported,legacyPhotoLinks},201)
 })
-items.get('/:id',async c=>c.json(await findItem(c.env,c.get('user').id,c.req.param('id'))))
+items.get('/:id',async c=>c.json({
+  ...await findItem(c.env,c.get('user').id,c.req.param('id')),
+  googleVisionAvailable:!!c.env.GOOGLE_VISION_API_KEY?.trim()
+}))
 items.post('/:id/merge',async c=>{
   const key = id.parse(c.req.param('id'))
   const {sourceId} = await body(c,z.object({sourceId:id}))

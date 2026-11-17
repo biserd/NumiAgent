@@ -22,7 +22,9 @@ const attachPhoto=ref('')
 const attachSide=ref<Link['side']>('obverse')
 const photosChanged=ref(false)
 type VisualSearch={photoCount:number;matches:{source:string;label:string;attribution:string;obverse:string;reverse:string}[]}
+type VisualProvider='syllogeum'|'google'
 const visualSearch=ref<VisualSearch|null>(null)
+const visualProvider=ref<VisualProvider>('syllogeum')
 const visualSearching=ref(false)
 const visualError=ref('')
 const next=ref<number|null>(null)
@@ -77,7 +79,7 @@ async function open(id:string){
   estimate.value=null;sale.value={...newSale(),grade:specimen.grade};useRate.value=false;ecbContext.value=''
   ocreId.value=specimen.details?.referenceUrl?.toString() ?? '';ocreType.value=null;saleImport.value=[];attestImport.value=false;saleResearch.value=null
   photosChanged.value=false;uploadBatch.value='';attachPhoto.value='';uploadPhotos.value=[]
-  visualSearch.value=null;visualError.value=''
+  visualSearch.value=null;visualProvider.value='syllogeum';visualError.value=''
   await refreshValue()
 }
 function create(){
@@ -143,13 +145,14 @@ async function lookupOcre(){
   ocreType.value=null
   ocreType.value=await request('/references/ocre?id='+encodeURIComponent(ocreId.value))
 }
-async function searchCoinPhotos(){
+async function searchCoinPhotos(provider:VisualProvider){
   const id=detail.value?.id
   if (!id || visualSearching.value) return
   visualSearching.value=true
+  visualProvider.value=provider
   visualSearch.value=null;visualError.value=''
   try {
-    const result=await request<VisualSearch>('/imports/visual-search/'+id,'POST',{consent:true})
+    const result=await request<VisualSearch>('/imports/visual-search/'+id,'POST',{consent:true,provider})
     if (active.value===id) visualSearch.value=result
   } catch (e) {
     if (active.value===id) visualError.value=message(e)
@@ -288,11 +291,18 @@ async function importNumisGraph(event:Event) {
     <details v-if="detail?.type==='coin' && detail.photos?.length" :key="detail.id">
       <summary>Search ancient coin photos</summary>
       <p>Search sends the saved photo of each available side to Syllogeum for visual comparison.</p>
-      <button type="button" :disabled="visualSearching || photosChanged" @click="searchCoinPhotos">Search with Syllogeum</button>
+      <button type="button" :disabled="visualSearching || photosChanged" @click="searchCoinPhotos('syllogeum')">Search with Syllogeum</button>
+      <div v-if="detail.googleVisionAvailable && (visualSearch || visualError || visualProvider==='google')">
+        <p>For a wider search, send the saved coin photos to Google Cloud Vision to find related web pages.</p>
+        <button type="button" :disabled="visualSearching || photosChanged" @click="searchCoinPhotos('google')">Search the web with Google</button>
+      </div>
       <p v-if="visualSearching" role="status">Comparing coin photos…</p>
       <p v-if="visualError" role="alert">{{visualError}}</p>
       <div v-if="visualSearch" aria-live="polite">
-        <p>{{visualSearch.matches.length ? 'Compare the designs before updating your identification.' : 'No visual suggestions were returned.'}}</p>
+        <template v-if="visualProvider==='google'">
+          <p>{{visualSearch.matches.length ? 'Open a source and check its attribution against your coin.' : 'Google returned no matching web pages.'}}</p>
+        </template>
+        <p v-else>{{visualSearch.matches.length ? 'Compare the designs before updating your identification.' : 'No visual suggestions were returned.'}}</p>
         <p v-if="visualSearch.photoCount===1">For a stronger comparison, attach the other side and label the photos Obverse and Reverse.</p>
         <ul v-if="visualSearch.matches.length">
           <li v-for="hit in visualSearch.matches" :key="hit.source">

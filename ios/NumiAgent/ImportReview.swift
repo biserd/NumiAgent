@@ -417,6 +417,11 @@ private struct IdentificationChoice: View {
 struct SpecimenIdentificationSheet: View {
     private struct Result: Decodable { let candidates: [PhotoCandidate] }
     private struct Search: Encodable { let legends: [String: String]? }
+    private enum VisualProvider: String, Encodable { case syllogeum, google }
+    private struct VisualQuery: Encodable {
+        var consent = true
+        let provider: VisualProvider
+    }
     private struct VisualResult: Decodable {
         struct Match: Decodable, Identifiable {
             let source: URL
@@ -440,6 +445,7 @@ struct SpecimenIdentificationSheet: View {
     @State private var visualResult: VisualResult?
     @State private var visualError: String?
     @State private var visualSearching = false
+    @State private var visualProvider: VisualProvider = .syllogeum
 
     var body: some View {
         if let draft {
@@ -453,14 +459,29 @@ struct SpecimenIdentificationSheet: View {
                                 Task { await searchCoinPhotos() }
                             }
                             .disabled(visualSearching)
+                            if item.googleVisionAvailable == true,
+                               visualResult != nil || visualError != nil || visualProvider == .google {
+                                Button("Search the web with Google", systemImage: "globe") {
+                                    Task { await searchCoinPhotos(provider: .google) }
+                                }
+                                .disabled(visualSearching)
+                                Text("This sends the saved coin photos to Google Cloud Vision to find related web pages.")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                            }
                             if visualSearching { ProgressView("Comparing coin photos") }
                             if let visualError {
                                 Text(visualError).font(.footnote).foregroundStyle(.secondary)
                             }
                             if let visualResult {
-                                Text(visualResult.matches.isEmpty ? "No visual suggestions were returned." :
-                                    "Compare the designs before updating your identification.")
-                                    .font(.footnote).foregroundStyle(.secondary)
+                                if visualProvider == .google {
+                                    Text(visualResult.matches.isEmpty ? "Google returned no matching web pages." :
+                                        "Open a source and check its attribution against your coin.")
+                                        .font(.footnote).foregroundStyle(.secondary)
+                                } else {
+                                    Text(visualResult.matches.isEmpty ? "No visual suggestions were returned." :
+                                        "Compare the designs before updating your identification.")
+                                        .font(.footnote).foregroundStyle(.secondary)
+                                }
                                 if visualResult.photoCount == 1 {
                                     Text("For a stronger comparison, add the other side and label the photos Front and Back.")
                                         .font(.footnote).foregroundStyle(.secondary)
@@ -534,14 +555,15 @@ struct SpecimenIdentificationSheet: View {
         }
     }
 
-    private func searchCoinPhotos() async {
+    private func searchCoinPhotos(provider: VisualProvider = .syllogeum) async {
         guard !visualSearching else { return }
         visualSearching = true
+        visualProvider = provider
         visualResult = nil
         visualError = nil
         defer { visualSearching = false }
         do {
-            let result: VisualResult = try await api.post("/imports/visual-search/" + item.id, payload: ["consent": true])
+            let result: VisualResult = try await api.post("/imports/visual-search/" + item.id, payload: VisualQuery(provider: provider))
             if !Task.isCancelled { visualResult = result }
         } catch { if !Task.isCancelled { visualError = error.localizedDescription } }
     }

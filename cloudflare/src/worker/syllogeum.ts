@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { boundedBody } from './core.ts'
-import { cropCoinJpeg } from './coinCloseup.ts'
+import { coinSearchBytes, sourceLink } from './visualSearch.ts'
+import type { CoinImage, CoinImages } from './visualSearch.ts'
 
-type CoinImage = {bytes:Uint8Array;mime:string}
 const endpoint = 'https://syllogeum.org/search'
 const result = z.object({
   type_label:z.string().trim().min(1).max(300),
@@ -15,16 +15,6 @@ const result = z.object({
   }).nullish(),
   score:z.number().finite()
 })
-
-function sourceLink(value:string|null|undefined) {
-  if (!value || value.length > 1500) return
-  try {
-    const url=new URL(value)
-    if (!['https:','http:'].includes(url.protocol) || url.username || url.password || url.port) return
-    url.protocol='https:'
-    return url.href
-  } catch { return }
-}
 
 async function search(obverse:Blob|undefined,reverse:Blob|undefined,request:typeof fetch) {
   const body=new FormData()
@@ -46,15 +36,8 @@ async function search(obverse:Blob|undefined,reverse:Blob|undefined,request:type
   })
 }
 
-export async function searchSyllogeum(images:readonly [CoinImage,CoinImage?],request:typeof fetch=fetch) {
-  const prepare=(image:CoinImage)=>{
-    let bytes=image.bytes
-    if (image.mime==='image/jpeg') {
-      try { bytes=cropCoinJpeg(bytes) ?? bytes }
-      catch { /* Use the original if the close-up could not be prepared. */ }
-    }
-    return new Blob([new Uint8Array(bytes)],{type:image.mime})
-  }
+export async function searchSyllogeum(images:CoinImages,request:typeof fetch=fetch) {
+  const prepare=(image:CoinImage)=>new Blob([new Uint8Array(coinSearchBytes(image))],{type:image.mime})
   const front=prepare(images[0])
   const back=images[1] ? prepare(images[1]) : undefined
   const searches=await Promise.allSettled([search(front,back,request),search(back,front,request)])

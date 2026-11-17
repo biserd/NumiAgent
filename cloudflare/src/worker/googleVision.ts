@@ -10,12 +10,12 @@ const annotation = z.object({
   webDetection:z.object({pagesWithMatchingImages:z.array(z.unknown()).max(50).optional()}).optional()
 })
 
-export async function searchGoogleVision(images:CoinImages,key:string,request:typeof fetch=fetch) {
-  const photos=images.filter((photo):photo is CoinImage=>!!photo)
-  const requests=photos.map(photo=>({
+async function annotatePhoto(photo:CoinImage,key:string,request:typeof fetch) {
+  // Two base64-encoded uploads can exceed Cloud Vision's 10 MB JSON limit.
+  const requests=[{
     image:{content:Buffer.from(coinSearchBytes(photo)).toString('base64')},
     features:[{type:'WEB_DETECTION',maxResults}]
-  }))
+  }]
   const response=await request('https://vision.googleapis.com/v1/images:annotate',{
     method:'POST',redirect:'error',signal:AbortSignal.timeout(15000),
     headers:{'Content-Type':'application/json','x-goog-api-key':key},
@@ -23,9 +23,16 @@ export async function searchGoogleVision(images:CoinImages,key:string,request:ty
   })
   if (!response.ok) throw new Error('Google Cloud Vision request failed')
   const bytes=await boundedBody(response,256*1024)
-  const {responses}=z.object({responses:z.array(annotation).length(photos.length)})
+  const {responses:[result]}=z.object({responses:z.tuple([annotation])})
     .parse(JSON.parse(new TextDecoder().decode(bytes)))
-  const completed=responses.filter(entry=>!entry.error)
+  if (result.error) throw new Error('Google Cloud Vision could not process this photo')
+  return result
+}
+
+export async function searchGoogleVision(images:CoinImages,key:string,request:typeof fetch=fetch) {
+  const photos=images.filter((photo):photo is CoinImage=>!!photo)
+  const results=await Promise.allSettled(photos.map(photo=>annotatePhoto(photo,key,request)))
+  const completed=results.flatMap(result=>result.status==='fulfilled' ? [result.value] : [])
   if (!completed.length) throw new Error('Google Cloud Vision could not process these photos')
   const matches=new Map<string,{source:string;label:string;attribution:string;obverse:string;reverse:string}>()
   for (let rank=0;rank<maxResults && matches.size<5;rank++) {

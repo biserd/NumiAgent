@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { siteLinks } from './sitePages'
 import { blogPosts } from './blogPosts'
+import AnalyticsPreference from './AnalyticsPreference.vue'
 defineProps<{footer?:boolean;landing?:boolean;path?:string}>()
 </script>
 <template>
@@ -12,6 +13,7 @@ defineProps<{footer?:boolean;landing?:boolean;path?:string}>()
     <nav class="footer-guides" aria-label="Collector guides">
       <a v-for="post in blogPosts" :key="post.path" :href="post.path" :aria-current="path===post.path?'page':undefined">{{post.guideLabel}}</a>
     </nav>
+    <AnalyticsPreference/>
   </footer>
   <header v-else class="site-header wrap">
     <a class="brand" href="/"><img src="/mark.svg" alt="" width="36" height="36">Numi<span>Agent</span></a>

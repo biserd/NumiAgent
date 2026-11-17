@@ -123,7 +123,7 @@ export const sitePages:Record<string,SitePage> = {
     ]
   },
   '/privacy':{
-    label:'Privacy',title:'Privacy Policy',effective:'November 14, 2026',
+    label:'Privacy',title:'Privacy Policy',effective:'November 17, 2026',
     description:'How NumiAgent handles account information, photographs, collection records, and support messages.',
     sections:[
       {title:'Information used to run your account',paragraphs:[
@@ -138,6 +138,9 @@ export const sitePages:Record<string,SitePage> = {
       ]},
       {title:'Support requests',paragraphs:[
         'The contact form stores your reply email, topic, and message so the operator can review and respond. Contact messages are scheduled for deletion from the active inbox after 90 days. Omit payment details, sign-in links, and other sensitive information.'
+      ]},
+      {title:'Optional website analytics',paragraphs:[
+        'If you allow analytics, Google Analytics uses cookies to count visits to public pages and help us understand how people find the site. Page addresses are sent without query strings or fragments. Analytics runs on the public site and excludes the signed-in workspace. You can change your choice using Analytics preferences in the footer.'
       ]},
       {title:'Access, export, and deletion',paragraphs:[
         'Keep your collection in NumiAgent as long as you need it. Settings lets you export your records, revoke sessions, and request deletion. Use Developer access to revoke API keys and connected agents. Deletion disables access and queues removal of private records and photographs. Backup and operational copies may expire on their own schedules.'

@@ -2,6 +2,8 @@ import { render } from '../../dist-server/render.js'
 import { brand, canonicalOrigin, landingSeo, sitePages } from '../web/sitePages'
 import type { Env } from './core'
 
+const googleMeasurementId='G-X6DV07YFCJ'
+
 export async function publicPage(request:Request,url:URL,env:Env) {
   const path=url.pathname.replace(/\/+$/,'') || '/'
   const page=Object.hasOwn(sitePages,path) ? sitePages[path] : undefined
@@ -14,6 +16,7 @@ export async function publicPage(request:Request,url:URL,env:Env) {
   }
   const title=page ? page.seoTitle ?? (page.title.includes(brand) ? page.title : page.title+' | '+brand) : landingSeo.title
   const description=page?.description ?? landingSeo.description
+  const analytics=env.APP_MODE==='production' && url.origin===canonicalOrigin
   const canonical=canonicalOrigin+path
   const image=canonicalOrigin+'/roman-bronze.jpg'
   const article=page?.article
@@ -53,10 +56,18 @@ export async function publicPage(request:Request,url:URL,env:Env) {
         element.append('<meta property="'+property+'" content="'+escapeAttribute(content)+'">',{html:true})
       }
       element.append('<script type="application/ld+json">'+structured+'</script>',{html:true})
+      if (analytics) element.append('<meta name="numiagent-ga4" content="'+googleMeasurementId+'">',{html:true})
     }})
     .on('#app',{element(element){element.setAttribute('data-rendered','server');element.setInnerContent(markup,{html:true})}})
     .transform(shell)
   const headers=new Headers(output.headers)
+  const csp=headers.get('Content-Security-Policy')
+  if (analytics && csp) {
+    headers.set('Content-Security-Policy',csp
+      .replace(/(^|;)\s*script-src [^;]+/,'$& https://www.googletagmanager.com')
+      .replace(/(^|;)\s*connect-src [^;]+/,'$& https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com')
+      .replace(/(^|;)\s*img-src [^;]+/,'$& https://*.google-analytics.com https://www.googletagmanager.com'))
+  }
   headers.delete('ETag')
   headers.delete('Last-Modified')
   headers.set('Cache-Control','public, max-age=60')

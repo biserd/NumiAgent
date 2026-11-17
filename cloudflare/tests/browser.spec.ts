@@ -79,6 +79,26 @@ test('A collector transfers a legacy portfolio row and attaches a private photo'
   await expect(page.getByRole('img',{name:'obverse',exact:true})).toBeVisible()
 })
 
+test('Grouped scan drafts survive navigation and save one record per physical item',async({page})=>{
+  await page.goto(server.url+'/app')
+  await page.getByLabel('Email address').fill('scan@example.test')
+  await page.getByRole('button',{name:'Send sign-in link'}).click()
+  await page.getByRole('link',{name:'Open local sign-in link'}).click()
+  await page.getByRole('button',{name:'Imports',exact:true}).click()
+  await page.getByLabel('Batch label').fill('Grouped scan fixture')
+  await page.getByLabel('Photo library',{exact:true}).setInputFiles(['public/icon-192.png','public/icon-512.png'])
+  await page.getByRole('button',{name:'Add another item'}).click()
+  await page.getByLabel('Photo library for item 2').setInputFiles('public/roman-bronze.jpg')
+  await page.getByRole('button',{name:'Overview',exact:true}).click()
+  await page.getByRole('button',{name:'Imports',exact:true}).click()
+  await page.getByRole('button',{name:'Identify 2 items'}).click()
+  const saved=page.getByRole('button',{name:'Open 1998 Hong Kong 1 dollar'})
+  await expect(saved).toHaveCount(2,{timeout:20000})
+  await saved.first().click()
+  await expect(page.getByRole('heading',{name:'1998 Hong Kong 1 dollar',exact:true})).toBeVisible()
+  await expect(page.locator('.specimen-images img')).toHaveCount(2)
+})
+
 test('Public information pages and contact form work without an account',async({page})=>{
   await page.goto(server.url)
   const footer=page.getByRole('navigation',{name:'Site information'})

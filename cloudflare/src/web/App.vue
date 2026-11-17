@@ -142,13 +142,13 @@ onUnmounted(()=>{
       <a class="brand" href="/"><img src="/mark.svg" alt="" width="36" height="36">Numi<span>Agent</span></a>
       <nav aria-label="Catalog"><button v-for="route in routes" :key="route" :aria-current="route===page ? 'page':undefined" @click="go(route)">{{ route }}</button></nav>
     </aside>
-    <main class="workspace-main" :key="page">
+    <main class="workspace-main">
       <Overview v-if="page==='Overview'" @imports="go('Imports')" @collection="go('Collection',$event)" @themes="go('Themes')"/>
       <Catalog v-else-if="page==='Collection'" :start-with-new="startWithNew" :opened-specimen="openedSpecimen"/>
-      <ImportView v-else-if="page==='Imports'" @specimen="viewSpecimen"/>
       <GoalsMarket v-else-if="page==='Themes' || page==='Marketplace'" :mode="page" :initial-query="marketQuery" @search="search"/>
       <Developer v-else-if="page==='Developer'"/>
-      <Settings v-else :email="user.email"/>
+      <Settings v-else-if="page==='Settings'" :email="user.email"/>
+      <KeepAlive><ImportView v-if="page==='Imports'" @specimen="viewSpecimen"/></KeepAlive>
       <nav class="app-links" aria-label="Site information"><a v-for="link in siteLinks" :key="link.href" :href="link.href">{{link.label}}</a></nav>
     </main>
   </div>

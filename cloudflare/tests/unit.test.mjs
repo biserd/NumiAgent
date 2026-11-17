@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { encode, decode } from 'jpeg-js'
 import { csv, item, matchesSlot, romanTheme, slot, valueSales } from '../src/shared/domain.ts'
 import { convertLegacyCoin, legacyCoin } from '../src/shared/legacy.ts'
 import { matchReference } from '../src/shared/references.ts'
@@ -11,7 +12,7 @@ import { parseThemeDraft } from '../src/worker/themePlanning.ts'
 import { automaticCatalogCandidate, parsePhotoCandidates, parseRomanLegends } from '../src/worker/vision.ts'
 import { searchSyllogeum } from '../src/worker/syllogeum.ts'
 import { searchGoogleVision } from '../src/worker/googleVision.ts'
-import { rankScanLeads, scanQuery } from '../src/worker/scanResearch.ts'
+import { rankScanLeads, researchScan, scanQuery } from '../src/worker/scanResearch.ts'
 
 test('An observed gazelle can launch discovery and a bull facing left separates the Carian references',()=>{
   const observed={type:'coin',details:{reverse:'Head of a gazelle facing left, with ringed horns'}}
@@ -28,6 +29,50 @@ test('An observed gazelle can launch discovery and a bull facing left separates 
   assert.equal(ranked[0].label,'CNG 287, lot 203')
   assert.deepEqual(ranked[1].conflicts,['bull faces right in this reference'])
   assert.doesNotMatch(scanQuery({type:'banknote',issuer:'Bank of Canada',denomination:'1 dollar',details:{serial:'B340595B'}}),/B340595B/)
+})
+
+test('An opted-in scan falls back to Google on specialist failure and sends only the cropped coin',async()=>{
+  const width=600,height=700
+  const data=new Uint8Array(width*height*4).fill(255)
+  for(let y=0;y<height;y++) for(let x=0;x<width;x++){
+    if(Math.hypot(x-306,y-379)>174) continue
+    const index=(y*width+x)*4
+    data[index]=data[index+1]=data[index+2]=65
+  }
+  const photo={mime:'image/jpeg',bytes:encode({data,width,height},90).data}
+  let consent=0
+  const env={GOOGLE_VISION_API_KEY:'fixture',FIRECRAWL_API_KEY:'fixture',
+    DB:{prepare:sql=>({bind:()=>({first:async()=>sql.startsWith('SELECT')
+      ? {external_photo_search:consent} : {count:1}})})}}
+  const calls=[]
+  const fetchFixture=async(url,request)=>{
+    calls.push(new URL(url).hostname)
+    if(url.startsWith('https://syllogeum.org')) return new Response(null,{status:503})
+    if(url.startsWith('https://api.firecrawl.dev')) {
+      const search=JSON.parse(request.body)
+      assert.match(search.query,/gazelle/)
+      assert.doesNotMatch(search.query,/Caria|obol|CNG/)
+      assert.equal(search.scrapeOptions,undefined)
+      return Response.json({success:true,data:{web:[{
+        url:'https://www.wildwinds.com/coins/greece/caria/uncertain/i.html',title:'Uncertain mints of Caria',description:'Head of gazelle left'
+      }]}})
+    }
+    const {requests}=JSON.parse(request.body)
+    const image=decode(Buffer.from(requests[0].image.content,'base64'))
+    assert.ok(image.width<width && image.height<height)
+    return Response.json({responses:[{webDetection:{pagesWithMatchingImages:[{url:'https://www.reddit.com/r/AncientCoins/',pageTitle:'Discussion'}]}}]})
+  }
+  const observation={type:'coin',details:{reverse:'Gazelle head left'}}
+  const privateResult=await researchScan(env,'collector',observation,[photo],async()=>true,fetchFixture)
+  assert.deepEqual(calls,['api.firecrawl.dev'])
+  assert.equal(privateResult.providers.google,'disabled')
+  consent=1
+  const result=await researchScan(env,'collector',observation,[photo],async()=>true,fetchFixture)
+  assert.equal(result.providers.syllogeum,'unavailable')
+  assert.equal(result.providers.google,'complete')
+  assert.equal(calls.at(-1),'vision.googleapis.com')
+  assert.equal(result.leads[0].label,'Uncertain mints of Caria')
+  assert.match(result.next,/other side/)
 })
 
 test('Google Web Detection sends only coin images with the server key and presents sourced web pages',async()=>{

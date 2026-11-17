@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, ref } from 'vue'
 import { cleanItem, emptyItem, message, photoURL, preparePhoto, request } from './api'
 import type { Box, Candidate, Folder, Link, Photo, RecordForm, ScanReview } from './api'
 import ItemFields from './ItemFields.vue'
@@ -8,7 +8,7 @@ defineEmits<{specimen:[id:string]}>()
 type ImportPhoto = Photo & {side?:'obverse'|'reverse'|null;slot?:number|null;record?:{id:string;title:string}|null;scan?:ScanReview}
 type Batch = {id:string;label:string;analyze:number;cancelled:number;paired?:number;expected_photos?:number|null;photos:ImportPhoto[]}
 type DraftGroup={id:number;photos:File[]}
-type Upload={id:string;slots:{file:File;slot?:number}[];plan?:number[];name:string}
+type Upload={id:string;slots:{name:string;photo:Blob;slot?:number}[];plan?:number[];name:string}
 const batches=ref<{id:string;label:string;total:number;pending:number}[]>([])
 const batch=ref<Batch|null>(null)
 const folders=ref<Folder[]>([])
@@ -48,14 +48,15 @@ const cropPercent=(n:number)=>Math.round(n*100)
 const rectStyle=computed(()=>({left:box.value.x*100+'%',top:box.value.y*100+'%',width:box.value.width*100+'%',height:box.value.height*100+'%'}))
 const reverseOptions=computed(()=>batch.value?.photos.filter(p=>p.id!==current.value && usable(p)) ?? [])
 const u=()=>new Date().toLocaleDateString()
-onMounted(async()=>{
+onActivated(async()=>{
+  poll.value=window.setInterval(()=>{if (batch.value && (pending.value || busy.value || uploading.value)) void refresh().catch(()=>{})},1800)
   try {
     await refreshList()
     folders.value=await request('/collections')
-    poll.value=window.setInterval(()=>{if (batch.value && (pending.value || busy.value)) void refresh().catch(()=>{})},1800)
+    await refresh()
   } catch(e){error.value=message(e)}
 })
-onUnmounted(()=>window.clearInterval(poll.value))
+onDeactivated(()=>window.clearInterval(poll.value))
 async function refreshList(){batches.value=await request('/imports')}
 async function refresh(){if(batch.value) await open(batch.value.id,false)}
 async function open(id:string,reset=true){
@@ -76,17 +77,29 @@ function removeGroup(index:number) {
 }
 async function upload(analyze:boolean){
   if (busy.value) return
-  if (!submitted.value) {
-    const items=groups.value.filter(group=>group.photos.length)
-    if (!items.length) return
-    const slots=items.flatMap((group,index)=>group.photos.map((file,view)=>({file,slot:analyze ? index*5+view : undefined})))
-    submitted.value={id:crypto.randomUUID(),slots,plan:analyze ? items.map(group=>group.photos.length) : undefined,
-      name:label.value.trim() || (analyze ? 'Photo scan · ' : 'Photo import · ')+u()}
-    successful.value.clear()
-  }
-  const entry=submitted.value
-  busy.value=true;error.value='';notice.value='';done.value=successful.value.size;total.value=entry.slots.length
+  busy.value=true;error.value='';notice.value=''
   try {
+    if (!submitted.value) {
+      const items=groups.value.filter(group=>group.photos.length)
+      if (!items.length) return
+      const slots:Upload['slots']=[]
+      const fingerprints=new Set<string>()
+      for(const [index,group] of items.entries()) {
+        for(const [view,file] of group.photos.entries()) {
+          const photo=await preparePhoto(file,keep.value)
+          const bytes=await crypto.subtle.digest('SHA-256',await photo.arrayBuffer())
+          const hash=Array.from(new Uint8Array(bytes)).join(',')
+          if (fingerprints.has(hash)) throw new Error('The same photo is in two slots. Remove one copy before identifying.')
+          fingerprints.add(hash)
+          slots.push({name:file.name,photo,slot:analyze ? index*5+view : undefined})
+        }
+      }
+      submitted.value={id:crypto.randomUUID(),slots,plan:analyze ? items.map(group=>group.photos.length) : undefined,
+        name:label.value.trim() || (analyze ? 'Photo scan · ' : 'Photo import · ')+u()}
+      successful.value.clear()
+    }
+    const entry=submitted.value
+    done.value=successful.value.size;total.value=entry.slots.length
     const scan=!!entry.plan
     await request('/imports','POST',{id:entry.id,label:entry.name,analyze:scan,consent:scan,autoCatalog:scan,scanPlan:entry.plan})
     if (batch.value?.id!==entry.id) await open(entry.id)
@@ -95,10 +108,10 @@ async function upload(analyze:boolean){
       for(let view=remaining.shift();view;view=remaining.shift()) {
         try {
           const query=view.slot===undefined ? '' : '?slot='+view.slot
-          await request('/imports/'+entry.id+'/photos'+query,'PUT',await preparePhoto(view.file,keep.value))
+          await request('/imports/'+entry.id+'/photos'+query,'PUT',view.photo)
           successful.value.add(view.index)
         }
-        catch(e){error.value=view.file.name+' — '+message(e)}
+        catch(e){error.value=view.name+' — '+message(e)}
         finally {done.value++}
       }
     }))
@@ -172,8 +185,8 @@ async function bulk(){
   <p role="alert" class="error" v-if="error">{{error}}</p><p role="status" v-if="notice">{{notice}}</p>
   <section class="panel">
     <h2>Scan coins and banknotes</h2>
-    <label>Batch label<input v-model="label" :disabled="!!submitted" placeholder="e.g. Second tray"></label>
-    <fieldset v-for="(group,index) in groups" :key="group.id" :disabled="!!submitted">
+    <label>Batch label<input v-model="label" :disabled="!!submitted || busy" placeholder="e.g. Second tray"></label>
+    <fieldset v-for="(group,index) in groups" :key="group.id" :disabled="!!submitted || busy">
       <legend>{{groups.length===1 ? 'One item' : 'Item '+(index+1)}}</legend>
       <div class="form-grid">
         <label>Photo library<input :aria-label="groups.length===1 ? 'Photo library' : 'Photo library for item '+(index+1)"
@@ -190,17 +203,18 @@ async function bulk(){
       <button v-if="groups.length>1" type="button" @click="removeGroup(index)">Remove item</button>
     </fieldset>
     <p>Keep both sides together. Use even light and include the full item before adding a close-up.</p>
-    <label class="check"><input type="checkbox" v-model="keep" :disabled="!!submitted">Keep compatible originals up to 6 MB.</label>
+    <label class="check"><input type="checkbox" v-model="keep" :disabled="!!submitted || busy">Keep compatible originals up to 6 MB.</label>
     <div class="actions">
       <template v-if="!submitted">
-        <button class="primary" :disabled="!totalDraft" @click="upload(true)">Identify {{groups.filter(group=>group.photos.length).length || 1}} {{groups.filter(group=>group.photos.length).length>1 ? 'items' : 'item'}}</button>
-        <button :disabled="!groups.at(-1)?.photos.length || totalDraft>=20" @click="groups.push({id:nextGroup++,photos:[]})">Add another item</button>
-        <button :disabled="!totalDraft" @click="upload(false)">Upload without identification</button>
+        <button class="primary" :disabled="!totalDraft || busy" @click="upload(true)">Identify {{groups.filter(group=>group.photos.length).length || 1}} {{groups.filter(group=>group.photos.length).length>1 ? 'items' : 'item'}}</button>
+        <button :disabled="!groups.at(-1)?.photos.length || totalDraft>=20 || busy" @click="groups.push({id:nextGroup++,photos:[]})">Add another item</button>
+        <button :disabled="!totalDraft || busy" @click="upload(false)">Upload without identification</button>
       </template>
       <button v-else :disabled="busy" @click="upload(!!submitted?.plan)">Resume upload</button>
     </div>
     <p class="muted">Identify sends the photos to NumiAgent for AI processing and saves clear matches. External image search is controlled in Settings.</p>
-    <label v-if="busy">Upload attempts {{done}} of {{total}}<progress :value="done" :max="total"></progress></label>
+    <p v-if="busy && !submitted" role="status">Preparing photos…</p>
+    <label v-if="busy && submitted">Upload attempts {{done}} of {{total}}<progress :value="done" :max="total"></progress></label>
   </section>
   <label v-if="batches.length">Open an import<select :value="batch?.id || ''" :disabled="busy" @change="open(($event.target as HTMLSelectElement).value)"><option value="" disabled>Select a batch</option><option v-for="b in batches" :key="b.id" :value="b.id">{{b.label}} ({{b.total}})</option></select></label>
   <section v-if="batch" class="panel">

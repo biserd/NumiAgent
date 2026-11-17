@@ -79,8 +79,8 @@ export function rankScanLeads(leads:ScanLead[],entry:Observation|undefined) {
   }).sort((a,b)=>b.score-a.score).slice(0,6).map(row=>row.lead)
 }
 
-async function textReferences(query:string,key:string) {
-  const response=await fetch('https://api.firecrawl.dev/v2/search',{
+async function textReferences(query:string,key:string,request:typeof fetch) {
+  const response=await request('https://api.firecrawl.dev/v2/search',{
     method:'POST',redirect:'error',signal:AbortSignal.timeout(12000),
     headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},
     body:JSON.stringify({query,limit:8,includeDomains:referenceDomains,safe:true,timeout:10000})
@@ -121,7 +121,7 @@ async function photoSearchAllowed(env:Env,user:string) {
 }
 
 export async function researchScan(env:Env,user:string,entry:Observation|undefined,photos:CoinImage[],
-  mayContinue:()=>Promise<boolean>):Promise<ScanResult> {
+  mayContinue:()=>Promise<boolean>,request:typeof fetch=fetch):Promise<ScanResult> {
   const query=scanQuery(entry)
   const isCoin=entry?.type!=='banknote'
   const allowed=isCoin && await photoSearchAllowed(env,user)
@@ -129,9 +129,9 @@ export async function researchScan(env:Env,user:string,entry:Observation|undefin
   const [front,back]=cropped
   const omitted=(status:ProviderStatus):ProviderResult=>({status,leads:[]})
   const [specialist,text]=await Promise.all([
-    front && !entry?.visibleDate ? research(env,user,'syllogeum',async()=>(await searchSyllogeum([front,back])).matches) :
+    front && !entry?.visibleDate ? research(env,user,'syllogeum',async()=>(await searchSyllogeum([front,back],request)).matches) :
       omitted(allowed && !front ? 'needs_crop' : 'disabled'),
-    query && env.FIRECRAWL_API_KEY ? research(env,user,'coin_references',()=>textReferences(query,env.FIRECRAWL_API_KEY!)) :
+    query && env.FIRECRAWL_API_KEY ? research(env,user,'coin_references',()=>textReferences(query,env.FIRECRAWL_API_KEY!,request)) :
       omitted(query ? 'unavailable' : 'disabled')
   ])
   const firstPass=rankScanLeads([...specialist.leads,...text.leads],entry)
@@ -141,7 +141,7 @@ export async function researchScan(env:Env,user:string,entry:Observation|undefin
   let google=omitted('disabled')
   if (!corroborated && front && await mayContinue() && await photoSearchAllowed(env,user)) {
     const key=env.GOOGLE_VISION_API_KEY?.trim()
-    google=key ? await research(env,user,'google_vision',async()=>(await searchGoogleVision([front,back],key)).matches) :
+    google=key ? await research(env,user,'google_vision',async()=>(await searchGoogleVision([front,back],key,request)).matches) :
       omitted('unavailable')
   } else if (!corroborated && allowed && !front) google=omitted('needs_crop')
   const leads=rankScanLeads([...firstPass,...google.leads],entry)

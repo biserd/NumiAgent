@@ -23,6 +23,7 @@ const marketQuery = ref('')
 const busy = ref(false)
 const checking = ref(onApp)
 const startWithNew = ref(false)
+const openedSpecimen = ref<string>()
 const developmentLink = ref('')
 const signInReady=ref(false)
 const challengeRequired=ref(true)
@@ -31,8 +32,13 @@ const challengeRoot=ref<HTMLElement|null>(null)
 let widget:Awaited<ReturnType<typeof mountChallenge>>=null
 function go(to:Page,add=false) {
   startWithNew.value=add
+  openedSpecimen.value=undefined
   page.value=to
   history.replaceState(null,'','/app#'+to.toLowerCase())
+}
+function viewSpecimen(id:string) {
+  go('Collection')
+  openedSpecimen.value=id
 }
 function search(q:string) { marketQuery.value=q; go('Marketplace') }
 async function account() {
@@ -136,13 +142,13 @@ onUnmounted(()=>{
       <a class="brand" href="/"><img src="/mark.svg" alt="" width="36" height="36">Numi<span>Agent</span></a>
       <nav aria-label="Catalog"><button v-for="route in routes" :key="route" :aria-current="route===page ? 'page':undefined" @click="go(route)">{{ route }}</button></nav>
     </aside>
-    <main class="workspace-main" :key="page">
+    <main class="workspace-main">
       <Overview v-if="page==='Overview'" @imports="go('Imports')" @collection="go('Collection',$event)" @themes="go('Themes')"/>
-      <Catalog v-else-if="page==='Collection'" :start-with-new="startWithNew"/>
-      <ImportView v-else-if="page==='Imports'"/>
+      <Catalog v-else-if="page==='Collection'" :start-with-new="startWithNew" :opened-specimen="openedSpecimen"/>
       <GoalsMarket v-else-if="page==='Themes' || page==='Marketplace'" :mode="page" :initial-query="marketQuery" @search="search"/>
       <Developer v-else-if="page==='Developer'"/>
-      <Settings v-else :email="user.email"/>
+      <Settings v-else-if="page==='Settings'" :email="user.email"/>
+      <KeepAlive><ImportView v-if="page==='Imports'" @specimen="viewSpecimen"/></KeepAlive>
       <nav class="app-links" aria-label="Site information"><a v-for="link in siteLinks" :key="link.href" :href="link.href">{{link.label}}</a></nav>
     </main>
   </div>

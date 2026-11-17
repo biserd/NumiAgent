@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { cleanItem, emptyItem, message, photoURL, request } from './api'
-import type { Folder, Link, Photo, RecordForm, Specimen } from './api'
+import { cleanItem, emptyItem, message, photoURL, preparePhoto, request } from './api'
+import type { Candidate, Folder, Link, Photo, RecordForm, ScanReview, Specimen } from './api'
 import ItemFields from './ItemFields.vue'
 import PrivatePhoto from './PrivatePhoto.vue'
-const props = defineProps<{startWithNew?:boolean}>()
+const props = defineProps<{startWithNew?:boolean;openedSpecimen?:string}>()
 const rows=ref<Specimen[]>([])
 const folders=ref<Folder[]>([])
 const selected=ref<string[]>([])
@@ -21,11 +21,9 @@ const uploadBatch=ref('')
 const attachPhoto=ref('')
 const attachSide=ref<Link['side']>('obverse')
 const photosChanged=ref(false)
-type VisualSearch={photoCount:number;matches:{source:string;label:string;attribution:string;obverse:string;reverse:string}[]}
-type VisualProvider='syllogeum'|'google'
-const visualSearch=ref<VisualSearch|null>(null)
-const visualProvider=ref<VisualProvider>('syllogeum')
+const visualSearch=ref<{candidates:Candidate[];scan?:ScanReview}|null>(null)
 const visualSearching=ref(false)
+const addingPhoto=ref(false)
 const visualError=ref('')
 const next=ref<number|null>(null)
 const query=ref('')
@@ -65,6 +63,7 @@ onMounted(()=>action(async()=>{
   folders.value=await request('/collections')
   if(props.startWithNew) create()
   await load()
+  if(props.openedSpecimen) await open(props.openedSpecimen)
 }))
 async function load(page=0){
   const params = new URLSearchParams({q:query.value,type:type.value,collection:collection.value,sort:sort.value,page:String(page)})
@@ -79,7 +78,7 @@ async function open(id:string){
   estimate.value=null;sale.value={...newSale(),grade:specimen.grade};useRate.value=false;ecbContext.value=''
   ocreId.value=specimen.details?.referenceUrl?.toString() ?? '';ocreType.value=null;saleImport.value=[];attestImport.value=false;saleResearch.value=null
   photosChanged.value=false;uploadBatch.value='';attachPhoto.value='';uploadPhotos.value=[]
-  visualSearch.value=null;visualProvider.value='syllogeum';visualError.value=''
+  visualSearch.value=null;visualError.value=''
   await refreshValue()
 }
 function create(){
@@ -145,18 +144,47 @@ async function lookupOcre(){
   ocreType.value=null
   ocreType.value=await request('/references/ocre?id='+encodeURIComponent(ocreId.value))
 }
-async function searchCoinPhotos(provider:VisualProvider){
+async function searchCoinPhotos(){
   const id=detail.value?.id
   if (!id || visualSearching.value) return
   visualSearching.value=true
-  visualProvider.value=provider
   visualSearch.value=null;visualError.value=''
   try {
-    const result=await request<VisualSearch>('/imports/visual-search/'+id,'POST',{consent:true,provider})
+    const result=await request<NonNullable<typeof visualSearch.value>>('/imports/refine/'+id,'POST',{searchReferences:true})
     if (active.value===id) visualSearch.value=result
   } catch (e) {
     if (active.value===id) visualError.value=message(e)
   } finally { visualSearching.value=false }
+}
+async function addPhoto(event:Event){
+  const input=event.target as HTMLInputElement
+  const file=input.files?.[0]
+  const specimen=detail.value
+  input.value=''
+  if (!file || !specimen || addingPhoto.value) return
+  addingPhoto.value=true
+  await action(async()=>{
+    const prepared=await preparePhoto(file)
+    const batch=crypto.randomUUID()
+    const photos=specimen.photos ?? []
+    const side=!photos.length ? 'obverse' : photos.length===1 ? (photos[0].side==='reverse' ? 'obverse' : 'reverse') : 'overview'
+    await request('/imports','POST',{id:batch,label:'Additional specimen photo',analyze:false,consent:false})
+    const {id:photoId}=await request<{id:string}>('/imports/'+batch+'/photos','PUT',prepared)
+    await request('/items/'+specimen.id+'/photo-links','POST',{photoId,side})
+    if (active.value===specimen.id) {
+      await open(specimen.id)
+      notice.value='Photo added to this specimen.'
+      await searchCoinPhotos()
+    }
+  })
+  addingPhoto.value=false
+}
+function useObservation(observation:Candidate){
+  const {type,title,issuer,ruler,year,denomination,reference,details}=observation
+  form.value={...form.value,type,title,issuer:issuer || form.value.issuer,ruler:ruler || form.value.ruler,
+    denomination:denomination || form.value.denomination,year:year || form.value.year,reference:reference || form.value.reference,
+    details:{...form.value.details,...Object.fromEntries(Object.entries(details ?? {}).filter(([,value])=>!!value))}}
+  notice.value='Review and save these details.'
 }
 function useOcre(){
   if(!ocreType.value) return
@@ -275,6 +303,10 @@ async function importNumisGraph(event:Event) {
   <section v-if="active" class="panel">
     <div class="section-heading"><h2>{{active==='new'?'New specimen':detail?.title}}</h2><button @click="active=null">Close specimen</button></div>
     <div v-if="form.photos?.length" class="photo-grid specimen-images"><figure v-for="(link,index) in form.photos" :key="index"><PrivatePhoto :id="link.photoId" :description="link.side" :crop="link.crop"/><figcaption>{{link.side}}</figcaption></figure></div>
+    <label v-if="detail && (detail.photos?.length ?? 0)<12">
+      {{addingPhoto ? 'Adding photo…' : detail.photos?.length===1 ? 'Add the other side' : 'Add a photo'}}
+      <input type="file" accept="image/*,.heic,.heif" :disabled="addingPhoto || photosChanged" @change="addPhoto">
+    </label>
     <details v-if="active!=='new'" @toggle="($event.target as HTMLDetailsElement).open && action(async()=>{uploadBatches=await request('/imports')})">
       <summary>Link an imported photo</summary>
       <div class="form-grid">
@@ -288,27 +320,22 @@ async function importNumisGraph(event:Event) {
     </details>
     <p v-if="detail?.duplicates?.length">Same catalog reference on {{detail.duplicates.length}} other specimen(s).</p>
     <p v-if="form.details.referenceUrl"><a :href="String(form.details.referenceUrl)" target="_blank" rel="noopener noreferrer">Open the linked catalog reference ↗</a></p>
-    <details v-if="detail?.type==='coin' && detail.photos?.length" :key="detail.id">
-      <summary>Search ancient coin photos</summary>
-      <p>Search sends the saved photo of each available side to Syllogeum for visual comparison.</p>
-      <button type="button" :disabled="visualSearching || photosChanged" @click="searchCoinPhotos('syllogeum')">Search with Syllogeum</button>
-      <div v-if="detail.googleVisionAvailable && (visualSearch || visualError || visualProvider==='google')">
-        <p>For a wider search, send the saved coin photos to Google Cloud Vision to find related web pages.</p>
-        <button type="button" :disabled="visualSearching || photosChanged" @click="searchCoinPhotos('google')">Search the web with Google</button>
-      </div>
-      <p v-if="visualSearching" role="status">Comparing coin photos…</p>
+    <details v-if="detail?.photos?.length" :key="detail.id" :open="visualSearching || !!visualSearch || !!visualError">
+      <summary>Improve identification</summary>
+      <button type="button" :disabled="visualSearching || photosChanged" @click="searchCoinPhotos">Check photos and references</button>
+      <p v-if="visualSearching" role="status">Reading photos and checking references…</p>
       <p v-if="visualError" role="alert">{{visualError}}</p>
       <div v-if="visualSearch" aria-live="polite">
-        <template v-if="visualProvider==='google'">
-          <p>{{visualSearch.matches.length ? 'Open a source and check its attribution against your coin.' : 'Google returned no matching web pages.'}}</p>
-        </template>
-        <p v-else>{{visualSearch.matches.length ? 'Compare the designs before updating your identification.' : 'No visual suggestions were returned.'}}</p>
-        <p v-if="visualSearch.photoCount===1">For a stronger comparison, attach the other side and label the photos Obverse and Reverse.</p>
-        <ul v-if="visualSearch.matches.length">
-          <li v-for="hit in visualSearch.matches" :key="hit.source">
+        <button v-for="(candidate,index) in visualSearch.candidates" :key="index" @click="useObservation(candidate)">Review {{candidate.title}}</button>
+        <p v-if="visualSearch.scan?.next">{{visualSearch.scan.next}}</p>
+        <p v-if="Object.values(visualSearch.scan?.providers ?? {}).includes('unavailable')">Some reference sources were unavailable.</p>
+        <ul v-if="visualSearch.scan?.leads.length" aria-label="Possible references">
+          <li v-for="hit in visualSearch.scan.leads" :key="hit.source">
             <a :href="hit.source" target="_blank" rel="noopener noreferrer">{{hit.label}}</a>
             <span v-if="hit.attribution"> · {{hit.attribution}}</span>
             <div v-if="hit.obverse">{{hit.obverse}}</div><div v-if="hit.reverse">{{hit.reverse}}</div>
+            <p v-if="hit.excerpt">{{hit.excerpt}}</p>
+            <small v-if="hit.conflicts?.length">{{hit.conflicts.join('. ')}}</small>
           </li>
         </ul>
       </div>

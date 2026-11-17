@@ -7,7 +7,8 @@ const page = z.object({url:z.string(),pageTitle:z.string().optional()})
 const maxResults = 10
 const annotation = z.object({
   error:z.unknown().optional(),
-  webDetection:z.object({pagesWithMatchingImages:z.array(z.unknown()).max(50).optional()}).optional()
+  webDetection:z.object({pagesWithMatchingImages:z.array(z.unknown()).max(50).optional(),
+    visuallySimilarImages:z.array(z.unknown()).max(50).optional()}).optional()
 })
 
 async function annotatePhoto(photo:CoinImage,key:string,request:typeof fetch) {
@@ -43,6 +44,16 @@ export async function searchGoogleVision(images:CoinImages,key:string,request:ty
       if (!source || matches.has(source)) continue
       const label=hit.data.pageTitle?.replace(/<[^>]*>/g,'').trim().slice(0,180) || new URL(source).hostname
       matches.set(source,{source,label,attribution:'Google Cloud Vision',obverse:'',reverse:''})
+    }
+  }
+  if (!matches.size) {
+    for (const entry of completed) {
+      for (const raw of entry.webDetection?.visuallySimilarImages?.slice(0,3) ?? []) {
+        const hit=page.safeParse(raw)
+        const source=hit.success ? sourceLink(hit.data.url) : undefined
+        if (!source || matches.has(source)) continue
+        matches.set(source,{source,label:'Similar image · '+new URL(source).hostname,attribution:'Google Cloud Vision',obverse:'',reverse:''})
+      }
     }
   }
   if (!matches.size && completed.length!==photos.length) throw new Error('Google Cloud Vision did not complete both searches')

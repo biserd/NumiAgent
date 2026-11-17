@@ -15,8 +15,20 @@ struct CaptureDraft: Codable {
     var expectedPhotos: Int?
     var warnings: [UUID: String]?
     var lastUploadedBatch: String?
+    var groupSizes: [Int]?
+    var submittedPlan: [Int]?
 
-    var oneItem: Bool { paired ?? photos.isEmpty }
+    var counts: [Int] { groupSizes ?? (paired == false ? Array(repeating: 1, count: photos.count) : [photos.count]) }
+    var oneItem: Bool { counts.filter { $0 > 0 }.count <= 1 && counts.count <= 1 }
+
+    func position(at index: Int) -> (group: Int, view: Int)? {
+        var start = 0
+        for (group, count) in counts.enumerated() {
+            if index < start + count { return (group, index - start) }
+            start += count
+        }
+        return nil
+    }
 
     func side(at index: Int) -> String? {
         guard oneItem else { return nil }
@@ -28,11 +40,11 @@ struct CaptureDraft: Codable {
     }
 
     func role(at index: Int) -> String {
-        guard oneItem else { return "Item \(index + 1)" }
-        switch index {
+        let view = position(at: index)?.view ?? index
+        switch view {
         case 0: return "Front"
         case 1: return "Back"
-        default: return index == 2 ? "Detail" : "Detail \(index - 1)"
+        default: return view == 2 ? "Detail" : "Detail \(view - 1)"
         }
     }
 }
@@ -137,13 +149,14 @@ final class CaptureDraftStore: ObservableObject {
     func photo(_ id: UUID) -> URL? { directory?.appending(path: id.uuidString + ".jpg") }
 
     var available: Int {
-        (draft.oneItem ? Self.maximumItemPhotos : Self.maximumPhotos) - draft.photos.count
+        min(Self.maximumPhotos - draft.photos.count, Self.maximumItemPhotos - (draft.counts.last ?? 0))
     }
 
-    func setOneItem(_ oneItem: Bool) throws {
-        guard draft.submittedName == nil, !oneItem || draft.photos.count <= Self.maximumItemPhotos else { return }
+    func addItem() throws {
+        guard draft.submittedName == nil, draft.photos.count < Self.maximumPhotos,
+              let count = draft.counts.last, count > 0 else { return }
         var updated = draft
-        updated.paired = oneItem
+        updated.groupSizes = draft.counts + [0]
         try save(updated)
     }
 
@@ -162,7 +175,6 @@ final class CaptureDraftStore: ObservableObject {
         try rejectDuplicate(data, except: existing)
         let directory = try prepareDirectory()
         var updated = draft
-        updated.paired = draft.oneItem
         let id = UUID()
         let target = directory.appending(path: id.uuidString + ".jpg")
         try data.write(to: target, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
@@ -171,9 +183,13 @@ final class CaptureDraftStore: ObservableObject {
             updated.warnings?.removeValue(forKey: existing)
         } else {
             updated.photos.append(id)
+            var counts = draft.counts
+            if counts.isEmpty { counts = [0] }
+            counts[counts.count - 1] += 1
+            updated.groupSizes = counts
         }
         var warnings = updated.warnings ?? [:]
-        warnings[id] = PhotoClarity.warning(for: image)
+        warnings[id] = PhotoClarity.warning(for: UIImage(data: data) ?? image)
         updated.warnings = warnings
         do {
             try save(updated)
@@ -193,7 +209,12 @@ final class CaptureDraftStore: ObservableObject {
     func removePhoto(_ id: UUID) throws {
         guard draft.submittedName == nil else { return }
         var updated = draft
-        updated.photos.removeAll { $0 == id }
+        guard let index = updated.photos.firstIndex(of: id), let position = updated.position(at: index) else { return }
+        var counts = draft.counts
+        counts[position.group] -= 1
+        if counts[position.group] == 0 && counts.count > 1 { counts.remove(at: position.group) }
+        updated.groupSizes = counts
+        updated.photos.remove(at: index)
         updated.warnings?.removeValue(forKey: id)
         try save(updated)
         if let photo = photo(id) { try? FileManager.default.removeItem(at: photo) }
@@ -201,10 +222,17 @@ final class CaptureDraftStore: ObservableObject {
 
     func move(_ id: UUID, offset: Int) throws {
         guard draft.submittedName == nil, let current = draft.photos.firstIndex(of: id),
-              draft.photos.indices.contains(current + offset) else { return }
+              draft.photos.indices.contains(current + offset),
+              canMove(at: current, offset: offset) else { return }
         var updated = draft
         updated.photos.swapAt(current, current + offset)
         try save(updated)
+    }
+
+    func canMove(at index: Int, offset: Int) -> Bool {
+        guard draft.photos.indices.contains(index + offset), let from = draft.position(at: index),
+              let to = draft.position(at: index + offset) else { return false }
+        return from.group == to.group
     }
 
     struct Submission {
@@ -233,25 +261,28 @@ final class CaptureDraftStore: ObservableObject {
                 guard let url = photo(id) else { throw CaptureError.storage }
                 guard seen.insert(try Data(contentsOf: url)).inserted else { throw CaptureError.duplicate }
             }
-            let label = updated.oneItem ? "One item" : "Photo import"
+            let items = updated.counts.filter { $0 > 0 }
+            let label = items.count == 1 ? "One item" : "\(items.count) items"
             updated.submittedName = label + " · " + Date.now.formatted(date: .abbreviated, time: .shortened)
             updated.submittedAnalysis = analyze
             updated.submittedAutoCatalog = analyze
             updated.expectedPhotos = analyze ? updated.photos.count : nil
+            updated.submittedPlan = analyze ? items : nil
             try save(updated)
         }
         guard let batchName = updated.submittedName, let batchAnalysis = updated.submittedAnalysis else {
             throw CaptureError.storage
         }
-        let isAnalysisPair = batchAnalysis && updated.paired == true
+        let isAnalysisPair = batchAnalysis && updated.submittedPlan == nil && updated.paired == true
         try await api.createImport(id: updated.id, name: batchName, analyze: batchAnalysis,
                                    autoCatalog: updated.submittedAutoCatalog ?? false, paired: isAnalysisPair,
-                                   expectedPhotos: updated.expectedPhotos)
+                                   expectedPhotos: updated.expectedPhotos, scanPlan: updated.submittedPlan)
         for (index, id) in updated.photos.enumerated() {
             if updated.uploaded.contains(id), batchAnalysis || updated.uploadedIDs?[id] != nil { continue }
             guard let photo = photo(id) else { throw CaptureError.storage }
             let side = isAnalysisPair ? updated.side(at: index) : nil
-            let uploadedID = try await api.uploadPhoto(Data(contentsOf: photo), batch: updated.id, side: side)
+            let slot = updated.submittedPlan == nil ? nil : updated.position(at: index).map { $0.group * 5 + $0.view }
+            let uploadedID = try await api.uploadPhoto(Data(contentsOf: photo), batch: updated.id, side: side, slot: slot)
             if !batchAnalysis {
                 var ids = updated.uploadedIDs ?? [:]
                 ids[id] = uploadedID
@@ -425,16 +456,7 @@ struct CaptureScreen: View {
 
     private var captureControls: some View {
         Section {
-            Picker("Photos are of", selection: Binding(get: { store.draft.oneItem }, set: { oneItem in
-                record { try store.setOneItem(oneItem) }
-            })) {
-                Text("One item").tag(true)
-                Text("Several items").tag(false)
-            }
-            .pickerStyle(.segmented)
-            .disabled(busy || store.draft.submittedName != nil || store.draft.photos.count > CaptureDraftStore.maximumItemPhotos)
-            Text(store.draft.oneItem ? "Add the front, back or close-ups of one coin or banknote." :
-                 "Add one photo per coin or banknote. Each photo becomes a separate item.")
+            Text("Add the front, back or close-ups of the same coin or banknote.")
                 .font(.subheadline).foregroundStyle(.secondary)
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button("Take photo", systemImage: "camera") { startCamera() }
@@ -445,6 +467,9 @@ struct CaptureScreen: View {
                 Label("Add photos", systemImage: "photo.on.rectangle")
             }
             .disabled(!canAddPhotos)
+            Button("Add another item", systemImage: "plus.rectangle.on.rectangle") { record { try store.addItem() } }
+                .disabled(busy || store.uploading || store.draft.submittedName != nil ||
+                          store.draft.photos.count >= CaptureDraftStore.maximumPhotos || (store.draft.counts.last ?? 0) == 0)
             #if DEBUG
             if previewDraft {
                 Button("Add a sample close-up") {
@@ -453,7 +478,7 @@ struct CaptureScreen: View {
             }
             #endif
         } header: {
-            Text("Coins and banknotes")
+            Text(store.draft.counts.count > 1 ? "Add photos to item \(store.draft.counts.count)" : "One item")
         } footer: {
             Text("Photograph the full item first. Use even light and focus on the lettering and date.")
         }
@@ -463,14 +488,17 @@ struct CaptureScreen: View {
     @ViewBuilder
     private var draftPhotos: some View {
         if store.hasDraft {
-            Section {
-                ForEach(Array(store.draft.photos.enumerated()), id: \.element) { index, id in
-                    draftRow(id, index: index)
+            ForEach(Array(store.draft.counts.enumerated()), id: \.offset) { group, count in
+                if count > 0 {
+                    let start = store.draft.counts.prefix(group).reduce(0, +)
+                    Section(store.draft.counts.count == 1 ? "Draft on this device" : "Item \(group + 1)") {
+                        ForEach(start..<(start + count), id: \.self) { index in
+                            draftRow(store.draft.photos[index], index: index)
+                        }
+                    }
+                    .listRowBackground(CollectorDesign.surface)
                 }
-            } header: {
-                Text(store.draft.submittedName == nil ? "Draft on this device" : "Photos")
             }
-            .listRowBackground(CollectorDesign.surface)
         }
     }
 
@@ -487,7 +515,7 @@ struct CaptureScreen: View {
                 }
             } else {
                 let count = store.draft.photos.count
-                let items = store.draft.oneItem ? 1 : count
+                let items = store.draft.counts.filter { $0 > 0 }.count
                 Text("\(items) \(items == 1 ? "item" : "items") · \(count) \(count == 1 ? "photo" : "photos")")
                     .font(.subheadline.weight(.semibold))
                     .accessibilityIdentifier("capture-draft-count")
@@ -529,8 +557,8 @@ struct CaptureScreen: View {
                       remove: { record { try store.removePhoto(id) } },
                       replace: { pick in await replacePhoto(id, with: pick) },
                       retake: { startCamera(replacing: id) },
-                      moveEarlier: index > 0 ? { record { try store.move(id, offset: -1) } } : nil,
-                      moveLater: index + 1 < store.draft.photos.count ? { record { try store.move(id, offset: 1) } } : nil)
+                      moveEarlier: store.canMove(at: index, offset: -1) ? { record { try store.move(id, offset: -1) } } : nil,
+                      moveLater: store.canMove(at: index, offset: 1) ? { record { try store.move(id, offset: 1) } } : nil)
     }
 
     private func startCamera(replacing id: UUID? = nil) {
@@ -650,10 +678,20 @@ private enum PhotoClarity {
         if subjectSpan < CGFloat(shortSide) * 0.42 {
             return "The subject may be too small in this frame. Move closer and include the entire edge."
         }
-        return hasFineDetail(pixels, bounds: bounds) ? nil :
+        return hasFineDetail(pixels, bounds: bounds) || hasReadableText(pixels, bounds: bounds) ? nil :
             "The lettering may be out of focus. Hold the camera steady and tap the rim to focus."
     }
 
+    private static func hasReadableText(_ image: CGImage, bounds: CGRect) -> Bool {
+        let request = VNRecognizeTextRequest()
+        request.regionOfInterest = bounds
+        request.recognitionLevel = .fast
+        request.usesLanguageCorrection = false
+        guard (try? VNImageRequestHandler(cgImage: image).perform([request])) != nil else { return false }
+        return request.results?.contains { result in
+            result.topCandidates(1).contains { $0.confidence >= 0.7 && $0.string.count >= 3 }
+        } ?? false
+    }
     private static func hasFineDetail(_ image: CGImage, bounds: CGRect) -> Bool {
         let width = CGFloat(image.width), height = CGFloat(image.height)
         let crop = CGRect(x: bounds.minX * width, y: (1 - bounds.maxY) * height,

@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct CatalogScreen: View {
     private enum AddSheet: String, Identifiable {
@@ -341,6 +342,8 @@ struct SpecimenScreen: View {
     @State private var loaded = false
     @State private var valuation: Valuation?
     @State private var valuationError: String?
+    @State private var additionalView: PhotosPickerItem?
+    @State private var addingView = false
 
     private var previewingValuation: Bool { demo && PreviewLaunch.screen == .valuation }
 
@@ -367,6 +370,13 @@ struct SpecimenScreen: View {
                     }
                     .padding(.vertical, 6)
                     photosSection
+                    if !demo && loaded && (item.photos?.count ?? 0) < 12 {
+                        PhotosPicker(selection: $additionalView, matching: .images) {
+                            Label(addingView ? "Adding photo…" : item.photos?.count == 1 ? "Add the other side" : "Add a photo",
+                                  systemImage: "photo.badge.plus")
+                        }
+                        .disabled(addingView)
+                    }
                 }
                 .listRowBackground(CollectorDesign.surface)
                 if !demo { itemActions }
@@ -455,6 +465,9 @@ struct SpecimenScreen: View {
             await loadDetail()
             await loadValuation()
         }
+        .onChange(of: additionalView) { _, pick in
+            if let pick { Task { await attach(pick) } }
+        }
         .sheet(isPresented: $editing) {
             ItemEditor(api: api, itemID: item.id, draft: ItemDraft(item: item)) {
                 onChange()
@@ -494,6 +507,29 @@ struct SpecimenScreen: View {
                 }
             }
         }
+    }
+
+    private func attach(_ pick: PhotosPickerItem) async {
+        guard !addingView else { return }
+        addingView = true
+        detailError = nil
+        defer { additionalView = nil; addingView = false }
+        do {
+            let image = try await loadCaptureImage(pick)
+            let data = try CaptureDraftStore.jpeg(image)
+            let batch = UUID()
+            try await api.createImport(id: batch, name: "Additional specimen photo", analyze: false,
+                                       autoCatalog: false, paired: false, expectedPhotos: nil)
+            let photo = try await api.uploadPhoto(data, batch: batch)
+            let current = item.photos ?? []
+            let side = current.isEmpty ? "obverse" : current.count == 1 ?
+                (current[0].side == "reverse" ? "obverse" : "reverse") : "overview"
+            let _: APIIdentifier = try await api.post("/items/" + item.id + "/photo-links",
+                                                       payload: ["photoId": photo, "side": side])
+            await loadDetail()
+            onChange()
+            identifying = true
+        } catch { detailError = error.localizedDescription }
     }
 
     @ViewBuilder

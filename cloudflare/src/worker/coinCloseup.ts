@@ -5,7 +5,7 @@ const angles=Array.from({length:24},(_,index)=>{
   return [Math.cos(angle),Math.sin(angle)]
 })
 
-export function findCircularRim(pixels:{data:Uint8Array;width:number;height:number}) {
+export function findCircularRim(pixels:{data:Uint8Array;width:number;height:number},padding=1.6) {
   const scale=Math.min(1,144/Math.max(pixels.width,pixels.height))
   const width=Math.floor(pixels.width*scale)
   const height=Math.floor(pixels.height*scale)
@@ -55,7 +55,7 @@ export function findCircularRim(pixels:{data:Uint8Array;width:number;height:numb
   }
   if (best.score<700) return null
   // Allow room for the struck edge when the visible rim is irregular or slightly foreshortened.
-  const padded=best.radius*1.6
+  const padded=best.radius*padding
   const left=Math.floor(Math.max(0,best.x-padded)/scale)
   const top=Math.floor(Math.max(0,best.y-padded)/scale)
   const right=Math.min(pixels.width,Math.ceil((best.x+padded)/scale))
@@ -63,10 +63,11 @@ export function findCircularRim(pixels:{data:Uint8Array;width:number;height:numb
   return {left,top,width:right-left,height:bottom-top}
 }
 
-export function cropCoinJpeg(original:Uint8Array) {
+export function cropCoinJpeg(original:Uint8Array,forExternalSearch=false) {
   const pixels=decode(original,{useTArray:true,maxResolutionInMP:8,maxMemoryUsageInMB:48})
-  const crop=findCircularRim(pixels)
-  if (!crop || crop.width<100 || crop.height<100 || crop.width*crop.height>pixels.width*pixels.height*.65) return null
+  const crop=findCircularRim(pixels,forExternalSearch ? 1.13 : 1.6)
+  if (!crop || crop.width<100 || crop.height<100 ||
+      (!forExternalSearch && crop.width*crop.height>pixels.width*pixels.height*.65)) return null
   const {left,top,width,height}=crop
   const data=new Uint8Array(width*height*4)
   for (let row=0;row<height;row++) {

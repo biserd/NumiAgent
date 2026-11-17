@@ -519,6 +519,8 @@ struct AccountScreen: View {
     @State private var delete = false
     @State private var busy = false
     @State private var error: String?
+    @State private var externalPhotoSearch: Bool?
+    @State private var savingPhotoSearch = false
 
     var body: some View {
         if inWorkspace || showClose { form }
@@ -542,6 +544,22 @@ struct AccountScreen: View {
                 }
                 if let error { Text(error).font(.footnote).foregroundStyle(.red) }
             }
+            if account != nil {
+                Section {
+                    if let enabled = externalPhotoSearch {
+                        Toggle("Search with external photos", isOn: Binding(get: { enabled }, set: { value in
+                            Task { await changePhotoSearch(value) }
+                        }))
+                        .disabled(savingPhotoSearch)
+                    } else {
+                        Button("Load photo search setting") { Task { await loadPhotoSearch() } }
+                    }
+                } header: {
+                    Text("Photo identification")
+                } footer: {
+                    Text("When enabled, NumiAgent can send tightly cropped coin photos to Syllogeum and Google Cloud Vision to look for similar coins. You can turn this off at any time.")
+                }
+            }
             Section("Help") {
                 Link("Contact NumiAgent", destination: NumiAPI.url("/contact"))
                 Link("Privacy policy", destination: NumiAPI.url("/privacy"))
@@ -551,6 +569,7 @@ struct AccountScreen: View {
         .scrollContentBackground(.hidden)
         .background(CollectorDesign.background)
         .navigationTitle("Account")
+        .task(id: account?.id) { if account != nil { await loadPhotoSearch() } }
         .toolbar {
             if showClose {
                 ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
@@ -563,6 +582,24 @@ struct AccountScreen: View {
         } message: {
             Text("Your online catalog and photos will be scheduled for deletion. This cannot be undone.")
         }
+    }
+
+    private func loadPhotoSearch() async {
+        do {
+            let preference: NumiAPI.PhotoSearchPreference = try await session.api.get("/me/photo-search")
+            externalPhotoSearch = preference.enabled
+        } catch { self.error = error.localizedDescription }
+    }
+
+    private func changePhotoSearch(_ enabled: Bool) async {
+        guard !savingPhotoSearch else { return }
+        savingPhotoSearch = true
+        error = nil
+        defer { savingPhotoSearch = false }
+        do {
+            try await session.api.setExternalPhotoSearch(enabled)
+            externalPhotoSearch = enabled
+        } catch { self.error = error.localizedDescription }
     }
 
     private func endSession(deleteAccount: Bool) async {

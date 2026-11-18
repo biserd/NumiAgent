@@ -1,0 +1,88 @@
+name: Calibrate the coin-family rule on the same Intel Mac runtime
+
+on:
+  push:
+    branches: [codex/recognition-family-study]
+    paths:
+      - .github/workflows/recognition-family-intel-calibration.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  calibration:
+    runs-on: macos-26-intel
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: family-fixture-and-coreml-package
+          path: ${{ runner.temp }}/prior-fixture
+          run-id: '44311255464'
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: possible-matches-study-results
+          path: ${{ runner.temp }}/shortlist
+          run-id: '44300337881'
+          github-token: ${{ github.token }}
+      - name: Materialize the earlier training coins
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports"
+          python -m pip install pillow==13.0.0
+          python - "$RUNNER_TEMP/training-inputs.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          earlier = json.loads(Path("benchmarks/public-model-study/confidence-inputs.json").read_text())
+          fresh = json.loads(Path("benchmarks/public-model-study/family-inputs.json").read_text())
+          held_out = {row["specimen_id"] for row in fresh["specimens"] if row["split"] == "test"}
+          training = [row for row in earlier["specimens"]
+                      if row["split"] == "reference" or row["category"] == "coin"]
+          assert not held_out.intersection(row["specimen_id"] for row in training)
+          earlier["specimens"] = training
+          Path(sys.argv[1]).write_text(json.dumps(earlier, ensure_ascii=False), encoding="utf-8")
+          PY
+          python -u benchmarks/public-model-study/materialize.py "$RUNNER_TEMP/training" \
+            --manifest "$RUNNER_TEMP/training-inputs.json"
+      - name: Run the earlier coins through the standalone macOS recognition CLI
+        run: |
+          suite="$RUNNER_TEMP/training"
+          reports="$RUNNER_TEMP/reports"
+          xcrun coremlcompiler compile "$RUNNER_TEMP/prior-fixture/dinov2-small.mlpackage" "$suite"
+          xcrun swiftc -O ios/NumiAgent/LocalRecognition.swift ios/NumiAgent/RecognitionBenchmark.swift \
+            ios/benchmark/Runner.swift -o "$RUNNER_TEMP/recognition-runner"
+          "$RUNNER_TEMP/recognition-runner" "$suite" dinov2-small "$reports/training-dinov2-small.json"
+      - name: Freeze a policy using only the earlier coins
+        run: |
+          reports="$RUNNER_TEMP/reports"
+          python benchmarks/public-model-study/score_coin_family.py fit "$reports/training-dinov2-small.json" \
+            "$RUNNER_TEMP/training-inputs.json" "$RUNNER_TEMP/shortlist/possible-matches.json" \
+            "$RUNNER_TEMP/training/source-sha256.json" benchmarks/public-model-study/family-inputs.json \
+            "$reports/intel-family-policy.json"
+      - uses: actions/download-artifact@v4
+        with:
+          name: coin-family-study-results-intel
+          path: ${{ runner.temp }}/holdout
+          run-id: '44311255464'
+          github-token: ${{ github.token }}
+      - name: Score the untouched held-out coins
+        run: |
+          reports="$RUNNER_TEMP/reports"
+          holdout="$RUNNER_TEMP/holdout"
+          python benchmarks/public-model-study/score_coin_family.py evaluate "$holdout/dinov2-small-report.json" \
+            "$holdout/source-sha256.json" benchmarks/public-model-study/family-inputs.json \
+            "$reports/intel-family-policy.json" "$reports/coin-family-results.json"
+          cp "$holdout/dinov2-small-report.json" "$reports/holdout-dinov2-small.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coin-family-same-runtime-results
+          path: ${{ runner.temp }}/reports/
+          retention-days: 30
+          if-no-files-found: error

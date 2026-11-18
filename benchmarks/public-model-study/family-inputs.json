@@ -1,0 +1,5240 @@
+{
+  "catalog": [
+    {
+      "id": "ans-ric.5.tet_i.270",
+      "type": "coin",
+      "title": "RIC V Tetricus I 270",
+      "issuer": "Tetricus I",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.tet_i.270",
+      "issuerWords": [
+        "Tetricus I"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "C PIV ESV TETRICVS CAES",
+        "SPES AVGG"
+      ]
+    },
+    {
+      "id": "ans-ric.5.tet_i.100",
+      "type": "coin",
+      "title": "RIC V Tetricus I 100",
+      "issuer": "Tetricus I",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.tet_i.100",
+      "issuerWords": [
+        "Tetricus I"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "IMP C TETRICVS P F AVG or IMP C TETRICVS P F AV",
+        "PAX AVG"
+      ]
+    },
+    {
+      "id": "ans-ric.5.vict.114",
+      "type": "coin",
+      "title": "RIC V Victorinus 114",
+      "issuer": "Victorinus",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.vict.114",
+      "issuerWords": [
+        "Victorinus"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "IMP C VICTORINVS P F AVG",
+        "INVICTVS"
+      ]
+    },
+    {
+      "id": "ans-ric.5.vict.78",
+      "type": "coin",
+      "title": "RIC V Victorinus 78",
+      "issuer": "Victorinus",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.vict.78",
+      "issuerWords": [
+        "Victorinus"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "IMP C VICTORINVS P F AVG",
+        "VIRTVS AVG"
+      ]
+    },
+    {
+      "id": "ans-ric.5.aur.386",
+      "type": "coin",
+      "title": "RIC V Aurelian 386",
+      "issuer": "Aurelian",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.aur.386",
+      "issuerWords": [
+        "Aurelian"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "IMP C AVRELIANVS AVG",
+        "RESTITVT ORBIS"
+      ]
+    },
+    {
+      "id": "ans-ric.5.aur.225",
+      "type": "coin",
+      "title": "RIC V Aurelian 225",
+      "issuer": "Aurelian",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.aur.225",
+      "issuerWords": [
+        "Aurelian"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "IMP AVRELIANVS AVG",
+        "IOVI CONSER"
+      ]
+    },
+    {
+      "id": "ans-ric.5.pro.925",
+      "type": "coin",
+      "title": "RIC V Probus 925",
+      "issuer": "Probus",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.pro.925",
+      "issuerWords": [
+        "Probus"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "IMP C M AVR PROBVS P F AVG",
+        "RESTITVT ORBIS"
+      ]
+    },
+    {
+      "id": "ans-ric.5.pro.922",
+      "type": "coin",
+      "title": "RIC V Probus 922",
+      "issuer": "Probus",
+      "denomination": "Antoninianus",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.5.pro.922",
+      "issuerWords": [
+        "Probus"
+      ],
+      "denominationWords": [
+        "Antoninianus"
+      ],
+      "variantWords": [
+        "IMP C M AVR PROBVS P F AVG",
+        "CLEMENTIA TEMP"
+      ]
+    },
+    {
+      "id": "ans-ric.7.sis.8",
+      "type": "coin",
+      "title": "RIC VII Siscia 8",
+      "issuer": "Licinius",
+      "denomination": "AE3",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.7.sis.8",
+      "issuerWords": [
+        "Licinius"
+      ],
+      "denominationWords": [
+        "AE3"
+      ],
+      "variantWords": [
+        "IMP LIC LICINIVS P F AVG or IMP LIC • LICINIVS P F AVG",
+        "IOVI CON-SERVATORI"
+      ]
+    },
+    {
+      "id": "ans-ric.7.sis.17",
+      "type": "coin",
+      "title": "RIC VII Siscia 17",
+      "issuer": "Licinius",
+      "denomination": "AE3",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.7.sis.17",
+      "issuerWords": [
+        "Licinius"
+      ],
+      "denominationWords": [
+        "AE3"
+      ],
+      "variantWords": [
+        "IMP LIC LICINIVS P F AVG or IMP LIC • LICINIVS P F AVG",
+        "IOVI CON-SERVATORI"
+      ]
+    },
+    {
+      "id": "ans-ric.7.alex.58",
+      "type": "coin",
+      "title": "RIC VII Alexandria 58",
+      "issuer": "Constantine I",
+      "denomination": "AE3",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.7.alex.58",
+      "issuerWords": [
+        "Constantine I"
+      ],
+      "denominationWords": [
+        "AE3"
+      ],
+      "variantWords": [
+        "CONSTANTI-NVS MAX AVG",
+        "GLOR-IA EXERC-ITVS"
+      ]
+    },
+    {
+      "id": "ans-ric.7.anch.86",
+      "type": "coin",
+      "title": "RIC VII Antioch 86",
+      "issuer": "Constantine I",
+      "denomination": "AE3",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.7.anch.86",
+      "issuerWords": [
+        "Constantine I"
+      ],
+      "denominationWords": [
+        "AE3"
+      ],
+      "variantWords": [
+        "CONSTANTI-NVS MAX AVG",
+        "GLOR-IA EXERC-ITVS"
+      ]
+    },
+    {
+      "id": "ans-ric.8.alex.72",
+      "type": "coin",
+      "title": "RIC VIII Alexandria 72",
+      "issuer": "Constantius II",
+      "denomination": "Large AE2",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.8.alex.72",
+      "issuerWords": [
+        "Constantius II"
+      ],
+      "denominationWords": [
+        "Large AE2"
+      ],
+      "variantWords": [
+        "D N CONSTAN-TIVS P F AVG",
+        "FEL TEMP RE-PARATIO"
+      ]
+    },
+    {
+      "id": "ans-ric.8.anch.132",
+      "type": "coin",
+      "title": "RIC VIII Antioch 132",
+      "issuer": "Constantius II",
+      "denomination": "Large AE2",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.8.anch.132",
+      "issuerWords": [
+        "Constantius II"
+      ],
+      "denominationWords": [
+        "Large AE2"
+      ],
+      "variantWords": [
+        "D N CONSTAN-TIVS P F AVG",
+        "FEL TEMP RE-PARATIO"
+      ]
+    },
+    {
+      "id": "ans-ric.2.hdn.398_denarius",
+      "type": "coin",
+      "title": "RIC II Hadrian 398 (denarius)",
+      "issuer": "Hadrian",
+      "denomination": "Denarius",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.2.hdn.398_denarius",
+      "issuerWords": [
+        "Hadrian"
+      ],
+      "denominationWords": [
+        "Denarius"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "ans-ric.2_3(2).hdn.2048",
+      "type": "coin",
+      "title": "RIC II, Part 3 (second edition) Hadrian 2048",
+      "issuer": "Hadrian",
+      "denomination": "Denarius",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.2_3(2).hdn.2048",
+      "issuerWords": [
+        "Hadrian"
+      ],
+      "denominationWords": [
+        "Denarius"
+      ],
+      "variantWords": [
+        "HADRIANVS AVG COS III P P",
+        "SALVS AVG"
+      ]
+    },
+    {
+      "id": "ans-ric.3.ant.362",
+      "type": "coin",
+      "title": "RIC III Antoninus Pius 362",
+      "issuer": "Antoninus Pius",
+      "denomination": "Denarius",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.3.ant.362",
+      "issuerWords": [
+        "Antoninus Pius"
+      ],
+      "denominationWords": [
+        "Denarius"
+      ],
+      "variantWords": [
+        "DIVA FAVSTINA",
+        "AVGVSTA"
+      ]
+    },
+    {
+      "id": "ans-ric.3.ant.351a",
+      "type": "coin",
+      "title": "RIC III Antoninus Pius 351a",
+      "issuer": "Antoninus Pius",
+      "denomination": "Denarius",
+      "year": "",
+      "source": "https://numismatics.org/ocre/id/ric.3.ant.351a",
+      "issuerWords": [
+        "Antoninus Pius"
+      ],
+      "denominationWords": [
+        "Denarius"
+      ],
+      "variantWords": [
+        "DIVA FAVSTINA",
+        "AETERNITAS"
+      ]
+    },
+    {
+      "id": "world-bangladesh_10_poisha",
+      "type": "coin",
+      "title": "Bangladesh 10 poisha",
+      "issuer": "Bangladesh",
+      "denomination": "10 poisha",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "Bangladesh"
+      ],
+      "denominationWords": [
+        "10 poisha",
+        "10",
+        "poisha"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-bangladesh_1_taka",
+      "type": "coin",
+      "title": "Bangladesh 1 taka",
+      "issuer": "Bangladesh",
+      "denomination": "1 taka",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "Bangladesh"
+      ],
+      "denominationWords": [
+        "1 taka",
+        "1",
+        "taka"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-bangladesh_50_poisha",
+      "type": "coin",
+      "title": "Bangladesh 50 poisha",
+      "issuer": "Bangladesh",
+      "denomination": "50 poisha",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "Bangladesh"
+      ],
+      "denominationWords": [
+        "50 poisha",
+        "50",
+        "poisha"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-hong_kong_1_dollar",
+      "type": "coin",
+      "title": "Hong Kong 1 dollar",
+      "issuer": "Hong Kong",
+      "denomination": "1 dollar",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "Hong Kong"
+      ],
+      "denominationWords": [
+        "1 dollar",
+        "1",
+        "dollar"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-india_1_rupee",
+      "type": "coin",
+      "title": "India 1 rupee",
+      "issuer": "India",
+      "denomination": "1 rupee",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "India"
+      ],
+      "denominationWords": [
+        "1 rupee",
+        "1",
+        "rupee"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-india_2_rupee",
+      "type": "coin",
+      "title": "India 2 rupee",
+      "issuer": "India",
+      "denomination": "2 rupee",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "India"
+      ],
+      "denominationWords": [
+        "2 rupee",
+        "2",
+        "rupee"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-malaysia_20_sen",
+      "type": "coin",
+      "title": "Malaysia 20 sen",
+      "issuer": "Malaysia",
+      "denomination": "20 sen",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "Malaysia"
+      ],
+      "denominationWords": [
+        "20 sen",
+        "20",
+        "sen"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-saudi_arabia_50_halala",
+      "type": "coin",
+      "title": "Saudi Arabia 50 halala",
+      "issuer": "Saudi Arabia",
+      "denomination": "50 halala",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "Saudi Arabia"
+      ],
+      "denominationWords": [
+        "50 halala",
+        "50",
+        "halala"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "world-united_states_25_cent",
+      "type": "coin",
+      "title": "United States 25 cent",
+      "issuer": "United States",
+      "denomination": "25 cent",
+      "year": "",
+      "source": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "issuerWords": [
+        "United States"
+      ],
+      "denominationWords": [
+        "25 cent",
+        "25",
+        "cent"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "jaaltaka-bdt-500",
+      "type": "banknote",
+      "title": "Bangladesh Bank 500 taka",
+      "issuer": "Bangladesh Bank",
+      "denomination": "500 taka",
+      "year": "",
+      "source": "https://data.mendeley.com/datasets/2m7wk5cy4c/2",
+      "issuerWords": [
+        "bangladesh bank",
+        "বাংলাদেশ ব্যাংক"
+      ],
+      "denominationWords": [
+        "500",
+        "৫০০",
+        "five hundred taka"
+      ],
+      "variantWords": []
+    },
+    {
+      "id": "jaaltaka-bdt-1000",
+      "type": "banknote",
+      "title": "Bangladesh Bank 1000 taka",
+      "issuer": "Bangladesh Bank",
+      "denomination": "1000 taka",
+      "year": "",
+      "source": "https://data.mendeley.com/datasets/2m7wk5cy4c/2",
+      "issuerWords": [
+        "bangladesh bank",
+        "বাংলাদেশ ব্যাংক"
+      ],
+      "denominationWords": [
+        "1000",
+        "১০০০",
+        "one thousand taka"
+      ],
+      "variantWords": []
+    }
+  ],
+  "specimens": [
+    {
+      "specimen_id": "ans-1924.69.8",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.alex.58",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1924.69.8",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/dc91f5d47e99296d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/d3833e83e10859f0.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1929.27.5",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.anch.86",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1929.27.5",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/0c5c0eb07272e831.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/33e83aa02c7cd71a.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1933.999.233",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.sis.8",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1933.999.233",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/94ce63d49a210e11.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/3a78e9c52a05d522.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.11667",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.alex.58",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.11667",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/829605063cd084f2.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/e6e7f8b17d9bc919.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.22378",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.8.anch.132",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.22378",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ac6171e3619c96ce.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/da4e0e5992199c45.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.22384",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.8.anch.132",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.22384",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/f8c82602683b6a7a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f93a11b2de344591.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.23209",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.8.alex.72",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.23209",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/e3e24b0afc9d14eb.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/694b0d6fab8c6f9c.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.32818",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.aur.225",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32818",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/1075e56ab5325ab9.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2dc168127063ca97.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32822",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.aur.225",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32822",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/cad9cb4a878c2a1b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/d6ed2e8a5c9bc3e7.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36173",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.pro.922",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36173",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/448d8117470a2c33.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/fda06b81ea8be1e4.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36177",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.pro.922",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36177",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/9ada851b045095b9.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1e843edaa4f046c2.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36196",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.pro.925",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36196",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/a9c208b7e6c8339a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/d9fbef4f72577e79.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36197",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.pro.925",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36197",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7ce84d00fe27458c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/dbfb755f7c26f85d.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.45527",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.2_3(2).hdn.2048",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.45527",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/898d4708a324a9b0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/7ac9ebf2d2aa61ce.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.7572",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.sis.8",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7572",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/3a143ec78000b387.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/249095c5c7d3bc9d.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7643",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.sis.17",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7643",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/e26a7a87b0ddda82.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1e903a745716d475.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7660",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.sis.17",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7660",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7488851e19962be1.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2b8a957c980bc14a.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1954.131.9",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.8.alex.72",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1954.131.9",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/988ab78af8a12991.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/6c80fa64e729516b.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1956.127.1804",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.2.hdn.398_denarius",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.1804",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/c5248538f33029cf.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/7e8ac7a5fd23b632.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.1810",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.2_3(2).hdn.2048",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.1810",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/458c083003b0719f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/85a53c096fb2cfdd.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.307",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.2.hdn.398_denarius",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.307",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/68590c738114c605.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/46b122a2c14b3afe.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.600",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.600",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/567600f8620d32f9.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/098dcb0ef898622b.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.610",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.610",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/bbf55ec9f75516cd.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/eb06a8f207f9dd4a.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.671",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.3.ant.362",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.671",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/69b62d422960a87f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/de7021eb173f26a8.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.683",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.3.ant.362",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.683",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/329d3d471e305806.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/bdc581f69a04f504.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1984.146.723",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.7.anch.86",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.723",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6a8ef4597b0410bf.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/c9c0765b79361487.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1984.67.1085",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.tet_i.270",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1085",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/e906e6fffdfd6d0c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2cf8b123e9a2f42b.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.1187",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.tet_i.270",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1187",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2a8c41e3e00d3c94.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/18d4ad13e195784c.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.189",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.189",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/e3b4d26893fdae71.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/7814454890654175.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.193",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.193",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/615061fedda3e585.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/18dd10868a2d384e.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2400",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.vict.114",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2400",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6bcd547d0722e4d2.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/00789c83d6096582.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2412",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.vict.114",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2412",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/55b247330cc0652a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/849ee411a5c183b1.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2596",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2596",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ef643aa166a21b9b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/da32d75a00a18722.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2811",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2811",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8816c5f4a15f2e16.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/766e09d0ad7eff86.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1992.77.46",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.aur.386",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1992.77.46",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2371ed5564a5d419.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/917216a7b7ad871a.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1992.77.74",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "ans-ric.5.aur.386",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1992.77.74",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/4adc156dd6b0685c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1ec12de1a25374bb.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "jaaltaka-176",
+      "category": "banknote",
+      "split": "reference",
+      "catalog_id": "jaaltaka-bdt-1000",
+      "condition": "circulated; selected detail views",
+      "license": "CC BY 4.0; Chowdhury Piyas et al., JaalTaka v2; genuine banknotes",
+      "source_url": "https://data.mendeley.com/datasets/2m7wk5cy4c/2",
+      "photo_sources": [
+        {
+          "entry": [
+            760477811,
+            995904,
+            997906,
+            8,
+            744639638
+          ]
+        },
+        {
+          "entry": [
+            764045586,
+            811007,
+            813057,
+            8,
+            2364379060
+          ],
+          "sha256": "a26a5651553d2ac89cbefc94e02a62c03c3e4c0e3ce55de82769baca2cf71cda"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "bangladesh-modern-portrait"
+    },
+    {
+      "specimen_id": "jaaltaka-181",
+      "category": "banknote",
+      "split": "reference",
+      "catalog_id": "jaaltaka-bdt-1000",
+      "condition": "circulated; selected detail views",
+      "license": "CC BY 4.0; Chowdhury Piyas et al., JaalTaka v2; genuine banknotes",
+      "source_url": "https://data.mendeley.com/datasets/2m7wk5cy4c/2",
+      "photo_sources": [
+        {
+          "entry": [
+            785340932,
+            995693,
+            997987,
+            8,
+            294689149
+          ]
+        },
+        {
+          "entry": [
+            788677593,
+            721145,
+            723660,
+            8,
+            4100622113
+          ],
+          "sha256": "1ca459d95fc256bc4a6e5d1bef7b29b0f4f30e25de08ceb1282c74e896dfbe14"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "bangladesh-modern-portrait"
+    },
+    {
+      "specimen_id": "jaaltaka-370",
+      "category": "banknote",
+      "split": "reference",
+      "catalog_id": "jaaltaka-bdt-500",
+      "condition": "circulated; selected detail views",
+      "license": "CC BY 4.0; Chowdhury Piyas et al., JaalTaka v2; genuine banknotes",
+      "source_url": "https://data.mendeley.com/datasets/2m7wk5cy4c/2",
+      "photo_sources": [
+        {
+          "entry": [
+            1570192765,
+            650572,
+            651890,
+            8,
+            2220543944
+          ]
+        },
+        {
+          "entry": [
+            1572594164,
+            677972,
+            679585,
+            8,
+            2565955001
+          ],
+          "sha256": "cdf1efc0bd3c20d41b83b13551fc37e4d75cbaa0d2a0db6599743c71d9fcef8d"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "bangladesh-modern-portrait"
+    },
+    {
+      "specimen_id": "world-COIN_0003",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-bangladesh_50_poisha",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0018.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0021.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0003"
+    },
+    {
+      "specimen_id": "world-COIN_0007",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-bangladesh_1_taka",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0046.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0050.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0007"
+    },
+    {
+      "specimen_id": "world-COIN_0017",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-india_2_rupee",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/test/IMG_0120.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/test/IMG_0124.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0017"
+    },
+    {
+      "specimen_id": "world-COIN_0022",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-malaysia_20_sen",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0152.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0156.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0022"
+    },
+    {
+      "specimen_id": "world-COIN_0025",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-saudi_arabia_50_halala",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0174.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0177.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0025"
+    },
+    {
+      "specimen_id": "world-COIN_0026",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-united_states_25_cent",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/test/IMG_0180.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/test/IMG_0183.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0026"
+    },
+    {
+      "specimen_id": "world-COIN_0031",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-hong_kong_1_dollar",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0214.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0218.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0031"
+    },
+    {
+      "specimen_id": "world-COIN_0049",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-india_1_rupee",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0343.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/train/IMG_0347.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "COIN_0049"
+    },
+    {
+      "specimen_id": "world-COIN_0134",
+      "category": "coin",
+      "split": "reference",
+      "catalog_id": "world-bangladesh_10_poisha",
+      "condition": "circulated; wear not graded",
+      "license": "CC BY 4.0; Md Irfan Hossain, Multi-Camera World Coin Dataset (2026)",
+      "source_url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset",
+      "photo_sources": [
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/validation/IMG_0697.jpg"
+        },
+        {
+          "url": "https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/resolve/3c14042bf841123f65d41733ffa7f28c232e8038/data/validation/IMG_0698.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "BD_ALU_SCALLOP"
+    },
+    {
+      "specimen_id": "ans-1956.127.1809",
+      "category": "coin",
+      "split": "calibration",
+      "catalog_id": "ans-ric.2_3(2).hdn.2048",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.1809",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ad6a9ec916a5d0a6.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f8d14bfff0511860.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1984.67.2823",
+      "category": "coin",
+      "split": "calibration",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2823",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7382f81afc76af0d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/376a0622526b3dd5.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1956.127.606",
+      "category": "coin",
+      "split": "calibration",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.606",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/199f426ecb83d1c9.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f9d02291fd0e3fd2.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1948.78.15",
+      "category": "coin",
+      "split": "calibration",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1948.78.15",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/f8fba4a2d3dc0e6b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/0cbfc0280231160b.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.311",
+      "category": "coin",
+      "split": "calibration",
+      "catalog_id": "ans-ric.2.hdn.398_denarius",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.311",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/5a9278a45aa229c3.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/35fe02c7e4d217c5.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1984.67.365",
+      "category": "coin",
+      "split": "calibration",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.365",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/c69eb003a20de3c3.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/04e41c6abe6066aa.jpg"
+        }
+      ],
+      "truth_fields": null,
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-0000.999.11200",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/0000.999.11200",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/39d9697da24356b8.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/7430019aa33e815e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Volusian",
+        "denomination": "Sestertius"
+      },
+      "similar_group": "Volusian Sestertius"
+    },
+    {
+      "specimen_id": "ans-1911.23.160",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1911.23.160",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/e21fcab1854079ae.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2843b7fb96237ac6.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Hadrian",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1920.102.7",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.alex.72",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1920.102.7",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/30574c9e6f705d18.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/9cfb51300f25d0b9.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1922.38.74",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.alex.58",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1922.38.74",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/d553249252b1c504.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/0495fa119bc65f2e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1933.999.238",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.17",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1933.999.238",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/3b5acdaeecef72fe.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/0ad6df820c001ca0.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1935.117.156",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1935.117.156",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/26cd3e71dd44fbe2.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2eefa39a7882fea1.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Gordian III",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Gordian III Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1935.117.424",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.362",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1935.117.424",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b1649904a83da5d1.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/d7a6a432fb7be651.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1941.131.704",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1941.131.704",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/5768b013d0a7c216.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/5e17a2945c8317d3.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Nero",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Nero Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.10886",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.10886",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2f8a7cde59b3d050.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/6299d6d49f24e2e1.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.10925",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.10925",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b064f9beb4cc79cd.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/0a439c42a1f8e68a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.11633",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.alex.58",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.11633",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b9cb3b6a5ea91e5a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/951781f0c57c7a3a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.11662",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.alex.58",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.11662",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2a555c79fa3be936.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/5c388c32ce860f62.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.11670",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.alex.58",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.11670",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/194bbc6a36398eb8.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/85406243ab214297.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.1290",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.1290",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/90d9739b7c14d7a5.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/25ac348c4edccdd5.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Diocletian",
+        "denomination": "AE1"
+      },
+      "similar_group": "Diocletian AE1"
+    },
+    {
+      "specimen_id": "ans-1944.100.21259",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.21259",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/a2d88c8aa8921475.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/aba5603403470c31.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.21513",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.21513",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/150b88c2725ad53b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/5cadd1a4ebe169ef.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantius II AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.21662",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.21662",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/14855306fd5857d0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/12a5e1e04e7cf64b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantius II AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.21815",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.21815",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6b342a2d49d250d7.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/86bf5aa04ce195b9.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.22373",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.anch.132",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.22373",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/d011105ea13d3504.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2f0f1ce2aa15a353.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.22376",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.anch.132",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.22376",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b474413b88d90f62.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/7990a51ebf178f54.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.22403",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.anch.132",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.22403",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/50039de7daee151e.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/009674e823b287fb.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.22405",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.anch.132",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.22405",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8f3a941fa4b2e4b0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/871aaeee0fc82b73.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.22415",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.anch.132",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.22415",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/3198829960d70435.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/8d35471838ef7cc0.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.23215",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.alex.72",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.23215",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/5462bc986f69897a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/16d336f91093cb09.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.23235",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.alex.72",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.23235",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/41d801bf347b039d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/3758c77f2855ed83.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.23254",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.alex.72",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.23254",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/a6bc2c6a6972f8d4.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/43cc905581a45a23.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.23270",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.23270",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/81f0a930cabefa22.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/22acc4b3444af94d.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.23526",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.23526",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/f498f00c81913f70.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/9da8ea3991448a5e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.23882",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.23882",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/34866703490ce006.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/a72851953eb161f2.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.25885",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.25885",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/4d806b79f753e6e3.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/14b1caa090a63535.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Theodosius I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Theodosius I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.25900",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.25900",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/1847c08bbda72524.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/11e3e6fce0545e1e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Theodosius I",
+        "denomination": "AE2"
+      },
+      "similar_group": "Theodosius I AE2"
+    },
+    {
+      "specimen_id": "ans-1944.100.27176",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.27176",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/aef7312227090505.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/ad3cd88eebc117b5.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Valerian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Valerian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.27218",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.27218",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/553608abf76506c7.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f5c1767bc4f008a6.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Valerian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Valerian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.27232",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.27232",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/3059b7f35422e48f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/3099632f636ecc5b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Valerian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Valerian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.30253",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.30253",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/366b7c0c0a90d99e.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/b065352e5cbf608e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Gallienus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Gallienus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.30494",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.30494",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/1e375b8bcc77f294.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/c14f716d48848d17.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Gallienus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Gallienus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.30800",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.30800",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/4423ca7cf6728933.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/aaaa9eeb02f6cf6f.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.30841",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.270",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.30841",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6d24b71388d63e0f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/453b29e62a162cff.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32469",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32469",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8ed191c1fd40a352.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/9a7fd6686099c75c.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Claudius II Gothicus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Claudius II Gothicus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32760",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32760",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/dcd6b7f8a91d109c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/40d182a667a49cf9.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32865",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32865",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7bed6fd4c3b63249.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/c40be11d4d6716f5.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32873",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32873",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7bbc4d3e3a4980c1.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/5e1f14c125ce8616.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32920",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32920",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/45e2f567672f1f75.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1f106469d3be3302.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32924",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.aur.386",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32924",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/58655a7a2b1d846f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/044824b305a744e4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.32942",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.aur.386",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.32942",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/26915b390707803f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/8c8b19ca9c909a34.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.33011",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.33011",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ca45d66139a2318d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f52e62349996a147.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tacitus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tacitus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.33097",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.33097",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/a59e82066c6b62f0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/ce2f3c3261899b12.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.33183",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.33183",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/481344010ea01eab.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/481b554b29ae718c.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36054",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36054",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/d9c1d9d528f5ef2e.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/00d00593a03f5141.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36147",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.922",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36147",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/713547f8587c1f85.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f15cd1e6f6191e18.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36167",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.922",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36167",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/10f032839a4ab3d5.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/679fef2bd0f2b37f.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36181",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.922",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36181",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/71d977606a06681b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/b9f7eb9c075761dc.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36184",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.922",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36184",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/60431c5933d743a5.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f0b5e36da605ac19.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36191",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.925",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36191",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/93b563a0d077ee1a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/c49a63b9ae6db0a1.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36193",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.925",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36193",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/e64dd541f2236cf2.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/43d8ed7831676927.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36198",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.925",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36198",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/76568a1ed6eae07e.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/a025c443f895d400.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.36222",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.925",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.36222",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/88faf4142f2a0a6e.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/bd52bb25d5fd16ff.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1944.100.39820",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.39820",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/060890466a4d8d1f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/4339d25c71d4d874.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Galba",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Galba Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.3999",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.3999",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/826b9c65f038a8cc.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/62c5a891c6704e01.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.44754",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.44754",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/84da11d35c889ffd.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/950485aba1fb5b6b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Trajan",
+        "denomination": "As"
+      },
+      "similar_group": "Trajan As"
+    },
+    {
+      "specimen_id": "ans-1944.100.44835",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.44835",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/77151901065bbeab.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/d6fd3daa97296bb2.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Hadrian",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.44840",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.44840",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/67b9f14e8060e713.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1344c6464248ad4c.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Hadrian",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.48160",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.48160",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/eaa0953943802149.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/42fccf8bf67fcb96.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.48242",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.48242",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/11ca233cd5b70fc8.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/8f724ea1c48df7e0.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "As"
+      },
+      "similar_group": "Antoninus Pius As"
+    },
+    {
+      "specimen_id": "ans-1944.100.49747",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.49747",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/808d01c07f78197d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/0b600a480405157a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Commodus",
+        "denomination": "Sestertius"
+      },
+      "similar_group": "Commodus Sestertius"
+    },
+    {
+      "specimen_id": "ans-1944.100.51776",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.51776",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/c15161f685e1f990.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/baa39088c88205d2.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Septimius Severus",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Septimius Severus Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.52328",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.52328",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7db292be66438e7b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/eb47394fbedc856a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Elagabalus",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Elagabalus Denarius"
+    },
+    {
+      "specimen_id": "ans-1944.100.5871",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.5871",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/27f699894db97850.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f01e8ad146dc3fb9.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Maximian",
+        "denomination": "Uncertain value"
+      },
+      "similar_group": "Maximian Uncertain value"
+    },
+    {
+      "specimen_id": "ans-1944.100.7398",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7398",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/0113d85ff22a1bb0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/12b3b1d9d1a10d2d.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7544",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.8",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7544",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ec05b5ae84dc0ce2.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/dee54c38b1fd2961.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7545",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.8",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7545",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/86e5d609a1525c61.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/4619e6d9bf7307a4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7546",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.8",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7546",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/28052086ea2e5307.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f1b045941124b1d4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7585",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.8",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7585",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/67f14f26ee208324.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/d989fa0e4bce501b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7642",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.17",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7642",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/c6a3679398988c78.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/0e4b3806d379b522.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7651",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.17",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7651",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/d5207df800ece173.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f84b790b34227e3a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7671",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.17",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7671",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/056fcc398fb79fee.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/ac9d1b0d32c440f8.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7879",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7879",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/555628ee192681df.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/439c130a4d720783.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.7977",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.7977",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/bc575d9936a5c7b9.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/b90a155d769d4fbd.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.9018",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.anch.86",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.9018",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/daf3d58026436cf5.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/323368563a11be36.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.9019",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.anch.86",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.9019",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/c6c31edcfeaf782d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/e68b723fdd47b0b7.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.9024",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.anch.86",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.9024",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/0fc4960e58d59578.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/18d9df9ce2f7dc56.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.9036",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.anch.86",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.9036",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/9243f95e0101793c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/aeef811faccd1aab.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1944.100.9516",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1944.100.9516",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/4a8e686c246ff790.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/88db4382aae2e5e9.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1948.19.1006",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.925",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1948.19.1006",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/0f8b1b7a5f368387.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/37c7ef1905e94759.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1948.19.1306",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1948.19.1306",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/33c7301787d4fd63.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/c70305c1b8f562b3.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Marcus Aurelius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Marcus Aurelius Denarius"
+    },
+    {
+      "specimen_id": "ans-1948.19.1415",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1948.19.1415",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/040edeb16829f5e2.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/68dbfc766e1687d8.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Clodius Albinus",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Clodius Albinus Denarius"
+    },
+    {
+      "specimen_id": "ans-1948.19.750",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1948.19.750",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/1122659c2094c4b0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/afd1656bcc8afdba.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constans",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constans AE3"
+    },
+    {
+      "specimen_id": "ans-1948.19.864",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1948.19.864",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/038431aba06dcf7e.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/d8adbf7f04b88c26.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Valerian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Valerian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1952.21.2",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1952.21.2",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8627ac8c0d2a37f3.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/179c104732641d61.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Nero",
+        "denomination": "As"
+      },
+      "similar_group": "Nero As"
+    },
+    {
+      "specimen_id": "ans-1956.127.1117",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.1117",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/25e797376f94671b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f05003ecf869042b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Marcus Aurelius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Marcus Aurelius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.127",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.127",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/903fba69040700bd.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/981a7001388ccd3b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Hadrian",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.498",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.498",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/5ffcb39c509d5d7c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/3d71a3e38eb5d61a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.605",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.605",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/67eb51c4d035c5d0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/ccca24e59120127d.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.607",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.607",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/923aa3ce5da97ea6.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/20491577991eecf7.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.608",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.608",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2bd68840fae83e8c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/cb81804635e39db4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.609",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.609",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/66443158229831b3.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/fc3040e5a312acde.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.613",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.351a",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.613",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/d6461ce6eb0f6d6d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/ad47ff4f648b4ac6.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.668",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.362",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.668",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7625baf7133de90d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/3bcbd01c0333c602.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.669",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.362",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.669",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/83014130cd25cdae.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/e20e0dcab51bb747.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.676",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.362",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.676",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/94ff1350f68e2910.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/59a9df2d741bd5ca.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.127.679",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.3.ant.362",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.127.679",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/3fac8ec940ce21f3.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/8c83fbdeaae08064.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1956.163.219",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1956.163.219",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/36aae312987dfd37.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f373a78b819616e5.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1957.172.1503",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1957.172.1503",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/a050e117852a1854.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f998fd20ee9b230d.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Augustus",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Augustus Denarius"
+    },
+    {
+      "specimen_id": "ans-1960.175.43",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1960.175.43",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/63375acdd9e8309c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/fe922263aa4d150b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Severus Alexander",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Severus Alexander Denarius"
+    },
+    {
+      "specimen_id": "ans-1961.180.7",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1961.180.7",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ebf3d40513d56671.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/56f65d1a18a09a1e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Severus Alexander",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Severus Alexander Denarius"
+    },
+    {
+      "specimen_id": "ans-1961.62.1",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1961.62.1",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/f4ee12ed9b2b7a64.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/7d9a875366e8880e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Trajan",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Trajan Denarius"
+    },
+    {
+      "specimen_id": "ans-1968.131.490",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1968.131.490",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7bd3df6938aa7b92.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f62e0e67a0aaa823.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Flavius Marcus",
+        "denomination": "Solidus"
+      },
+      "similar_group": "Flavius Marcus Solidus"
+    },
+    {
+      "specimen_id": "ans-1969.214.11",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.17",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1969.214.11",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/974793bd1540ff19.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/6929545891a43f57.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1969.26.4",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1969.26.4",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/0d981071fb87026d.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/9bd120dae9227c5b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Aureus"
+      },
+      "similar_group": "Antoninus Pius Aureus"
+    },
+    {
+      "specimen_id": "ans-1973.999.19",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1973.999.19",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/7862b69da1987b54.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/08f6cc369b613977.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1976.198.1",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1976.198.1",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8a99c07f94b9f9d0.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2972697ac9d79f1b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1979.73.1",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1979.73.1",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/446697977d928061.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/0aa37bc5f79f92ba.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Domitian",
+        "denomination": "Sestertius"
+      },
+      "similar_group": "Domitian Sestertius"
+    },
+    {
+      "specimen_id": "ans-1980.109.394",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.pro.922",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1980.109.394",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2463a505abe304ee.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/70c996a54c925921.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1980.129.1",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1980.129.1",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b847c7cd6ddefeb6.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/7d9f0aa977b7e879.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Hadrian",
+        "denomination": "Cistophorus"
+      },
+      "similar_group": "Hadrian Cistophorus"
+    },
+    {
+      "specimen_id": "ans-1984.146.1037",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.sis.8",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.1037",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/10de9bf5c539a218.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/edb6be3e85dc52c4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1984.146.175",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.175",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/e3a324da5bb61c73.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2775275ca6a2075d.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Maximian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Maximian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.146.529",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.alex.58",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.529",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/1f4dc76214e5f708.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/a4c08f4dd8c185f0.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1984.146.562",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.8.alex.72",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.562",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8274a8992f16d15e.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/8dfcbb5449d095cb.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantius II",
+        "denomination": "Large AE2"
+      },
+      "similar_group": "Constantius II Large AE2"
+    },
+    {
+      "specimen_id": "ans-1984.146.727",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.7.anch.86",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.727",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6740eeb61d135d00.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/ef287bfc89ab5e3e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1984.146.950",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.950",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8c6094ee826a4ba1.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/9850f36069992715.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Licinius",
+        "denomination": "AE3"
+      },
+      "similar_group": "Licinius AE3"
+    },
+    {
+      "specimen_id": "ans-1984.146.969",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.146.969",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/f66c784f26d6ceeb.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f43b65d756f503da.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Constantine I",
+        "denomination": "AE3"
+      },
+      "similar_group": "Constantine I AE3"
+    },
+    {
+      "specimen_id": "ans-1984.67.1014",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1014",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b6f920010ad4aef9.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/ebfa5a71e0c1bdf1.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.1189",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.270",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1189",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b807a4a802e4811c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1862ee538342259f.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.1240",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.270",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1240",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2ffce8335843230a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/3fac5ce4efca31d7.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.1626",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1626",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/930dc5edf3a337bd.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/9686ab0ce66c0f10.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.1755",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.270",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1755",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b484b69ddfc4c8cb.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/63e8ef5ae0755c58.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.1801",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.270",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.1801",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/4e27d25d96cbfcd3.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/fb3dfe92d5116d6a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.225",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.225",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/3763b4c43d8c49be.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2f36b0f2a4d2f029.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2316",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2316",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/a1be648f9d323ea6.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f4fbf7346374754a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2328",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2328",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8f769e68883f9263.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/be741a7980a0e1bb.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2362",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.114",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2362",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/342770af86346f7b.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/e51d79d41cb96caf.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2367",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.114",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2367",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/a928e4f7123f4b6a.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/338c37d9fa88046b.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2398",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.114",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2398",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/b728753c93a3784c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/61afacd97fa0e781.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2417",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.114",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2417",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/004d49907a7e2915.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1e8e35778cc0a706.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2438",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.114",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2438",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/62871d04e3db57ca.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/fdcd586a107b5f55.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2453",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2453",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/f164cfe04454eece.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/4d922679af76b7d0.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2579",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2579",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/c14d198c9081db57.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/9cab2fae5e1fc79e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2601",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2601",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/64d5cb55b46398ac.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/810e1e2c72f47d76.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2840",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2840",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/f3ce0242a30ba005.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/dc1dff124e0e087e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2853",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2853",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6e9271905fb5e7db.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/841db92f85204cfe.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2864",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.vict.78",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2864",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/3d8a0303ea28c3e6.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/4cf7392eba3a4a36.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.2875",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.2875",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/757eb388e42f25bd.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f03a5ddd4d6ae44e.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.3373",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.3373",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6081f7ca27bb5ffb.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2765d13c7a5c28f4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Gallienus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Gallienus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.3405",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.3405",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ad8ad887921528d7.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/6a143ae187d9a599.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Gallienus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Gallienus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.347",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.347",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/74199b873ab8d2ef.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/fb1220355e8efafc.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.360",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.360",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/49a8d1695a212cd2.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/42a5262218074a5d.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.382",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.tet_i.100",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.382",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/603bef25d355f414.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/8c74fc1a0b038771.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.422",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.422",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/ab77f032883e5a0c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/187bb781367290ca.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1984.67.447",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1984.67.447",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/6c5a2d0d93b384dc.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/daecde1e9426cde2.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Tetricus I",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Tetricus I Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1985.140.117",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1985.140.117",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/bd46616cf8c56765.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/cf412ced6ac1e1ae.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1985.140.172",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1985.140.172",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/fe5c90a52ca28eed.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/1bc3eddf5f5ba825.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Macrinus",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Macrinus Denarius"
+    },
+    {
+      "specimen_id": "ans-1987.26.154",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1987.26.154",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/40b7a76c6e8985a8.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/2298578002a5eaa4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Hadrian",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Hadrian Denarius"
+    },
+    {
+      "specimen_id": "ans-1987.26.158",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1987.26.158",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/c6df445d944eb900.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/16ed54dbde9ba9e4.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1988.5.64",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1988.5.64",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/8b2d527fa4cd8288.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/01d7bdf75900c53f.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Commodus",
+        "denomination": "Sestertius"
+      },
+      "similar_group": "Commodus Sestertius"
+    },
+    {
+      "specimen_id": "ans-1991.9.90",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1991.9.90",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/1bf01836faf7ff77.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/c749274f4e5ca7c3.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Macrinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Macrinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1992.77.44",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.aur.386",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1992.77.44",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/4970816c3e9287e5.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/c2acb2b3955cf3cb.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1992.77.56",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.aur.386",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1992.77.56",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/494f39af6f190acf.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/fd86179b978f7a8a.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1992.77.62",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "ans-ric.5.aur.386",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1992.77.62",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/d2040ed653c0048c.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/e80329223288bdf5.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Aurelian",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Aurelian Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1994.123.78",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1994.123.78",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/0bf4ba58ba454070.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/8fe62284a2f1d52d.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Valens",
+        "denomination": "AE3"
+      },
+      "similar_group": "Valens AE3"
+    },
+    {
+      "specimen_id": "ans-1994.59.4",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1994.59.4",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/cfd8a0a3ff620ffc.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/3f08f8f18c5131a3.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Denarius"
+      },
+      "similar_group": "Antoninus Pius Denarius"
+    },
+    {
+      "specimen_id": "ans-1995.11.1192",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1995.11.1192",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/825321415c2c299f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/00b57647fcb6c810.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Victorinus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Victorinus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1995.11.120",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1995.11.120",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/2c504d4cc03f607f.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/66e07e5a1ed7b418.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Antoninus Pius",
+        "denomination": "Sestertius"
+      },
+      "similar_group": "Antoninus Pius Sestertius"
+    },
+    {
+      "specimen_id": "ans-1995.11.699",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1995.11.699",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/cf8a13ccdc7116d6.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/f18577154185e6c2.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1995.11.726",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1995.11.726",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/25852b567a114be9.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/46bd2094b514da66.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Probus",
+        "denomination": "Antoninianus"
+      },
+      "similar_group": "Probus Antoninianus"
+    },
+    {
+      "specimen_id": "ans-1996.104.7",
+      "category": "coin",
+      "split": "test",
+      "catalog_id": "",
+      "condition": "historic; wear not graded",
+      "license": "Public domain US images, American Numismatic Society; metadata ODbL 1.0 via Syllogeum v1.1",
+      "source_url": "https://numismatics.org/collection/1996.104.7",
+      "photo_sources": [
+        {
+          "url": "https://syllogeum.org/images/54fae6602d825814.jpg"
+        },
+        {
+          "url": "https://syllogeum.org/images/15910af31894f692.jpg"
+        }
+      ],
+      "truth_fields": {
+        "issuer": "Augustus",
+        "denomination": "As"
+      },
+      "similar_group": "Augustus As"
+    }
+  ]
+}

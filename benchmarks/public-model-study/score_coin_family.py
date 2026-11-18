@@ -140,7 +140,10 @@ def evaluate(args):
     manifest = read(args.holdout_manifest)
     frozen = read(args.policy)
     source_hashes = read(args.source_hashes)
-    if any(report[key] != frozen[key] for key in ("model", "os", "device")):
+    if report["model"] != frozen["model"]:
+        raise ValueError("Use the model named in the frozen policy")
+    exact_runtime = all(report[key] == frozen[key] for key in ("os", "device"))
+    if not exact_runtime and not args.replay_compatible_runtime:
         raise ValueError("Use the same model and Mac runtime for the frozen policy")
     for key, digest in frozen["references"].items():
         if source_hashes.get(key) != digest:
@@ -173,7 +176,8 @@ def evaluate(args):
         slices[cohort] = {"existing": summary([row["old"] for row in selected]),
                           "with_family": summary([row["new"] for row in selected])}
     old, new = summary(before), summary(after)
-    report = {"suite_sha256": report["suite_sha256"], "existing": old, "with_family": new,
+    report = {"suite_sha256": report["suite_sha256"], "device": report["device"], "os": report["os"],
+              "matches_calibration_runtime": exact_runtime, "existing": old, "with_family": new,
               "correct_gain": new["correct"] - old["correct"],
               "added_wrong": new["wrong_entries"] - old["wrong_entries"],
               "gain_95pct_ci_per_100": paired_ci(before, after), "by_cohort": slices,
@@ -193,6 +197,9 @@ def main():
         command = commands.add_parser(phase)
         for path in paths:
             command.add_argument(path, type=Path)
+        if phase == "evaluate":
+            command.add_argument("--replay-compatible-runtime", action="store_true",
+                                 help="Permit a different Mac runtime if all six replay specimens agree")
     args = parser.parse_args()
     (fit if args.phase == "fit" else evaluate)(args)
 

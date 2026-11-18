@@ -124,3 +124,46 @@ final class PhoneSignInAndReviewTests: XCTestCase {
         XCTAssertTrue(uncertain.waitForExistence(timeout: 10))
     }
 }
+
+final class GuestV1Tests: XCTestCase {
+    @MainActor
+    func testGuestDraftPersistsAcrossRelaunchWithBothSides() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-photo-fixtures"]
+        app.launch()
+        let start = app.buttons["Start scanning"]
+        XCTAssertTrue(start.waitForExistence(timeout: 15))
+        start.tap()
+        let front = app.buttons["Use sample front"]
+        XCTAssertTrue(front.waitForExistence(timeout: 10))
+        front.tap()
+        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
+        app.terminate()
+        app.launch()
+        let resume = app.buttons["Resume batch"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        XCTAssertFalse(start.exists)
+        resume.tap()
+        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
+        let back = app.buttons["Use sample back"]
+        if !back.isHittable { app.swipeUp() }
+        XCTAssertTrue(back.isHittable)
+        back.tap()
+        XCTAssertTrue(app.images["Back photo"].firstMatch.waitForExistence(timeout: 10))
+        let save = app.buttons["Save as unidentified"]
+        for _ in 0..<8 where !save.isHittable { app.swipeUp() }
+        XCTAssertTrue(save.isHittable)
+        save.tap()
+        XCTAssertTrue(app.staticTexts["Unidentified coin"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(resume.exists)
+    }
+
+    @MainActor
+    func testEncryptedBackupAndSpreadsheetRoundTrip() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-storage-acceptance"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Guest storage checks passed"].waitForExistence(timeout: 20), app.debugDescription)
+    }
+}

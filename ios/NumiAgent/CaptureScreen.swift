@@ -794,7 +794,7 @@ func removeCaptureDrafts(for accountID: String) throws {
     try CaptureDraftStore.remove(accountID: accountID)
 }
 
-private struct CameraPicker: UIViewControllerRepresentable {
+struct CameraPicker: UIViewControllerRepresentable {
     let completion: (UIImage?) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(completion: completion) }

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { randomBytes, createHash, randomUUID } from 'node:crypto'
 import { deflateSync, crc32 } from 'node:zlib'
+import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import { localServer } from './server.mjs'
 
@@ -42,6 +43,24 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     return verified.headers.get('set-cookie').split(';')[0]
   }
   try {
+    const guestPhoto = await readFile(new URL('../../ios/NumiAgent/Assets.xcassets/DemoNickel.imageset/jefferson-nickel.jpg',import.meta.url))
+    const guestKey = randomBytes(32).toString('hex')
+    const stamp = Math.floor(Date.now()/1000)
+    const guestId = stamp+'-'+randomUUID()
+    const guestRequest = (id,key,payload) => fetch(base+'/api/v1/guest-scans/'+id,
+      {method:'POST',headers:{Origin:base,Authorization:'Bearer '+key,'Content-Type':'application/json'},
+        body:JSON.stringify(payload)})
+    const selected = {front:guestPhoto.toString('base64'),back:guestPhoto.toString('base64')}
+    const startGuest = await json(await guestRequest(guestId,guestKey,selected))
+    assert.equal(startGuest.state,'complete')
+    assert.equal(startGuest.candidates.length,1)
+    assert.deepEqual(await json(await guestRequest(guestId,guestKey,selected)),startGuest)
+    assert.equal((await guestRequest(guestId,randomBytes(32).toString('hex'),selected)).status,404)
+    assert.equal((await guestRequest(guestId,guestKey,{front:selected.front})).status,409)
+    assert.equal((await guestRequest(guestId,guestKey,{...selected,email:'not-in-payload@example.test'})).status,400)
+    assert.equal((await guestRequest((stamp-1201)+'-'+randomUUID(),guestKey,selected)).status,410)
+    assert.equal((await api('/items')).status,401)
+
     const sitemap=await (await fetch(base+'/sitemap.xml')).text()
     assert.equal((await api('/internal/photo-release',null,'POST',{})).status,401)
     const landing=await (await fetch(base+'/')).text()

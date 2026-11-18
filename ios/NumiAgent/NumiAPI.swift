@@ -189,7 +189,8 @@ final class NumiAPI {
         query: [URLQueryItem] = [],
         body: Data? = nil,
         type: String = "application/json",
-        authenticated: Bool = true
+        authenticated: Bool = true,
+        scanKey: String? = nil
     ) async throws -> (Data, HTTPURLResponse) {
         var components = URLComponents(string: Self.origin)!
         components.path = "/api/v1" + path
@@ -199,6 +200,7 @@ final class NumiAPI {
         request.httpBody = body
         request.setValue(Self.origin, forHTTPHeaderField: "Origin")
         if body != nil { request.setValue(type, forHTTPHeaderField: "Content-Type") }
+        if let scanKey { request.setValue("Bearer " + scanKey, forHTTPHeaderField: "Authorization") }
         if authenticated {
             guard let value = try sessionStore.load() else {
                 throw NumiError.request(401, "Sign in to continue.")
@@ -238,6 +240,16 @@ final class NumiAPI {
     func requestSignIn(email: String) async throws {
         let body = try JSONEncoder().encode(["email": email])
         _ = try await send("/auth/native/request", method: "POST", body: body, authenticated: false)
+    }
+
+    var hasStoredSession: Bool { (try? sessionStore.load()) != nil }
+
+    func searchGuestPhotos(id: String, key: String, front: Data, back: Data?) async throws -> GuestScanResult {
+        struct SelectedPhotos: Encodable { let front: Data; let back: Data? }
+        let body = try JSONEncoder().encode(SelectedPhotos(front: front, back: back))
+        let (data, _) = try await send("/guest-scans/" + id, method: "POST", body: body,
+                                       authenticated: false, scanKey: key)
+        return try JSONDecoder().decode(GuestScanResult.self, from: data)
     }
 
     func verify(_ link: URL) async throws {

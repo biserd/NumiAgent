@@ -80,7 +80,8 @@ jobs:
         run: |
           xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Debug \
             -destination "platform=iOS Simulator,id=$NUMIAGENT_SIMULATOR" -derivedDataPath "$RUNNER_TEMP/numiagent" \
-            -parallel-testing-enabled NO -only-testing:NumiAgentUITests/PhoneSignInAndReviewTests CODE_SIGNING_ALLOWED=NO test
+            -parallel-testing-enabled NO -only-testing:NumiAgentUITests/PhoneSignInAndReviewTests \
+            -only-testing:NumiAgentUITests/GuestV1Tests CODE_SIGNING_ALLOWED=NO test
   ipad:
     runs-on: macos-26
     timeout-minutes: 22

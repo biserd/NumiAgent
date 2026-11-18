@@ -87,10 +87,15 @@ final class AppSession: ObservableObject {
 
     let api = NumiAPI()
     @Published private(set) var phase: Phase = .checking
+    @Published var showingLocal = false
     private var verifying = false
 
     func refresh() async {
         guard phase != .demo else { return }
+        guard api.hasStoredSession else {
+            phase = .signedOut
+            return
+        }
         do {
             let account: Account = try await api.get("/me")
             if phase != .demo { phase = .signedIn(account) }
@@ -107,6 +112,7 @@ final class AppSession: ObservableObject {
         defer { verifying = false }
         try await api.verify(url)
         let account: Account = try await api.get("/me")
+        showingLocal = false
         phase = .signedIn(account)
     }
 
@@ -126,20 +132,56 @@ final class AppSession: ObservableObject {
 @MainActor
 struct NumiAgentApp: App {
     @StateObject private var session = AppSession()
+    @StateObject private var guest = GuestStore()
     @Environment(\.scenePhase) private var scenePhase
     @State private var linkError: String?
+    @State private var signInSheet = false
+    @State private var restoreSheet = false
+    @State private var scanOnOpen = false
+    #if DEBUG
+    @State private var guestAcceptanceStatus = "Running guest storage checks"
+    #endif
 
     var body: some Scene {
         WindowGroup {
-            root
+            #if DEBUG
+            if let model = DeviceRecognitionBenchmark.modelArgument {
+                DeviceRecognitionBenchmark(model: model)
+            } else if ProcessInfo.processInfo.arguments.contains("--guest-storage-acceptance") {
+                Text(guestAcceptanceStatus).task {
+                    do {
+                        try runGuestStorageAcceptance()
+                        guestAcceptanceStatus = "Guest storage checks passed"
+                    } catch { guestAcceptanceStatus = error.localizedDescription }
+                }
+            } else { collectorRoot }
+            #else
+            collectorRoot
+            #endif
+        }
+    }
+
+    private var collectorRoot: some View {
+        root
                 .tint(CollectorDesign.tint)
                 .task {
                     if PreviewLaunch.screen != nil { session.openDemo() }
                     else { await session.refresh() }
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { Task { await session.refresh() } }
+                    if phase == .active {
+                        guest.reload()
+                        Task { await session.refresh() }
+                    }
                 }
+                .onChange(of: session.phase) { _, phase in
+                    switch phase {
+                    case .signedIn, .demo: signInSheet = false
+                    default: break
+                    }
+                }
+                .sheet(isPresented: $signInSheet) { SignInScreen(session: session) }
+                .sheet(isPresented: $restoreSheet) { GuestFiles(store: guest, action: .restore) }
                 .onOpenURL(perform: openLink)
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                     if let url = activity.webpageURL { openLink(url) }
@@ -149,7 +191,6 @@ struct NumiAgentApp: App {
                 )) { Button("OK", role: .cancel) {} } message: {
                     Text(linkError ?? "")
                 }
-        }
     }
 
     @ViewBuilder
@@ -167,12 +208,36 @@ struct NumiAgentApp: App {
         case .checking:
             ProgressView("Opening NumiAgent")
         case .signedOut, .unavailable:
-            SignInScreen(session: session)
+            if guest.active != nil { localWorkspace(account: nil) }
+            else {
+                GuestWelcome(start: {
+                    do { try guest.openCollection(); scanOnOpen = true }
+                    catch { guest.error = error.localizedDescription }
+                }, signIn: { signInSheet = true }, restore: { restoreSheet = true })
+                .guestStorageAlert(guest)
+            }
         case .signedIn(let account):
-            workspace(account: account).id(account.id)
+            if session.showingLocal { localWorkspace(account: account) }
+            else { workspace(account: account).id(account.id) }
         case .demo:
             workspace(account: nil).id("demo")
         }
+    }
+
+    private func localWorkspace(account: Account?) -> some View {
+        GuestWorkspace(store: guest, api: session.api,
+                       accountTitle: account.map { _ in "Open account collection" },
+                       openAccount: {
+                           if account != nil { session.showingLocal = false }
+                           else { signInSheet = true }
+                       }, scanOnOpen: $scanOnOpen)
+            .id(guest.activeID)
+            .task {
+                if guest.active == nil {
+                    do { try guest.openCollection() }
+                    catch { guest.error = error.localizedDescription }
+                }
+            }
     }
 
     @ViewBuilder
@@ -537,6 +602,7 @@ struct AccountScreen: View {
                     }
                     Button("Sign out") { Task { await endSession(deleteAccount: false) } }
                         .disabled(busy)
+                    Button("On this iPhone", systemImage: "iphone") { session.showingLocal = true }
                     Button("Delete account", role: .destructive) { delete = true }.disabled(busy)
                 } else {
                     Text("Demo collection")

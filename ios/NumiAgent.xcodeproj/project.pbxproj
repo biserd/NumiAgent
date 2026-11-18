@@ -55,6 +55,13 @@
                 B0000000000000000000000B,
                 B0000000000000000000000C,
                 B0000000000000000000000D,
+                B0000000000000000000000E,
+                B0000000000000000000000F,
+                B00000000000000000000010,
+                B00000000000000000000011,
+                B00000000000000000000012,
+                B00000000000000000000013,
+                B00000000000000000000014,
             );
             path = NumiAgent;
             sourceTree = "<group>";
@@ -63,11 +70,11 @@
         A00000000000000000000007 = {
             isa = PBXSourcesBuildPhase;
             buildActionMask = 2147483647;
-            files = (C00000000000000000000001, C00000000000000000000002, C00000000000000000000003, C00000000000000000000004, C00000000000000000000005, C00000000000000000000008, C00000000000000000000009, C0000000000000000000000A, C0000000000000000000000B, C0000000000000000000000D);
+            files = (C00000000000000000000001, C00000000000000000000002, C00000000000000000000003, C00000000000000000000004, C00000000000000000000005, C00000000000000000000008, C00000000000000000000009, C0000000000000000000000A, C0000000000000000000000B, C0000000000000000000000D, C0000000000000000000000E, C0000000000000000000000F, C00000000000000000000010, C00000000000000000000011, C00000000000000000000014);
             runOnlyForDeploymentPostprocessing = 0;
         };
         A00000000000000000000008 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-        A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (C00000000000000000000006); runOnlyForDeploymentPostprocessing = 0; };
+        A00000000000000000000009 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (C00000000000000000000006, C00000000000000000000012, C00000000000000000000013); runOnlyForDeploymentPostprocessing = 0; };
         A0000000000000000000000A = {
             isa = XCConfigurationList;
             buildConfigurations = (A0000000000000000000000C, A0000000000000000000000D);
@@ -163,6 +170,13 @@
         B0000000000000000000000B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSales.swift; sourceTree = "<group>"; };
         B0000000000000000000000C = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
         B0000000000000000000000D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabletWorkspace.swift; sourceTree = "<group>"; };
+        B0000000000000000000000E = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestStore.swift; sourceTree = "<group>"; };
+        B0000000000000000000000F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestWorkspace.swift; sourceTree = "<group>"; };
+        B00000000000000000000010 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuestFiles.swift; sourceTree = "<group>"; };
+        B00000000000000000000011 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRecognition.swift; sourceTree = "<group>"; };
+        B00000000000000000000012 = { isa = PBXFileReference; lastKnownFileType = text.json; path = LocalCatalog.json; sourceTree = "<group>"; };
+        B00000000000000000000013 = { isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+        B00000000000000000000014 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecognitionBenchmark.swift; sourceTree = "<group>"; };
         C00000000000000000000001 = { isa = PBXBuildFile; fileRef = B00000000000000000000001; };
         C00000000000000000000002 = { isa = PBXBuildFile; fileRef = B00000000000000000000002; };
         C00000000000000000000003 = { isa = PBXBuildFile; fileRef = B00000000000000000000003; };
@@ -174,6 +188,13 @@
         C0000000000000000000000A = { isa = PBXBuildFile; fileRef = B0000000000000000000000A; };
         C0000000000000000000000B = { isa = PBXBuildFile; fileRef = B0000000000000000000000B; };
         C0000000000000000000000D = { isa = PBXBuildFile; fileRef = B0000000000000000000000D; };
+        C0000000000000000000000E = { isa = PBXBuildFile; fileRef = B0000000000000000000000E; };
+        C0000000000000000000000F = { isa = PBXBuildFile; fileRef = B0000000000000000000000F; };
+        C00000000000000000000010 = { isa = PBXBuildFile; fileRef = B00000000000000000000010; };
+        C00000000000000000000011 = { isa = PBXBuildFile; fileRef = B00000000000000000000011; };
+        C00000000000000000000012 = { isa = PBXBuildFile; fileRef = B00000000000000000000012; };
+        C00000000000000000000013 = { isa = PBXBuildFile; fileRef = B00000000000000000000013; };
+        C00000000000000000000014 = { isa = PBXBuildFile; fileRef = B00000000000000000000014; };
         D00000000000000000000001 = {
             isa = PBXNativeTarget;
             buildConfigurationList = D00000000000000000000009;

@@ -13,6 +13,7 @@ import { market, refreshWatchlists, watchlists } from './market'
 import { publicPage } from './publicSite'
 import { exchangeRates, ocre } from './officialData'
 import { verifyPhotoRelease } from './photoRelease'
+import { guestScans } from './guestScans'
 export { PhotoWorkflow } from './ingest'
 
 const api = router()
@@ -20,6 +21,7 @@ api.get('/health',c=>c.json({ok:true}))
 api.route('/auth',auth)
 api.post('/contact',submitContact)
 api.post('/internal/photo-release',verifyPhotoRelease)
+api.route('/guest-scans',guestScans)
 api.use('*',async(c,next)=>{
   const authorization = c.req.header('Authorization')
   if (authorization !== undefined) return authorizeDeveloper(c,authorization,next)
@@ -95,6 +97,7 @@ async function maintenance(env:Env) {
     env.DB.prepare('DELETE FROM login_links WHERE expires<?').bind(now()),
     env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(now()),
     env.DB.prepare('DELETE FROM developer_keys WHERE expires<=?').bind(now()),
+    env.DB.prepare('DELETE FROM guest_scans WHERE expires<=?').bind(now()),
     env.DB.prepare('DELETE FROM limits WHERE window<?').bind(now()-8*86400),
     env.DB.prepare('DELETE FROM contact_messages WHERE created<?').bind(now()-contactRetentionDays*86400)
   ])

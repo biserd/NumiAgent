@@ -4,6 +4,8 @@ NumiAgent uses SwiftUI for sign-in, catalog editing, photo import and review, au
 
 ## Build
 
+On first launch, choose **Start scanning** to use an on-device collection. Drafts and photos persist before the app confirms a save. Open the collection menu to make an encrypted backup, restore it as a local collection, or export a CSV with optional private fields. Local files are excluded from device backup. Existing email users can sign in for their existing cloud collection, then use **On this iPhone** in Account to switch to the local workspace. See the [acceptance checks](../docs/ios-v1-verification.md) and [recognition benchmark](benchmark/README.md).
+
 Open `NumiAgent.xcodeproj` in Xcode 26 or later. Select the shared NumiAgent scheme and an iPhone or iPad simulator. The minimum deployment target is iOS and iPadOS 17. Tap **Explore demo** to see sample records without an account. The demo uses sample valuations and identification results.
 
 iPad uses a native sidebar with a list and detail view for the catalog, photo imports, and checklists. The layout adapts when the window narrows. Specimen photos can appear side by side where the detail column has room.

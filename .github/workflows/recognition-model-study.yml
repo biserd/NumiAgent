@@ -1,0 +1,81 @@
+name: Compare recognition models on public specimens
+
+on:
+  push:
+    branches: [codex/recognition-model-study]
+    paths:
+      - .github/workflows/recognition-model-study.yml
+      - benchmarks/public-model-study/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  specimens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pillow==13.0.0
+      - run: python -u benchmarks/public-model-study/materialize.py "$RUNNER_TEMP/fixture"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-input-images
+          path: ${{ runner.temp }}/fixture/
+          retention-days: 3
+          if-no-files-found: error
+
+  compare:
+    needs: specimens
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-input-images
+          path: ${{ runner.temp }}/fixture
+      - name: Compile the macOS recognition command-line runner
+        run: |
+          xcrun swiftc -O ios/NumiAgent/LocalRecognition.swift ios/NumiAgent/RecognitionBenchmark.swift \
+            ios/benchmark/Runner.swift -o "$RUNNER_TEMP/recognition-runner"
+      - name: Convert and run the four variants
+        env:
+          HF_HUB_DISABLE_XET: '1'
+        run: |
+          set -euo pipefail
+          suite="$RUNNER_TEMP/fixture"
+          reports="$RUNNER_TEMP/reports"
+          mkdir -p "$reports"
+          python -m pip install -r ios/benchmark/requirements.txt
+          for model in ocr mobilenet-v3-small dinov2-small dinov2-base; do
+            echo "::group::$model"
+            if [[ "$model" != ocr ]]; then
+              python ios/benchmark/convert_models.py "$suite" "$model"
+              xcrun coremlcompiler compile "$suite/$model.mlpackage" "$suite"
+            fi
+            "$RUNNER_TEMP/recognition-runner" "$suite" "$model" "$reports/$model-report.json"
+            echo "::endgroup::"
+          done
+      - name: Score the held-out specimens
+        run: |
+          suite="$RUNNER_TEMP/fixture"
+          reports="$RUNNER_TEMP/reports"
+          python ios/benchmark/score_runs.py "$reports/scored" "$reports/"*-report.json --max-wrong-per-100 1
+          python ios/benchmark/numi_benchmark.py "$reports/scored/truth.csv" "$reports/scored/dinov2-small.csv" \
+            "$reports/scored/dinov2-base.csv" > "$reports/scored/base-vs-small.json"
+          cp "$suite/"{catalog,manifest,source-sha256}.json "$reports/"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recognition-benchmark-results
+          path: ${{ runner.temp }}/reports/
+          retention-days: 30
+          if-no-files-found: error

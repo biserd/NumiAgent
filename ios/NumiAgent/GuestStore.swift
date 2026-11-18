@@ -480,7 +480,7 @@ enum GuestCSV {
 #if DEBUG
 @MainActor
 func runGuestStorageAcceptance() throws {
-    func verify(_ success: @autoclosure () -> Bool, _ message: String) throws {
+    func verify(_ success: Bool, _ message: String) throws {
         if !success { throw RecognitionBenchmark.InputError.invalid(message) }
     }
     let temporary = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)

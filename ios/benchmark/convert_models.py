@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+from types import MethodType
 
 import coremltools as ct
 import torch
@@ -14,6 +15,23 @@ DINO_REVISIONS = {
     "dinov2-small": "ed25f3a31f01632728cabb09d1542f84ab7b0056",
     "dinov2-base": "f9e44c814b77203eaa57a6bdbbd535f21ede1415",
 }
+
+
+def fixed_positions(module, _embeddings, _height, _width):
+    return module.position_embeddings
+
+
+def freeze_dino_positions(encoder, example):
+    """Bake the pretrained position interpolation for the fixed Core ML input."""
+    embedding = encoder.model.embeddings
+    height, width = example.shape[-2:]
+    before = encoder(example)
+    patches = (height // embedding.patch_size) * (width // embedding.patch_size)
+    positional_input = embedding.position_embeddings.new_empty((1, patches + 1, encoder.model.config.hidden_size))
+    positions = embedding.interpolate_pos_encoding(positional_input, height, width)
+    embedding.position_embeddings = nn.Parameter(positions.detach(), requires_grad=False)
+    embedding.interpolate_pos_encoding = MethodType(fixed_positions, embedding)
+    torch.testing.assert_close(encoder(example), before)
 
 
 class Encoder(nn.Module):
@@ -45,6 +63,8 @@ def main():
     example = torch.rand(1, 3, 224, 224)
     encoder = Encoder(args.model).eval()
     with torch.no_grad():
+        if not encoder.mobile:
+            freeze_dino_positions(encoder, example)
         traced = torch.jit.trace(encoder, example)
     converted = ct.convert(
         traced,

@@ -1,0 +1,88 @@
+name: Compare DINOv2 variants on the frozen public specimens
+
+on:
+  push:
+    branches: [codex/recognition-model-study]
+    paths:
+      - .github/workflows/dino-study-recovery.yml
+      - ios/benchmark/convert_models.py
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  DATASET_RUN: '44290196199'
+
+jobs:
+  dino:
+    name: Run ${{ matrix.model }} on macOS
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [dinov2-small, dinov2-base]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-input-images
+          path: ${{ runner.temp }}/fixture
+          run-id: ${{ env.DATASET_RUN }}
+          github-token: ${{ github.token }}
+      - name: Convert the fixed input model
+        env:
+          MODEL: ${{ matrix.model }}
+          HF_HUB_DISABLE_XET: '1'
+        run: |
+          python -m pip install -r ios/benchmark/requirements.txt
+          python ios/benchmark/convert_models.py "$RUNNER_TEMP/fixture" "$MODEL"
+          xcrun coremlcompiler compile "$RUNNER_TEMP/fixture/$MODEL.mlpackage" "$RUNNER_TEMP/fixture"
+      - name: Compile and run the macOS recognition CLI
+        env:
+          MODEL: ${{ matrix.model }}
+        run: |
+          xcrun swiftc -O ios/NumiAgent/LocalRecognition.swift ios/NumiAgent/RecognitionBenchmark.swift \
+            ios/benchmark/Runner.swift -o "$RUNNER_TEMP/recognition-runner"
+          "$RUNNER_TEMP/recognition-runner" "$RUNNER_TEMP/fixture" "$MODEL" "$RUNNER_TEMP/$MODEL-report.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: study-report-${{ matrix.model }}
+          path: ${{ runner.temp }}/${{ matrix.model }}-report.json
+          retention-days: 30
+          if-no-files-found: error
+
+  score:
+    needs: dino
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: recognition-benchmark-results
+          path: ${{ runner.temp }}/reports
+          run-id: ${{ env.DATASET_RUN }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: study-report-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/reports
+      - name: Score the held-out specimens
+        run: |
+          reports="$RUNNER_TEMP/reports"
+          python3 ios/benchmark/score_runs.py "$reports/scored" "$reports/"*-report.json --max-wrong-per-100 1
+          python3 ios/benchmark/numi_benchmark.py "$reports/scored/truth.csv" "$reports/scored/dinov2-small.csv" \
+            "$reports/scored/dinov2-base.csv" > "$reports/scored/base-vs-small.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recognition-benchmark-results-complete
+          path: ${{ runner.temp }}/reports/
+          retention-days: 30
+          if-no-files-found: error

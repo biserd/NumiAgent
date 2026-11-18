@@ -10,6 +10,12 @@ from torchvision.models import MobileNet_V3_Small_Weights, mobilenet_v3_small
 from transformers import Dinov2Model
 
 
+DINO_REVISIONS = {
+    "dinov2-small": "ed25f3a31f01632728cabb09d1542f84ab7b0056",
+    "dinov2-base": "f9e44c814b77203eaa57a6bdbbd535f21ede1415",
+}
+
+
 class Encoder(nn.Module):
     def __init__(self, name):
         super().__init__()
@@ -17,7 +23,8 @@ class Encoder(nn.Module):
         if self.mobile:
             self.model = mobilenet_v3_small(weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1)
         else:
-            self.model = Dinov2Model.from_pretrained(f"facebook/{name}", attn_implementation="eager")
+            self.model = Dinov2Model.from_pretrained(f"facebook/{name}", revision=DINO_REVISIONS[name],
+                                                     attn_implementation="eager")
         self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
         self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 

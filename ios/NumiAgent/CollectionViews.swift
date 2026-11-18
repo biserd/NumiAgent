@@ -42,6 +42,8 @@ struct CatalogScreen: View {
         List(selection: workspaceSelection?.matching(items)) {
             if demo {
                 Text("Demo collection").font(.footnote).foregroundStyle(.secondary)
+            } else {
+                Text("Saved to your NumiAgent account").font(.footnote).foregroundStyle(.secondary)
             }
             if !demo, query.isEmpty, type.isEmpty, folder.isEmpty {
                 collectionStart

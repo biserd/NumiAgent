@@ -151,6 +151,14 @@ final class GuestStore: ObservableObject {
                 let collection = try JSONDecoder().decode(GuestCollection.self, from: Data(contentsOf: manifest(folder)))
                 guard collection.id == id else { throw GuestStorageError.unavailable }
                 restored.append(collection)
+                let referenced = collection.photoIDs
+                if let contents = try? files.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
+                    for image in contents where image.pathExtension == "jpg" {
+                        guard let photo = UUID(uuidString: image.deletingPathExtension().lastPathComponent),
+                              !referenced.contains(photo) else { continue }
+                        try? files.removeItem(at: image)
+                    }
+                }
             }
             let chosen = (try? JSONDecoder().decode(UUID.self, from: Data(contentsOf: selection)))
             collections = restored.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }

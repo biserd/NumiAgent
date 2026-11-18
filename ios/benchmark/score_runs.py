@@ -102,6 +102,7 @@ def main():
     threshold_report = {}
     calibration_accuracy = {}
     fields_by_model = {}
+    unsupported = {}
     for name, report in reports.items():
         rows = report["predictions"]
         thresholds = {}
@@ -111,7 +112,10 @@ def main():
             calibration = [r for r in rows if r["split"] == "calibration" and r["category"] == category]
             test = [r for r in rows if r["split"] == "test" and r["category"] == category]
             if not calibration or not test:
-                parser.error(f"Provide both calibration and test specimens for {category}")
+                unsupported[category] = "Both calibration and test specimens are required"
+                thresholds[category] = math.inf
+                fields_by_model[name][category] = {"status": "pending"}
+                continue
             accuracy[category], _, thresholds[category] = calibrate(calibration, args.max_wrong_per_100)
             fields_by_model[name][category] = field_scores(test, thresholds[category])
         threshold_report[name] = {key: value if math.isfinite(value) else None for key, value in thresholds.items()}
@@ -143,6 +147,9 @@ def main():
             if smaller == "ocr":
                 report["against_ocr"] = compared
             for category in ("coin", "banknote"):
+                if category in unsupported:
+                    report["decision_by_category"][category] = {"status": "pending", "reason": unsupported[category]}
+                    continue
                 best = max((m for m in MODELS[:MODELS.index(name)] if m in reports),
                            key=lambda m: calibration_accuracy[m][category])
                 if smaller != best:
@@ -156,7 +163,7 @@ def main():
                 }
         comparisons[name] = report
     output = {"calibration_max_wrong_per_100": args.max_wrong_per_100, "thresholds": threshold_report,
-              "comparisons": comparisons, "field_accuracy": fields_by_model,
+              "comparisons": comparisons, "field_accuracy": fields_by_model, "unsupported_categories": unsupported,
               "device_metrics": {name: {key: value for key, value in report.items() if key != "predictions"}
                                  for name, report in reports.items()}}
     path = args.output / "comparison.json"

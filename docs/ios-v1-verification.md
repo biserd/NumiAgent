@@ -20,3 +20,5 @@ Local records, images and draft manifests live in Application Support with compl
 | V1-10 | OCR runs locally and shares the guest review screen with online results | Airplane mode with mixed real pieces, converted model accuracy and device performance |
 
 [Benchmark inputs, conversion and test commands](../ios/benchmark/README.md)
+
+The current backup implementation holds the encrypted and decoded archive in memory. It caps accepted archives at 128 MiB and caps the saved photo bytes at 64 MiB per export. A larger collection remains usable if it exceeds that export limit.

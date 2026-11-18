@@ -25,6 +25,7 @@ Prepare a private directory with `catalog.json`, `manifest.json`, and JPEG photo
 - Give every catalog ID at least one separate `reference` specimen. The visual encoders compute and cache averaged reference embeddings from this split.
 - Include `calibration` and `test` pieces in both `coin` and `banknote`. Include worn coins, similar dates/variants, banknote series, one-sided pieces, and out-of-catalog pieces with an empty `catalog_id`. Aim for hundreds per category and at least 20 test pieces per category. Do not use calibration or test photos in the reference index.
 - `truth_fields` is optional for cataloged pieces, which default to the issuer, denomination and year on their catalog row. Use explicit labels for known fields on out-of-catalog pieces. Unknown or unreadable ground-truth fields can be omitted, and the report counts them as unlabeled.
+- If either category is missing calibration or test specimens, its model decision remains pending. The scorer still reports the supported category.
 - Keep the exact same manifest, captures, catalog and hardware for all compared runs. Preserve individual images at a fixed orientation and size. The runner rejects identical image bytes across different specimen IDs, but the dataset owner must catch recrops and duplicate physical specimens.
 - Run this against actual labeled photos. Synthetic cases can exercise the runner and scorer without measuring recognition accuracy.
 

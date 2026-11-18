@@ -98,7 +98,9 @@ struct GuestWorkspace: View {
                         Button("Back up collection", systemImage: "lock") { menu = .backup }
                         Button("Restore backup", systemImage: "arrow.down.doc") { menu = .restore }
                         Button("Export spreadsheet", systemImage: "tablecells") { menu = .csv }
-                        Button(accountTitle ?? "Sign in with email", systemImage: "person.crop.circle", action: openAccount)
+                        Section("Settings") {
+                            Button(accountTitle ?? "Sign in with email", systemImage: "person.crop.circle", action: openAccount)
+                        }
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {

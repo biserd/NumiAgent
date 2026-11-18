@@ -36,15 +36,24 @@ enum LocalRecognition {
             let languages = (try? request.supportedRecognitionLanguages()) ?? []
             request.recognitionLanguages = ["en-US", "fr-FR", "zh-Hant"].filter(languages.contains)
             let source = CGImageSourceCreateWithData(photo as CFData, nil)
-            let properties = source.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [CFString: Any] }
-            let orientation = (properties?[kCGImagePropertyOrientation] as? UInt32)
+            let properties = source.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [String: Any] }
+            let orientation = (properties?[kCGImagePropertyOrientation as String] as? UInt32)
                 .flatMap(CGImagePropertyOrientation.init(rawValue:)) ?? .up
             let handler = VNImageRequestHandler(data: photo, orientation: orientation, options: [:])
             try handler.perform([request])
-            lines.append(contentsOf: (request.results ?? []).compactMap { observation in
-                guard let text = observation.topCandidates(1).first, text.confidence >= 0.3 else { return nil }
-                return text.string
-            })
+            func strongLines() -> [String] {
+                (request.results ?? []).compactMap { observation in
+                    guard let text = observation.topCandidates(1).first, text.confidence >= 0.3 else { return nil }
+                    return text.string
+                }
+            }
+            let full = strongLines()
+            lines.append(contentsOf: full)
+            if full.count < 3 {
+                request.regionOfInterest = CGRect(x: 0.12, y: 0.12, width: 0.76, height: 0.76)
+                try handler.perform([request])
+                lines.append(contentsOf: strongLines().filter { !full.contains($0) })
+            }
         }
         return lines
     }
@@ -53,6 +62,13 @@ enum LocalRecognition {
         value.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
             .lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: " ")
+    }
+
+    static func bundledResult(for urls: [URL]) throws -> LocalRecognitionResult {
+        let photos = try urls.map { try Data(contentsOf: $0) }
+        let references = try Bundle.main.url(forResource: "LocalCatalog", withExtension: "json")
+            .map(catalog(at:)) ?? []
+        return result(lines: try read(photos), references: references)
     }
 
     static func evidence(_ reference: LocalReference, lines: [String]) -> [String] {
@@ -69,17 +85,26 @@ enum LocalRecognition {
     }
 
     static func result(lines: [String], references: [LocalReference]) -> LocalRecognitionResult {
-        let ranked = references.map { ($0, evidence($0, lines: lines)) }
-            .sorted { $0.1.count == $1.1.count ? $0.0.id < $1.0.id : $0.1.count > $1.1.count }
-            .filter { $0.1.count >= 2 && ($0.1.contains("Issuer") || $0.1.contains("Series or design")) }
-        let suggestions = ranked.prefix(3).map { entry, observed in
-            LocalSuggestion(id: entry.id, type: entry.type, title: entry.title,
-                            issuer: entry.issuer, denomination: entry.denomination, year: entry.year,
-                            reference: entry.source, evidence: observed)
+        var ranked: [(reference: LocalReference, observed: [String])] = []
+        for reference in references {
+            let observed = evidence(reference, lines: lines)
+            if observed.count >= 2 && (observed.contains("Issuer") || observed.contains("Series or design")) {
+                ranked.append((reference, observed))
+            }
         }
-        let strongest = ranked.first?.1 ?? []
+        ranked.sort { left, right in
+            if left.observed.count == right.observed.count { return left.reference.id < right.reference.id }
+            return left.observed.count > right.observed.count
+        }
+        let suggestions: [LocalSuggestion] = ranked.prefix(3).map { row in
+            let entry = row.reference
+            return LocalSuggestion(id: entry.id, type: entry.type, title: entry.title,
+                                   issuer: entry.issuer, denomination: entry.denomination, year: entry.year,
+                                   reference: entry.source, evidence: row.observed)
+        }
+        let strongest = ranked.first?.observed ?? []
         let likely = strongest.contains("Issuer") && strongest.contains("Denomination") && strongest.contains("Year") &&
-            strongest.count > (ranked.dropFirst().first?.1.count ?? 0)
+            strongest.count > (ranked.dropFirst().first?.observed.count ?? 0)
         return LocalRecognitionResult(suggestions: suggestions, likely: likely, observations: Array(lines.prefix(12)))
     }
 }

@@ -55,6 +55,11 @@ jobs:
           }, "Expected all iPad orientations"
           assert not info.get("UIRequiresFullScreen"), "iPad windows must be resizable"
           PY
+      - name: Verify the recognition benchmark runner and scorer
+        run: |
+          xcrun swiftc -O ios/NumiAgent/LocalRecognition.swift ios/NumiAgent/RecognitionBenchmark.swift \
+            ios/benchmark/Runner.swift -o "$RUNNER_TEMP/recognition-runner"
+          python3 -B -m unittest discover -s ios/benchmark -p test_score_runs.py
       - name: Launch the iPhone demo and capture screenshots
         run: |
           set -euo pipefail

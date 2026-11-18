@@ -8,7 +8,8 @@ const maxPhoto = 2 * 1024 * 1024
 const frame = z.base64().max(Math.ceil(maxPhoto / 3) * 4)
 const request = z.object({ front: frame, back: frame.optional() }).strict()
 const jobID = /^(\d{10})-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
-type Scan = { capability:string; input_digest:string; state:string; attempt:number; result:string|null }
+type Scan = { capability:string; input_digest:string; state:string; attempt:number; started:number; result:string|null }
+const readScan = 'SELECT capability,input_digest,state,attempt,started,result FROM guest_scans WHERE id=?'
 
 function decodeJpeg(value:string): Uint8Array<ArrayBuffer> {
   const photo = Uint8Array.from(atob(value), character => character.charCodeAt(0))
@@ -39,7 +40,7 @@ guestScans.post('/:id',async c=>{
   if (!input.success) return fail(400,'Select a front photo and an optional back photo')
   const images = [input.data.front,input.data.back].flatMap(value=>value ? [decodeJpeg(value)] : [])
   const fingerprint = await digest(JSON.stringify(input.data))
-  const current = await one<Scan>(c.env,'SELECT capability,input_digest,state,attempt,result FROM guest_scans WHERE id=?',id)
+  const current = await one<Scan>(c.env,readScan,id)
   if (current && current.capability !== capability) return fail(404,'Scan not found')
   if (current && current.input_digest !== fingerprint) return fail(409,'The selected photos changed. Start a new search.')
   if (current?.state === 'complete') return c.json({state:'complete',candidates:JSON.parse(current.result ?? '[]')})
@@ -49,11 +50,13 @@ guestScans.post('/:id',async c=>{
       AND (state='failed' OR (state='running' AND started<=?)) AND attempt<3 RETURNING attempt`,
     id,capability,fingerprint,expires,received,received-lease)
   if (!claim) {
-    const existing = await one<Scan>(c.env,'SELECT capability,input_digest,state,attempt,result FROM guest_scans WHERE id=?',id)
+    const existing = await one<Scan>(c.env,readScan,id)
     if (!existing || existing.capability !== capability) return fail(404,'Scan not found')
     if (existing.input_digest !== fingerprint) return fail(409,'The selected photos changed. Start a new search.')
     if (existing.state === 'complete') return c.json({state:'complete',candidates:JSON.parse(existing.result ?? '[]')})
-    if (existing.attempt >= 3 && existing.state === 'failed') return fail(409,'This search could not finish. Start a new search.')
+    if (existing.attempt >= 3 && (existing.state === 'failed' || existing.started <= received - lease)) {
+      return fail(409,'This search could not finish. Start a new search.')
+    }
     return c.json({state:'running',candidates:[]},202)
   }
   try {

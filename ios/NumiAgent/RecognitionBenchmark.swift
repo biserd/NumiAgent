@@ -10,6 +10,7 @@ enum RecognitionBenchmark {
     struct SpecimenInput: Codable {
         let specimen_id, category, split, catalog_id, condition, license: String
         let similar_group: String?
+        let truth_fields: [String: String]?
         let photos: [String]
     }
 
@@ -17,12 +18,14 @@ enum RecognitionBenchmark {
     struct Prediction: Codable {
         let specimen_id, category, split, catalog_id: String
         let ranked: [Rank]
+        let truth_fields, first_fields: [String: String]
         let confidence: Double
         let duration_ms: Double
     }
 
     struct Report: Codable {
         let model, device, os: String
+        let suite_sha256: String
         let predictions: [Prediction]
         let reference_count: Int
         let model_bytes, reference_bytes, baseline_catalog_bytes: Int
@@ -52,6 +55,10 @@ enum RecognitionBenchmark {
             throw InputError.invalid("The manifest needs unique specimens and all three splits.")
         }
         let categories = Dictionary(uniqueKeysWithValues: references.map { ($0.id, $0.type) })
+        let entries = Dictionary(uniqueKeysWithValues: references.map { ($0.id, $0) })
+        var suiteFingerprint = SHA256()
+        suiteFingerprint.update(data: manifest)
+        suiteFingerprint.update(data: try Data(contentsOf: referencesURL))
         var seenPhotos: [SHA256.Digest: String] = [:]
         for specimen in specimens {
             guard ["coin","banknote"].contains(specimen.category),
@@ -67,6 +74,7 @@ enum RecognitionBenchmark {
                     throw InputError.invalid("The same photo is assigned to more than one physical specimen.")
                 }
                 seenPhotos[fingerprint] = specimen.specimen_id
+                suiteFingerprint.update(data: Data(fingerprint))
             }
         }
         let referenceRows = specimens.filter { $0.split == "reference" }
@@ -122,8 +130,11 @@ enum RecognitionBenchmark {
             let confidence = ranked.first.map { first in
                 first.score + max(0, first.score - (ranked.dropFirst().first?.score ?? first.score))
             } ?? -100
+            let firstFields = ranked.first.flatMap { entries[$0.id] }.map(fields) ?? [:]
+            let truth = specimen.truth_fields ?? entries[specimen.catalog_id].map(fields) ?? [:]
             return Prediction(specimen_id: specimen.specimen_id, category: specimen.category, split: specimen.split,
-                              catalog_id: specimen.catalog_id, ranked: Array(ranked.prefix(3)), confidence: confidence,
+                              catalog_id: specimen.catalog_id, ranked: Array(ranked.prefix(3)),
+                              truth_fields: truth, first_fields: firstFields, confidence: confidence,
                               duration_ms: (CFAbsoluteTimeGetCurrent() - start) * 1000)
         }
 
@@ -145,11 +156,16 @@ enum RecognitionBenchmark {
         var resource = rusage()
         _ = getrusage(RUSAGE_SELF, &resource)
         let device = hardware()
-        return Report(model: modelName, device: device, os: ProcessInfo.processInfo.operatingSystemVersionString,
+        let suiteHash = suiteFingerprint.finalize().map { String(format: "%02x", $0) }.joined()
+        return Report(model: modelName, device: device, os: ProcessInfo.processInfo.operatingSystemVersionString, suite_sha256: suiteHash,
                       predictions: calibration + measured, reference_count: references.count,
                       model_bytes: model == nil ? 0 : modelFiles(modelURL).map(size).reduce(0, +),
                       reference_bytes: model == nil ? 0 : size(cacheURL), baseline_catalog_bytes: size(referencesURL),
                       peak_resident_bytes: Int64(resource.ru_maxrss), batch_20_ms: batches, piece_p95_ms: p95)
+    }
+
+    private static func fields(_ reference: LocalReference) -> [String: String] {
+        ["issuer": reference.issuer, "denomination": reference.denomination, "year": reference.year]
     }
 
     private static func files(_ specimen: SpecimenInput, in root: URL) throws -> [URL] {
@@ -198,9 +214,9 @@ enum RecognitionBenchmark {
 
     private static func pixels(_ url: URL) throws -> CVPixelBuffer {
         let side = 224
-        let options = [kCGImageSourceCreateThumbnailFromImageAlways: true,
-                       kCGImageSourceCreateThumbnailWithTransform: true,
-                       kCGImageSourceThumbnailMaxPixelSize: side] as [CFString: Any]
+        let options = [kCGImageSourceCreateThumbnailFromImageAlways as String: true,
+                       kCGImageSourceCreateThumbnailWithTransform as String: true,
+                       kCGImageSourceThumbnailMaxPixelSize as String: side] as [String: Any]
         var buffer: CVPixelBuffer?
         CVPixelBufferCreate(kCFAllocatorDefault, side, side, kCVPixelFormatType_32BGRA, nil, &buffer)
         guard let buffer, let source = CGImageSourceCreateWithURL(url as CFURL, nil),

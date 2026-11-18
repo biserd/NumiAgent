@@ -127,7 +127,7 @@ struct GuestWorkspace: View {
             }
         }
         .onChange(of: imports) { _, picks in
-            guard !picks.isEmpty, !importing else { return }
+            guard !picks.isEmpty, !importing, let collectionID = store.activeID else { return }
             importing = true
             Task {
                 defer { importing = false; imports = [] }
@@ -135,6 +135,10 @@ struct GuestWorkspace: View {
                 for pick in picks {
                     do {
                         let image = try await loadCaptureImage(pick)
+                        guard store.activeID == collectionID else {
+                            store.error = "Import stopped when you switched collections. Accepted photos are saved in the original collection."
+                            return
+                        }
                         try store.importDraft(CaptureDraftStore.jpeg(image))
                     } catch { failures += 1 }
                 }
@@ -417,10 +421,7 @@ private struct GuestPieceScreen: View {
         let urls = version.map { store.photoURL($0) }
         do {
             let result = try await Task.detached(priority: .userInitiated) {
-                let images = try urls.map { try Data(contentsOf: $0) }
-                let references = try Bundle.main.url(forResource: "LocalCatalog", withExtension: "json")
-                    .map(LocalRecognition.catalog(at:)) ?? []
-                return LocalRecognition.result(lines: try LocalRecognition.read(images), references: references)
+                try LocalRecognition.bundledResult(for: urls)
             }.value
             guard !Task.isCancelled, let current = store.piece(id), photoVersion(current) == version,
                   current.recognition == nil else { return }
@@ -487,6 +488,7 @@ private struct GuestPieceScreen: View {
 }
 
 extension View {
+    @MainActor
     func guestStorageAlert(_ store: GuestStore) -> some View {
         alert("NumiAgent", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("OK", role: .cancel) {}

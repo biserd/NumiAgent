@@ -420,7 +420,10 @@ enum GuestArchive {
         catch { throw GuestStorageError.invalidBackup }
         let records = snapshot.collection.pieces + snapshot.collection.drafts
         guard Set(records.map(\.id)).count == records.count,
-              records.allSatisfy({ $0.type == "coin" || $0.type == "banknote" }),
+              records.allSatisfy({ record in
+                  (record.type == "coin" || record.type == "banknote") &&
+                    (record.reference.map { $0.scheme == "https" && $0.user == nil && $0.password == nil } ?? true)
+              }),
               snapshot.collection.activeDraft.map({ active in snapshot.collection.drafts.contains { $0.id == active } }) ?? true,
               Set(snapshot.photos.keys) == Set(snapshot.collection.photoIDs.map(\.uuidString)),
               snapshot.photos.values.allSatisfy(validPhoto) else { throw GuestStorageError.invalidBackup }
@@ -433,10 +436,10 @@ enum GuestArchive {
     private static func validPhoto(_ photo: Data) -> Bool {
         guard photo.count > 3, photo.count <= maxPhoto, photo.starts(with: [255, 216]),
               let image = CGImageSourceCreateWithData(photo as CFData, nil),
-              let values = CGImageSourceCopyPropertiesAtIndex(image, 0, nil) as? [CFString: Any],
-              values[kCGImagePropertyGPSDictionary] == nil,
-              let width = values[kCGImagePropertyPixelWidth] as? Int, (1...2048).contains(width),
-              let height = values[kCGImagePropertyPixelHeight] as? Int, (1...2048).contains(height) else { return false }
+              let values = CGImageSourceCopyPropertiesAtIndex(image, 0, nil) as? [String: Any],
+              values[kCGImagePropertyGPSDictionary as String] == nil,
+              let width = values[kCGImagePropertyPixelWidth as String] as? Int, (1...2048).contains(width),
+              let height = values[kCGImagePropertyPixelHeight as String] as? Int, (1...2048).contains(height) else { return false }
         return true
     }
 }
@@ -485,7 +488,25 @@ func runGuestStorageAcceptance() throws {
         $0.purchaseCurrency = "USD"
     }
     guard let image = UIImage(named: "DemoNickel") else { throw GuestStorageError.missingPhoto }
-    let jpeg = try CaptureDraftStore.jpeg(image)
+    guard let raster = image.cgImage else { throw GuestStorageError.missingPhoto }
+    let tagged = NSMutableData()
+    guard let encoder = CGImageDestinationCreateWithData(tagged, "public.jpeg" as CFString, 1, nil) else {
+        throw GuestStorageError.missingPhoto
+    }
+    let metadata: [String: Any] = [
+        kCGImagePropertyOrientation as String: 6,
+        kCGImagePropertyGPSDictionary as String: [
+            kCGImagePropertyGPSLatitude as String: 12.34, kCGImagePropertyGPSLongitude as String: 45.67
+        ]
+    ]
+    CGImageDestinationAddImage(encoder, raster, metadata as CFDictionary)
+    guard CGImageDestinationFinalize(encoder), let rotated = UIImage(data: tagged as Data) else {
+        throw GuestStorageError.missingPhoto
+    }
+    let jpeg = try CaptureDraftStore.jpeg(rotated)
+    if let normalized = UIImage(data: jpeg) {
+        try verify(normalized.imageOrientation == .up, "Accepted photo retained EXIF orientation.")
+    } else { throw GuestStorageError.missingPhoto }
     try source.putPhoto(jpeg, piece: id, side: .front)
     try source.putPhoto(jpeg, piece: id, side: .back)
     try source.save(id, status: .confirmed)

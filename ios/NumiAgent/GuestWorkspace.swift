@@ -225,6 +225,7 @@ private struct GuestPieceScreen: View {
                         Button(isDraft ? "Delete draft" : "Delete piece", role: .destructive) { askDelete = true }
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .navigationTitle(isDraft ? draftTitle : piece.displayTitle)
                 .task(id: photoVersion(piece)) { await recognize(piece) }
             }
@@ -382,6 +383,7 @@ private struct GuestPieceScreen: View {
     private var details: some View {
         Section("Details") {
             Picker("Type", selection: field(\.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
+                .pickerStyle(.segmented)
             TextField("Title", text: field(\.title))
             TextField("Issuer or country", text: field(\.issuer))
             TextField("Denomination", text: field(\.denomination))

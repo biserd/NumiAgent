@@ -192,11 +192,10 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(field.isHittable)
         let save = app.buttons["Save as unidentified"]
         if isBanknote {
-            let picker = app.buttons["Type"].firstMatch
-            if !picker.isHittable { app.swipeDown() }
-            XCTAssertTrue(picker.isHittable)
-            picker.tap()
-            app.buttons["Banknote"].tap()
+            let banknote = app.segmentedControls.buttons["Banknote"].firstMatch
+            if !banknote.isHittable { app.swipeDown() }
+            XCTAssertTrue(banknote.isHittable, app.debugDescription)
+            banknote.tap()
         }
         field.tap()
         field.typeText(title)

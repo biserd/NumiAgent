@@ -87,6 +87,10 @@ def save_photo(source, destination):
         raise ValueError("Source image changed")
     with Image.open(io.BytesIO(raw)) as original:
         image = ImageOps.exif_transpose(original).convert("RGB")
+        if "crop" in source:
+            left, top, right, bottom = source["crop"]
+            image = image.crop((round(left * image.width), round(top * image.height),
+                                round(right * image.width), round(bottom * image.height)))
         image.thumbnail((1280, 1280), Image.Resampling.LANCZOS)
         image.save(destination, format="JPEG", quality=90)
     return hashlib.sha256(raw).hexdigest()

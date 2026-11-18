@@ -1,5 +1,6 @@
 """Sample genuine notes by deposited specimen ID for independent label review."""
 
+import argparse
 import json
 import random
 from pathlib import Path
@@ -10,10 +11,19 @@ from download import archive_index, download_all
 
 
 def main():
-    out = Path("study-data/note-review")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fresh", action="store_true", help="Exclude the original study specimens")
+    args = parser.parse_args()
+    initial = Path("study-data/note-review")
+    out = initial.with_name("fresh-note-review") if args.fresh else initial
     out.mkdir(parents=True, exist_ok=True)
     index = archive_index()
-    sample = sorted(random.Random(17411).sample(range(1, 803), 168))
+    if args.fresh:
+        previous = set(map(int, json.loads((initial / "sources.json").read_text(encoding="utf-8"))))
+        choices = sorted(set(range(1, 803)) - previous)
+        sample = sorted(random.Random(72661).sample(choices, 126))
+    else:
+        sample = sorted(random.Random(17411).sample(range(1, 803), 168))
     sources = {f"{n:03d}": {str(view): {"entry": index[f"real_notes/note_{n:03d}/note_{n:03d}_{view}.jpg"]}
                             for view in (1, 5)} for n in sample}
     work = [(views["5"], out / (key + ".jpg")) for key, views in sources.items()]

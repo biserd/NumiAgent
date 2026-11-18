@@ -14,7 +14,12 @@ enum RecognitionBenchmark {
         let photos: [String]
     }
 
-    struct Rank: Codable { let id: String; let score: Double }
+    struct Rank: Codable {
+        let id: String
+        let score: Double
+        var textEvidence: Int? = nil
+        var imageSimilarity: Double? = nil
+    }
     struct Prediction: Codable {
         let specimen_id, category, split, catalog_id: String
         let ranked: [Rank]
@@ -120,9 +125,10 @@ enum RecognitionBenchmark {
             if let model {
                 let query = try embed(views, model: model)
                 ranked = references.map { entry in
-                    let text = Double(LocalRecognition.evidence(entry, lines: lines).count)
+                    let text = LocalRecognition.evidence(entry, lines: lines).count
                     let visual = embeddings[entry.id].map { Double(dot(query, $0)) } ?? 0
-                    return Rank(id: entry.id, score: text + 2 * visual)
+                    return Rank(id: entry.id, score: Double(text) + 2 * visual,
+                                textEvidence: text, imageSimilarity: visual)
                 }.sorted { $0.score == $1.score ? $0.id < $1.id : $0.score > $1.score }
             } else {
                 ranked = local.suggestions.map { Rank(id: $0.id, score: Double($0.evidence.count)) }
@@ -133,7 +139,7 @@ enum RecognitionBenchmark {
             let firstFields = ranked.first.flatMap { entries[$0.id] }.map(fields) ?? [:]
             let truth = specimen.truth_fields ?? entries[specimen.catalog_id].map(fields) ?? [:]
             return Prediction(specimen_id: specimen.specimen_id, category: specimen.category, split: specimen.split,
-                              catalog_id: specimen.catalog_id, ranked: Array(ranked.prefix(3)),
+                              catalog_id: specimen.catalog_id, ranked: Array(ranked.prefix(5)),
                               truth_fields: truth, first_fields: firstFields, confidence: confidence,
                               duration_ms: (CFAbsoluteTimeGetCurrent() - start) * 1000)
         }

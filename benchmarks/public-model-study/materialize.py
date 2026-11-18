@@ -10,8 +10,9 @@ from download import download_all
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--manifest", type=Path, default=Path(__file__).with_name("inputs.json"))
     args = parser.parse_args()
-    inputs = json.loads(Path(__file__).with_name("inputs.json").read_text(encoding="utf-8"))
+    inputs = json.loads(args.manifest.read_text(encoding="utf-8"))
     photos = args.output / "photos"
     photos.mkdir(parents=True, exist_ok=True)
     work, rows = [], []

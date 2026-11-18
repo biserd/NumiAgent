@@ -50,6 +50,17 @@ jobs:
           PY
           python -u benchmarks/public-model-study/materialize.py "$RUNNER_TEMP/training" \
             --manifest "$RUNNER_TEMP/training-inputs.json"
+          python - "$RUNNER_TEMP/prior-fixture" "$RUNNER_TEMP/training" <<'PY'
+          import json
+          import shutil
+          import sys
+          from pathlib import Path
+          original, training = map(Path, sys.argv[1:])
+          a, b = (json.loads((root / "source-sha256.json").read_text()) for root in (original, training))
+          for name in a.keys() & b.keys():
+              assert a[name] == b[name], name
+              shutil.copyfile(original / "photos" / name, training / "photos" / name)
+          PY
       - name: Run the earlier coins through the standalone macOS recognition CLI
         run: |
           suite="$RUNNER_TEMP/training"

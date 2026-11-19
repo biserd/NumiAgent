@@ -124,3 +124,119 @@ final class PhoneSignInAndReviewTests: XCTestCase {
         XCTAssertTrue(uncertain.waitForExistence(timeout: 10))
     }
 }
+
+final class GuestV1Tests: XCTestCase {
+    @MainActor
+    func testGuestConsentStartsEmptyAndCanBeDeclined() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-photo-fixtures"]
+        app.launch()
+        let start = app.buttons["Start scanning"]
+        XCTAssertTrue(start.waitForExistence(timeout: 15))
+        start.tap()
+        let front = app.buttons["Use sample front"]
+        XCTAssertTrue(front.waitForExistence(timeout: 10))
+        front.tap()
+        let back = app.buttons["Use sample back"]
+        for _ in 0..<5 where !back.isHittable { app.swipeUp() }
+        XCTAssertTrue(back.isHittable)
+        back.tap()
+        let search = app.buttons["Search online"]
+        for _ in 0..<6 where !search.isHittable { app.swipeUp() }
+        XCTAssertTrue(search.isHittable)
+        search.tap()
+        let send = app.buttons["Send selected photos"]
+        XCTAssertTrue(send.waitForExistence(timeout: 10))
+        XCTAssertFalse(send.isEnabled)
+        let backChoice = app.buttons["guest-online-back"]
+        XCTAssertTrue(backChoice.isHittable)
+        backChoice.tap()
+        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 10))
+        XCTAssertTrue(send.isEnabled)
+        app.buttons["Keep on this iPhone"].tap()
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        search.tap()
+        XCTAssertTrue(send.waitForExistence(timeout: 10))
+        XCTAssertFalse(send.isEnabled)
+    }
+
+    @MainActor
+    func testGuestDraftPersistsAcrossRelaunchWithBothSides() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-photo-fixtures"]
+        app.launch()
+        let start = app.buttons["Start scanning"]
+        XCTAssertTrue(start.waitForExistence(timeout: 15))
+        start.tap()
+        let front = app.buttons["Use sample front"]
+        XCTAssertTrue(front.waitForExistence(timeout: 10))
+        front.tap()
+        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
+        app.terminate()
+        app.launch()
+        let resume = app.buttons["Resume batch"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        XCTAssertFalse(start.exists)
+        resume.tap()
+        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
+        let back = app.buttons["Use sample back"]
+        if !back.isHittable { app.swipeUp() }
+        XCTAssertTrue(back.isHittable)
+        back.tap()
+        XCTAssertTrue(app.images["Back photo"].firstMatch.waitForExistence(timeout: 10))
+        let save = app.buttons["Save as unidentified"]
+        for _ in 0..<8 where !save.isHittable { app.swipeUp() }
+        XCTAssertTrue(save.isHittable)
+        save.tap()
+        XCTAssertTrue(app.staticTexts["Unidentified coin"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(resume.exists)
+
+        addManually("Test banknote", to: app, isBanknote: true)
+        addManually("Unknown piece", to: app, isBanknote: false)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Test banknote"].firstMatch.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["Unknown piece"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Unidentified coin"].firstMatch.exists)
+        XCTAssertFalse(app.buttons["Send sign-in link"].exists)
+        let search = app.searchFields.firstMatch
+        if !search.isHittable { app.swipeDown() }
+        XCTAssertTrue(search.isHittable)
+        search.tap()
+        search.typeText("banknote")
+        XCTAssertTrue(app.staticTexts["Test banknote"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Unknown piece"].firstMatch.exists)
+    }
+
+    @MainActor
+    func testEncryptedBackupAndSpreadsheetRoundTrip() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-storage-acceptance"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Guest storage checks passed"].waitForExistence(timeout: 20), app.debugDescription)
+    }
+
+    @MainActor
+    private func addManually(_ title: String, to app: XCUIApplication, isBanknote: Bool) {
+        app.buttons["Add item"].tap()
+        app.buttons["Enter details manually"].tap()
+        let field = app.textFields["Title"]
+        for _ in 0..<5 where !field.isHittable { app.swipeUp() }
+        XCTAssertTrue(field.isHittable)
+        let save = app.buttons["Save as unidentified"]
+        if isBanknote {
+            let banknote = app.segmentedControls.buttons["Banknote"].firstMatch
+            if !banknote.isHittable { app.swipeDown() }
+            XCTAssertTrue(banknote.isHittable, app.debugDescription)
+            banknote.tap()
+        }
+        field.tap()
+        field.typeText(title)
+        for _ in 0..<5 where !save.isHittable { app.swipeUp() }
+        XCTAssertTrue(save.isHittable)
+        save.tap()
+        XCTAssertTrue(app.staticTexts[title].firstMatch.waitForExistence(timeout: 10))
+    }
+}

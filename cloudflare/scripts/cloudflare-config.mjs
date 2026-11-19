@@ -35,6 +35,7 @@ config.send_email = [{name:'EMAIL',allowed_sender_addresses:[from]}]
 config.observability = {enabled:true,logs:{enabled:true,invocation_logs:false}}
 config.workers_dev = origin.hostname.endsWith('.workers.dev')
 config.preview_urls = false
+if (environment==='staging') config.assets.run_worker_first.push('/robots.txt','/app')
 if (!config.workers_dev) config.routes = [{pattern:origin.hostname,custom_domain:true}]
 await writeFile('wrangler.deploy.json',JSON.stringify(config,null,2)+'\n')
 console.log('Wrote isolated '+environment+' binding configuration')

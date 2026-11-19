@@ -2,6 +2,12 @@ name: Upload NumiAgent to TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      guest_backend:
+        description: Guest photo search backend
+        type: choice
+        default: production
+        options: [production, staging]
 
 permissions:
   contents: read
@@ -18,7 +24,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +32,8 @@ jobs:
             ios
             .github/scripts
       - name: Verify the live photo-only identification regression
+        env:
+          GUEST_BACKEND: ${{ inputs.guest_backend }}
         run: |
           python3 - <<'PY'
           import json
@@ -58,7 +66,35 @@ jobs:
           if result.get("fixture") != "faustina-two-sided-v1" or result.get("passed") is not True:
               raise SystemExit(f"Photo identification regression failed: {result}")
           print("Both original photos identified Faustina II and the denarius denomination; the exact variant stayed open.")
+
+          guest_origin = "https://staging.numiagent.com" if os.environ["GUEST_BACKEND"] == "staging" else "https://numiagent.com"
+          guest_check = Request(guest_origin + "/api/v1/guest-scans/testflight-readiness", method="POST",
+                                headers={"Origin": guest_origin})
+          try:
+              with urlopen(guest_check, timeout=20):
+                  raise SystemExit("The guest photo endpoint accepted an invalid scan ID")
+          except HTTPError as error:
+              result = json.loads(error.read(2048))
+              if error.code != 400 or result.get("error") != "Invalid scan ID or device clock":
+                  raise SystemExit(f"The guest photo endpoint at {guest_origin} is unavailable")
+          print("Guest photo endpoint verified at " + guest_origin)
           PY
+      - name: Verify native guest photo consent before signing
+        run: |
+          set -euo pipefail
+          simulator="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          phones = [d for runtime in json.load(sys.stdin)["devices"].values()
+                    for d in runtime if d["name"].startswith("iPhone")]
+          assert phones, "No iPhone simulator is installed"
+          print(phones[0]["udid"])
+          ')"
+          xcrun simctl boot "$simulator"
+          xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Debug \
+            -destination "platform=iOS Simulator,id=$simulator" -derivedDataPath "$RUNNER_TEMP/numiagent-consent" \
+            -parallel-testing-enabled NO \
+            -only-testing:NumiAgentUITests/GuestV1Tests/testGuestConsentStartsEmptyAndCanBeDeclined \
+            CODE_SIGNING_ALLOWED=NO test
       - name: Archive, sign, and upload
         env:
           IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
@@ -68,6 +104,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
           IOS_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
+          GUEST_BACKEND: ${{ inputs.guest_backend }}
         run: |
           set -euo pipefail
           : "${IOS_CERTIFICATE_BASE64:?Configure IOS_CERTIFICATE_BASE64 in the app-store environment}"
@@ -100,10 +137,14 @@ jobs:
           security import "$signing/distribution.p12" -k "$keychain" -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" >/dev/null
           security list-keychains -d user -s "$keychain"
+          build_settings=()
+          if [[ "$GUEST_BACKEND" == "staging" ]]; then
+            build_settings+=(SWIFT_ACTIVE_COMPILATION_CONDITIONS=NUMIAGENT_TESTFLIGHT_STAGING)
+          fi
           xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NumiAgent.xcarchive" \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER="$profile_uuid" \
-            CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" archive
+            CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" "${build_settings[@]}" archive
           python3 - "$signing/ExportOptions.plist" "$profile_uuid" <<'PY'
           import plistlib, sys
           with open(sys.argv[1], "wb") as file:

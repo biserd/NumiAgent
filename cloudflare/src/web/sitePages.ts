@@ -4,8 +4,8 @@ import { blogPosts } from './blogPosts'
 export const brand = 'NumiAgent'
 export const canonicalOrigin = 'https://numiagent.com'
 export const landingSeo = {
-  title:'Coin & Banknote Collection Software | NumiAgent',
-  description:'Turn coin and banknote photos into a private catalog. Identify unfamiliar pieces, compare actual auction sales, and see what is missing from your sets.'
+  title:'Private Coin & Banknote Collection App | NumiAgent',
+  description:'Scan and identify coins and banknotes on iPhone and iPad. Build a searchable offline collection, choose which photos to search online, and keep an encrypted backup.'
 }
 
 type Link = {href:string;label:string}
@@ -58,7 +58,7 @@ export const sitePages:Record<string,SitePage> = {
         'I take the same approach to prices. When you record a comparable sale, the date, grade, price basis, and original lot link stay with it. If the evidence is too thin for a range, I want the catalog to say so plainly.'
       ]},
       {title:'Keep it yours',paragraphs:[
-        'A collection can have personal notes, purchase details, or photographs you only want to keep for yourself. I’ve built the catalog to be private. You decide which photo batches to send for AI analysis and which tools can read your records. You can export your catalog and revoke access from your account.',
+        'My collection can have notes, purchase details, and photos I want to keep to myself. That’s why I built a way to start on iPhone or iPad without an account. You can decide which individual photos to search online, keep an encrypted backup, or open a separate collection in your browser when you want one.',
         'Collectors should also be able to check the sources behind the software. Aurearia informed some of the collecting workflows. Public Nomisma records give selected rulers, mints, denominations, and materials a link back to a numismatic reference.'
       ],links:[{href:'https://github.com/briandenicola/Aurearia',label:'Aurearia'},{href:'https://nomisma.org/',label:'Nomisma'}]},
       {title:'Tell me what your catalog is missing',paragraphs:[
@@ -72,10 +72,11 @@ export const sitePages:Record<string,SitePage> = {
     description:'Clear your photo backlog, identify unfamiliar coins and banknotes, compare actual auction sales, and track the pieces you still need.',
     sections:[
       {id:'photo-imports',title:'Turn the photo backlog into a catalog',paragraphs:[
-        'Get the tray out of your camera roll. Import a batch from your phone or computer, name it so you can find it later, and see which images are ready for review. Keep compatible originals up to 6 MB or let the browser resize supported formats. You can pause and pick up the batch later.'
+        'On iPhone and iPad, start without an email, capture or import photos, and pair both sides. Accepted photos and unfinished pieces are saved on your device so you can resume later.',
+        'In the separate web account, import a photo batch from your phone or computer, name it so you can find it later, and see which images are ready for review.'
       ],links:[{href:'/app#imports',label:'Open photo imports'},{href:'/blog/photograph-coins-and-banknotes',label:'Photograph coins and banknotes for a batch'}]},
       {id:'identification',title:'Get unstuck on a mystery coin or banknote',paragraphs:[
-        'An unfamiliar portrait or worn legend is easier to research with a few candidates. Opt in to AI analysis and review suggested attributions, confidence scores, and crops. Pair front and back photos, correct the record, or catalog the piece by hand.'
+        'Review likely matches, possible matches, or a request to review the piece yourself. Local recognition runs automatically when you add a photo. For a second opinion, select the individual photos you want to send for online identification.'
       ],links:[help,{href:'/blog/identify-roman-coins',label:'Identify a Roman coin from its features'}]},
       {id:'catalog',title:'Build and search a private catalog',paragraphs:[
         'Save coins and banknotes in named collection folders. Record issuer, denomination, date, grade, references, notes, measurements, inscriptions, and type-specific details. Find pieces with text search and filters, inspect potential duplicates that share a reference, and see collection and import counts on the overview.',
@@ -94,7 +95,8 @@ export const sitePages:Record<string,SitePage> = {
         'Create a revocable REST API key for scripts, or approve an OAuth connection for a compatible MCP client. Both use read-only permissions for your account. Use them to query your catalog, check themes, or pull valuation evidence for research.'
       ],links:[{href:'/developers',label:'Developer documentation'},accessGuide]},
       {title:'Control your account and data',paragraphs:[
-        'Sign in with an email link. Manage active sessions, check your usage, export records, or request deletion from Settings. Uploaded photographs and catalog records stay private, and you can revoke API keys and MCP connections in Developer.'
+        'Use an encrypted backup to move your guest collection. Export a spreadsheet and choose whether to include private fields. Open the separate web account when you choose. Signing in keeps your guest collection on your device.',
+        'In the web account, sign in with an email link. Manage sessions, check usage, export records, or request deletion from Settings. Revoke API keys and MCP connections in Developer.'
       ],links:[{href:'/privacy',label:'Privacy Policy'},app]}
     ]
   },
@@ -106,7 +108,7 @@ export const sitePages:Record<string,SitePage> = {
         'Keep control of the email address used to sign in. Sign-in links are for your use. Revoke sessions in Settings and revoke API keys or connected tools in Developer access.'
       ]},
       {title:'Your collection and uploads',paragraphs:[
-        'You retain ownership of your photographs and collection records. Upload material you have permission to use. You authorize NumiAgent to store and process that material to provide the features you use. AI analysis follows the consent choice you make for a photo batch.'
+        'You retain ownership of your photographs and collection records. Upload material you have permission to use. You authorize NumiAgent to process photos you select for guest search and to store photos you add to your online account. AI analysis follows the consent choice you make for each search or account photo batch.'
       ]},
       {title:'Identifications and valuation evidence',paragraphs:[
         'Identification candidates and valuation ranges are research aids. Review the attribution, condition, and comparable sales before you rely on an estimate or make a purchase. NumiAgent does not authenticate specimens or issue appraisals.'
@@ -130,7 +132,9 @@ export const sitePages:Record<string,SitePage> = {
         'We use your email address to sign you in and manage your account. A session cookie keeps you signed in. We record limited usage and security information to protect the service and enforce usage limits.'
       ]},
       {title:'Photographs and collection records',paragraphs:[
-        'Your uploaded photographs and catalog are private to your account. When you consent to AI analysis for a batch, Cloudflare Workers AI processes the photographs for identification suggestions. You can also catalog them manually.'
+        'Your uploaded photographs and catalog are private to your account. When you consent to AI analysis for a batch, Cloudflare Workers AI processes the photographs for identification suggestions. You can also catalog them manually.',
+        'The iPhone and iPad app can store a guest collection on the device without an account. Signing in or choosing to open the browser gives you access to a separate online collection. Guest photos and records stay on your device when you open the browser or sign in.',
+        'If you request an online search for a local piece, only the photos you select are sent to NumiAgent for processing by Cloudflare Workers AI. The request excludes catalog notes, prices and email. The photos are processed for that search without being added to an online collection. Access to the online result expires after twenty minutes. Expired results are removed on the next scheduled cleanup.'
       ]},
       {title:'Services and connected tools',paragraphs:[
         'Cloudflare hosts the site, stores app data, checks for abuse, and delivers sign-in email. An AI theme preview sends your collecting request to Workers AI. If you enable external photo search in Settings, identification may send up to two cropped coin photos to Syllogeum and Google Cloud Vision. You can turn that setting off at any time. Older app versions can send photos when you select one of those services directly. Reference discovery can use observed inscriptions, design descriptions or printed identification fields as search terms. ECB lookups send currency codes and a date. Auction searches and comparable-sale lookups can send your search terms or reference to configured providers.',
@@ -143,6 +147,7 @@ export const sitePages:Record<string,SitePage> = {
         'If you allow analytics, Google Analytics uses cookies to count visits to public pages and help us understand how people find the site. Page addresses are sent without query strings or fragments. Analytics runs on the public site and excludes the signed-in workspace. You can change your choice using Analytics preferences in the footer.'
       ]},
       {title:'Access, export, and deletion',paragraphs:[
+        'The app excludes its guest collection folder from automatic device backups. You can export a separate encrypted backup and choose where to save it, including iCloud Drive if you use it. Keep the recovery key separately. A spreadsheet export includes private fields only when you choose that option.',
         'Keep your collection in NumiAgent as long as you need it. Settings lets you export your records, revoke sessions, and request deletion. Use Developer access to revoke API keys and connected agents. Deletion disables access and queues removal of private records and photographs. Backup and operational copies may expire on their own schedules.'
       ],links:[{href:'/app#settings',label:'Manage your account'},contact]},
       {title:'Questions about your data',paragraphs:[
@@ -155,7 +160,8 @@ export const sitePages:Record<string,SitePage> = {
     description:'Get started with a collection, import photographs, and understand what the catalog is showing you.',
     sections:[
       {title:'Start with an empty collection',paragraphs:[
-        'Open your collection and choose Import photos to work through a batch, or use Add specimen to enter a coin or banknote by hand. Counts on the overview reflect what you have actually saved.'
+        'Tap Start scanning on iPhone or iPad to save guest photos and records on your device. Choose Search online to send selected photos for identification. If you lose your connection, your draft is saved and you can retry after reconnecting.',
+        'To use a separate web collection, open Privacy & browser access from the native Collection menu and choose Open web account. You can sign in with email in the browser and import a new batch there.'
       ],links:[app]},
       {title:'Import and review a batch',paragraphs:[
         'Use the photo library or phone camera. Choose whether to allow AI analysis. Open a processed photo to check the suggested attribution, adjust the crop, and pair another photo as the reverse. Save only the specimens you have reviewed.'

@@ -495,6 +495,10 @@ struct CaptureScreen: View {
                         ForEach(start..<(start + count), id: \.self) { index in
                             draftRow(store.draft.photos[index], index: index)
                         }
+                        if account != nil && store.draft.submittedName == nil {
+                            let views = Array(store.draft.photos[start..<(start + count)].prefix(2))
+                            AccountDraftRecognition(photos: views.compactMap(store.photo), revision: views)
+                        }
                     }
                     .listRowBackground(CollectorDesign.surface)
                 }
@@ -794,7 +798,7 @@ func removeCaptureDrafts(for accountID: String) throws {
     try CaptureDraftStore.remove(accountID: accountID)
 }
 
-private struct CameraPicker: UIViewControllerRepresentable {
+struct CameraPicker: UIViewControllerRepresentable {
     let completion: (UIImage?) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(completion: completion) }
@@ -817,5 +821,34 @@ private struct CameraPicker: UIViewControllerRepresentable {
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { completion(nil) }
+    }
+}
+
+private struct AccountDraftRecognition: View {
+    let photos: [URL]
+    let revision: [UUID]
+    @State private var result: LocalRecognitionResult?
+
+    var body: some View {
+        Group {
+            if let result {
+                Text(result.likely ? "Likely match" : result.suggestions.isEmpty ? "Needs review" : "Possible matches")
+                    .font(.headline)
+                ForEach(result.suggestions) { suggestion in
+                    if let reference = suggestion.reference { Link(suggestion.title, destination: reference) }
+                    else { Text(suggestion.title) }
+                }
+            } else {
+                ProgressView("Finding matches…")
+            }
+        }
+        .task(id: revision) {
+            result = nil
+            let views = photos
+            let candidate = try? await Task.detached(priority: .utility) {
+                try LocalRecognition.bundledResult(for: views)
+            }.value
+            if !Task.isCancelled { result = candidate ?? LocalRecognitionResult() }
+        }
     }
 }

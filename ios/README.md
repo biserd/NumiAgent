@@ -36,4 +36,4 @@ Use the manually triggered **Upload NumiAgent to TestFlight** workflow on `main`
 | `ASC_ISSUER_ID` | App Store Connect issuer ID |
 | `ASC_PRIVATE_KEY` | Contents of the API key’s `.p8` file |
 
-This workflow uploads the signed build to App Store Connect. Configure the TestFlight test group and submit for App Review separately.
+This workflow uploads the signed build to App Store Connect and assigns it to NumiAgent Internal. For a v1 internal beta, choose the staging guest photo search backend. This build sends only consented guest searches to staging. Account sign-in and the browser continue to use numiagent.com. Use a production build for App Review after the guest endpoint is deployed there.

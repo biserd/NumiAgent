@@ -151,12 +151,16 @@ final class NumiAPI {
     private let sessionStore = SessionKeychain()
 
     private var guestScanOrigin: String {
+        #if NUMIAGENT_TESTFLIGHT_STAGING
+        return "https://staging.numiagent.com"
+        #else
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--guest-scan-staging") {
             return "https://staging.numiagent.com"
         }
         #endif
         return Self.origin
+        #endif
     }
 
     init() {

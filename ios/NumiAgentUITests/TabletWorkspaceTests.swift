@@ -149,9 +149,10 @@ final class GuestV1Tests: XCTestCase {
         let send = app.buttons["Send selected photos"]
         XCTAssertTrue(send.waitForExistence(timeout: 10))
         XCTAssertFalse(send.isEnabled)
-        let backToggle = app.switches["guest-online-back"]
-        XCTAssertTrue(backToggle.exists)
-        backToggle.tap()
+        let backChoice = app.buttons["guest-online-back"]
+        XCTAssertTrue(backChoice.isHittable)
+        backChoice.tap()
+        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 10))
         XCTAssertTrue(send.isEnabled)
         app.buttons["Keep on this iPhone"].tap()
         XCTAssertTrue(search.waitForExistence(timeout: 10))

@@ -222,6 +222,53 @@ private struct GuestPrivacyView: View {
     }
 }
 
+private struct GuestOnlineConsent: View {
+    @Environment(\.dismiss) private var dismiss
+    let photos: [GuestSide: UUID]
+    @State var selected: Set<UUID>
+    let send: (Set<UUID>) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach(GuestSide.allCases) { side in
+                        if let photo = photos[side] {
+                            let isSelected = selected.contains(photo)
+                            Button {
+                                if isSelected { selected.remove(photo) } else { selected.insert(photo) }
+                            } label: {
+                                HStack {
+                                    Text(side.title + " photo")
+                                    Spacer()
+                                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(.tint)
+                                        .accessibilityHidden(true)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(isSelected ? .isSelected : [])
+                            .accessibilityIdentifier("guest-online-" + side.rawValue)
+                        }
+                    }
+                    Text("NumiAgent sends only the selected photos for processing by Cloudflare Workers AI. Your notes, purchase details, and email stay out of this search.")
+                    Button("Send selected photos") {
+                        dismiss()
+                        send(selected)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selected.isEmpty)
+                    Button("Keep on this iPhone", role: .cancel) { dismiss() }
+                } header: {
+                    Text("\(selected.count) selected")
+                }
+            }
+            .navigationTitle("Search online")
+        }
+    }
+}
+
 private struct GuestPieceScreen: View {
     @ObservedObject var store: GuestStore
     let api: NumiAPI
@@ -235,7 +282,6 @@ private struct GuestPieceScreen: View {
     @State private var busy = false
     @State private var lookingOnline = false
     @State private var askOnline = false
-    @State private var onlinePhotos: Set<UUID> = []
     @State private var askDelete = false
     @State private var recognitionError: String?
     @State private var onlineError: String?
@@ -284,31 +330,11 @@ private struct GuestPieceScreen: View {
             }.ignoresSafeArea()
         }
         .sheet(isPresented: $askOnline) {
-            NavigationStack {
-                Form {
-                    Section {
-                        if let piece = store.piece(id) {
-                            ForEach(GuestSide.allCases) { side in
-                                if let photo = piece.photos[side] {
-                                    Toggle(side.title + " photo", isOn: Binding(
-                                        get: { onlinePhotos.contains(photo) },
-                                        set: { selected in
-                                            if selected { onlinePhotos.insert(photo) } else { onlinePhotos.remove(photo) }
-                                        }
-                                    ))
-                                    .accessibilityIdentifier("guest-online-" + side.rawValue)
-                                }
-                            }
-                        }
-                        Text("NumiAgent sends only the selected photos for processing by Cloudflare Workers AI. Your notes, purchase details, and email stay out of this search.")
-                        Button("Send selected photos") {
-                            let selection = onlinePhotos
-                            askOnline = false
-                            Task { await searchOnline(selection) }
-                        }.buttonStyle(.borderedProminent).disabled(onlinePhotos.isEmpty)
-                        Button("Keep on this iPhone", role: .cancel) { askOnline = false }
-                    } header: { Text("\(onlinePhotos.count) selected") }
-                }.navigationTitle("Search online")
+            if let piece = store.piece(id) {
+                let previouslySelected = Set(piece.onlineJob?.photos ?? []).intersection(piece.photos.values)
+                GuestOnlineConsent(photos: piece.photos, selected: previouslySelected) { selection in
+                    Task { await searchOnline(selection) }
+                }
             }
         }
         .confirmationDialog(isDraft ? "Delete this draft?" : "Delete this piece?", isPresented: $askDelete, titleVisibility: .visible) {
@@ -409,7 +435,6 @@ private struct GuestPieceScreen: View {
             if let onlineError { Text(onlineError).font(.footnote) }
             if !piece.photos.isEmpty && !lookingOnline {
                 Button(piece.onlineJob == nil && onlineError == nil ? "Search online" : "Retry online search", systemImage: "magnifyingglass") {
-                    onlinePhotos = Set(piece.onlineJob?.photos ?? [])
                     askOnline = true
                 }
                     .disabled(busy)

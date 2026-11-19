@@ -15,7 +15,7 @@ struct GuestWelcome: View {
                     .font(.headline).foregroundStyle(.tint)
                 Text("Catalog your coins and banknotes")
                     .font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                Text("Photograph both sides and keep the pieces together in a collection you can search.")
+                Text("Photograph both sides and build a searchable collection on this device. No email needed.")
                     .foregroundStyle(.secondary)
                 Button(action: start) {
                     Label("Start scanning", systemImage: "camera").frame(maxWidth: .infinity, minHeight: 32)
@@ -45,6 +45,7 @@ struct GuestWorkspace: View {
     @State private var search = ""
     @State private var filter = GuestFilter.all
     @State private var menu: GuestFileAction?
+    @State private var showPrivacy = false
     @State private var imports: [PhotosPickerItem] = []
     @State private var importing = false
 
@@ -52,7 +53,7 @@ struct GuestWorkspace: View {
         NavigationSplitView {
             List(selection: $selected) {
                 Section {
-                    Text("Saved on this iPhone").foregroundStyle(.secondary)
+                    Text("Saved on this device").foregroundStyle(.secondary)
                     if let active = store.active, !active.drafts.isEmpty {
                         Button("Resume batch", systemImage: "camera.viewfinder") {
                             if let draft = active.activeDraft ?? active.drafts.first?.id { open(draft) }
@@ -99,6 +100,7 @@ struct GuestWorkspace: View {
                         Button("Restore backup", systemImage: "arrow.down.doc") { menu = .restore }
                         Button("Export spreadsheet", systemImage: "tablecells") { menu = .csv }
                         Section("Settings") {
+                            Button("Privacy & browser access", systemImage: "hand.raised") { showPrivacy = true }
                             Button(accountTitle ?? "Sign in with email", systemImage: "person.crop.circle", action: openAccount)
                         }
                     }
@@ -157,6 +159,7 @@ struct GuestWorkspace: View {
             }
         }
         .sheet(item: $menu) { action in GuestFiles(store: store, action: action) }
+        .sheet(isPresented: $showPrivacy) { GuestPrivacyView() }
         .guestStorageAlert(store)
     }
 
@@ -183,6 +186,39 @@ struct GuestWorkspace: View {
     private func open(_ id: UUID) { act { try store.resume(id); editor = store.piece(id) } }
     private func act(_ action: () throws -> Void) {
         do { try action() } catch { store.error = error.localizedDescription }
+    }
+}
+
+private struct GuestPrivacyView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @State private var confirmBrowser = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("On this device") {
+                    Text("Guest photos, drafts and collection details are saved here. The app excludes them from automatic device backups. You can save your own encrypted backup in Files or export a spreadsheet and choose whether to include private fields.")
+                }
+                Section("Online identification") {
+                    Text("Local identification runs on this device. When you choose Search online, you select which photos to send to NumiAgent for processing by Cloudflare Workers AI.")
+                }
+                Section("Browser access") {
+                    Text("You can open a separate web collection and sign in with your email. Opening the browser or signing in leaves your guest collection on this device.")
+                    Button("Open web account", systemImage: "safari") { confirmBrowser = true }
+                }
+            }
+            .navigationTitle("Privacy & browser access")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+            }
+            .confirmationDialog("Open NumiAgent in your browser?", isPresented: $confirmBrowser, titleVisibility: .visible) {
+                Button("Continue to web account") { openURL(NumiAPI.url("/app")) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Browser sign-in is separate. No guest photos, records or sign-in credentials are shared by this action.")
+            }
+        }
     }
 }
 
@@ -260,10 +296,11 @@ private struct GuestPieceScreen: View {
                                             if selected { onlinePhotos.insert(photo) } else { onlinePhotos.remove(photo) }
                                         }
                                     ))
+                                    .accessibilityIdentifier("guest-online-" + side.rawValue)
                                 }
                             }
                         }
-                        Text("NumiAgent sends the selected photos to its online identification provider. Your notes, purchase details, and email stay out of this search.")
+                        Text("NumiAgent sends only the selected photos for processing by Cloudflare Workers AI. Your notes, purchase details, and email stay out of this search.")
                         Button("Send selected photos") {
                             let selection = onlinePhotos
                             askOnline = false
@@ -370,9 +407,9 @@ private struct GuestPieceScreen: View {
             }
             if let recognitionError { Text(recognitionError).font(.footnote) }
             if let onlineError { Text(onlineError).font(.footnote) }
-            if !piece.photos.isEmpty && !lookingOnline && piece.recognition?.likely != true {
-                Button(onlineError == nil ? "Search online" : "Retry online search", systemImage: "magnifyingglass") {
-                    onlinePhotos = Set(piece.onlineJob?.photos ?? photoVersion(piece))
+            if !piece.photos.isEmpty && !lookingOnline {
+                Button(piece.onlineJob == nil && onlineError == nil ? "Search online" : "Retry online search", systemImage: "magnifyingglass") {
+                    onlinePhotos = Set(piece.onlineJob?.photos ?? [])
                     askOnline = true
                 }
                     .disabled(busy)
@@ -439,16 +476,18 @@ private struct GuestPieceScreen: View {
         guard !lookingOnline, let piece = store.piece(id) else { return }
         let version = photoVersion(piece)
         let photos = version.filter { selected.contains($0) }
-        guard let front = photos.first else { return }
+        guard !photos.isEmpty else { return }
+        let front = piece.photos[.front].flatMap { selected.contains($0) ? $0 : nil }
+        let back = piece.photos[.back].flatMap { selected.contains($0) ? $0 : nil }
         lookingOnline = true
         onlineError = nil
         defer { lookingOnline = false }
         do {
             let job = piece.onlineJob.flatMap { $0.expired || $0.photos != photos ? nil : $0 } ?? GuestOnlineJob(photos: photos)
             try store.changePiece(id) { $0.onlineJob = job }
-            let primary = try Data(contentsOf: store.photoURL(front))
-            let back = try photos.dropFirst().first.map { try Data(contentsOf: store.photoURL($0)) }
-            let result = try await api.searchGuestPhotos(id: job.id, key: job.key, front: primary, back: back)
+            let frontData = try front.map { try Data(contentsOf: store.photoURL($0)) }
+            let backData = try back.map { try Data(contentsOf: store.photoURL($0)) }
+            let result = try await api.searchGuestPhotos(id: job.id, key: job.key, front: frontData, back: backData)
             guard let current = store.piece(id), photoVersion(current) == version,
                   current.onlineJob?.id == job.id else { return }
             if result.state == "complete" {
@@ -458,6 +497,9 @@ private struct GuestPieceScreen: View {
                     if matches.suggestions.isEmpty { matches.suggestions = $0.recognition?.suggestions ?? [] }
                     $0.recognition = matches
                     $0.onlineJob = nil
+                }
+                if result.recognition.suggestions.isEmpty {
+                    onlineError = "No online matches found. You can still use the local suggestions or enter details yourself."
                 }
             } else {
                 onlineError = "Search is still processing. Retry to pick up the result."

@@ -6,7 +6,8 @@ const lifetime = 20 * 60
 const lease = 120
 const maxPhoto = 2 * 1024 * 1024
 const frame = z.base64().max(Math.ceil(maxPhoto / 3) * 4)
-const request = z.object({ front: frame, back: frame.optional() }).strict()
+const request = z.object({ front: frame.optional(), back: frame.optional() }).strict()
+  .refine(photos=>Boolean(photos.front || photos.back))
 const jobID = /^(\d{10})-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/
 type Scan = { capability:string; input_digest:string; state:string; attempt:number; started:number; result:string|null }
 const readScan = 'SELECT capability,input_digest,state,attempt,started,result FROM guest_scans WHERE id=?'
@@ -37,7 +38,7 @@ guestScans.post('/:id',async c=>{
   let decoded: unknown
   try { decoded = JSON.parse(new TextDecoder().decode(bytes)) } catch { return fail(400,'Expected selected photos') }
   const input = request.safeParse(decoded)
-  if (!input.success) return fail(400,'Select a front photo and an optional back photo')
+  if (!input.success) return fail(400,'Select at least one photo')
   const images = [input.data.front,input.data.back].flatMap(value=>value ? [decodeJpeg(value)] : [])
   const fingerprint = await digest(JSON.stringify(input.data))
   const current = await one<Scan>(c.env,readScan,id)

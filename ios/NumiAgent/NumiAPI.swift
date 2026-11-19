@@ -244,8 +244,8 @@ final class NumiAPI {
 
     var hasStoredSession: Bool { (try? sessionStore.load()) != nil }
 
-    func searchGuestPhotos(id: String, key: String, front: Data, back: Data?) async throws -> GuestScanResult {
-        struct SelectedPhotos: Encodable { let front: Data; let back: Data? }
+    func searchGuestPhotos(id: String, key: String, front: Data?, back: Data?) async throws -> GuestScanResult {
+        struct SelectedPhotos: Encodable { let front: Data?; let back: Data? }
         let body = try JSONEncoder().encode(SelectedPhotos(front: front, back: back))
         let (data, _) = try await send("/guest-scans/" + id, method: "POST", body: body,
                                        authenticated: false, scanKey: key)

@@ -58,6 +58,9 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await guestRequest(guestId,randomBytes(32).toString('hex'),selected)).status,404)
     assert.equal((await guestRequest(guestId,guestKey,{front:selected.front})).status,409)
     assert.equal((await guestRequest(guestId,guestKey,{...selected,email:'not-in-payload@example.test'})).status,400)
+    assert.equal((await guestRequest(guestId,guestKey,{})).status,400)
+    const backOnly = await json(await guestRequest(stamp+'-'+randomUUID(), guestKey, {back:selected.back}))
+    assert.equal(backOnly.state,'complete')
     assert.equal((await guestRequest((stamp-1201)+'-'+randomUUID(),guestKey,selected)).status,410)
     assert.equal((await api('/items')).status,401)
 
@@ -65,9 +68,10 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await api('/internal/photo-release',null,'POST',{})).status,401)
     const landing=await (await fetch(base+'/')).text()
     assert.match(landing,/id="app" data-rendered="server"/)
-    assert.match(landing,/class="hero-art"/)
+    assert.match(landing,/class="hero-art collection-hero"/)
     assert.match(landing,/aria-label="Collector guides"/)
-    assert.match(landing,/Coin &amp; Banknote Collection Software/)
+    assert.match(landing,/Private Coin &amp; Banknote Collection App/)
+    assert.match(landing,/collection-hero\.jpg/)
     for(const issue of ['Too many photos to sort?','Stuck on an unfamiliar piece?','Unsure what it’s worth?','What’s still missing?']){
       assert.ok(landing.includes(issue),issue)
     }

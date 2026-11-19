@@ -127,6 +127,40 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
+    func testGuestConsentStartsEmptyAndCanBeDeclined() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-photo-fixtures"]
+        app.launch()
+        let start = app.buttons["Start scanning"]
+        XCTAssertTrue(start.waitForExistence(timeout: 15))
+        start.tap()
+        let front = app.buttons["Use sample front"]
+        XCTAssertTrue(front.waitForExistence(timeout: 10))
+        front.tap()
+        let back = app.buttons["Use sample back"]
+        for _ in 0..<5 where !back.isHittable { app.swipeUp() }
+        XCTAssertTrue(back.isHittable)
+        back.tap()
+        let search = app.buttons["Search online"]
+        for _ in 0..<6 where !search.isHittable { app.swipeUp() }
+        XCTAssertTrue(search.isHittable)
+        search.tap()
+        let send = app.buttons["Send selected photos"]
+        XCTAssertTrue(send.waitForExistence(timeout: 10))
+        XCTAssertFalse(send.isEnabled)
+        let backToggle = app.switches["guest-online-back"]
+        XCTAssertTrue(backToggle.exists)
+        backToggle.tap()
+        XCTAssertTrue(send.isEnabled)
+        app.buttons["Keep on this iPhone"].tap()
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        search.tap()
+        XCTAssertTrue(send.waitForExistence(timeout: 10))
+        XCTAssertFalse(send.isEnabled)
+    }
+
+    @MainActor
     func testGuestDraftPersistsAcrossRelaunchWithBothSides() {
         continueAfterFailure = false
         let app = XCUIApplication()

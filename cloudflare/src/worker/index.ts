@@ -71,7 +71,11 @@ export default {
     if (url.pathname==='/mcp' && origin && origin!==env.APP_ORIGIN) return new Response('Origin rejected',{status:403})
     let response: Response
     try {
-      if (isApi) response = await app.fetch(request,env,ctx)
+      if (env.APP_MODE==='staging' && url.pathname==='/robots.txt') {
+        response = new Response(request.method==='HEAD' ? null : 'User-agent: *\nDisallow: /\n',
+          {headers:{'Content-Type':'text/plain; charset=utf-8'}})
+      }
+      else if (isApi) response = await app.fetch(request,env,ctx)
       else if (isAgent) response = await agentRequest(request,env,ctx)
       else response = await publicPage(request,url,env) ?? await env.ASSETS.fetch(request)
       if (url.pathname==='/404' && response.ok) {
@@ -85,6 +89,7 @@ export default {
     headers.set('X-Frame-Options','DENY')
     headers.set('X-Content-Type-Options','nosniff')
     headers.set('Referrer-Policy','no-referrer')
+    if (env.APP_MODE==='staging') headers.set('X-Robots-Tag','noindex, nofollow')
     if (isApi || isAgent) headers.set('Cache-Control','no-store')
     return new Response(response.body,{status:response.status,statusText:response.statusText,headers})
   },

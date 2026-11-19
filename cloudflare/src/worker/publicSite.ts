@@ -18,8 +18,9 @@ export async function publicPage(request:Request,url:URL,env:Env) {
   const description=page?.description ?? landingSeo.description
   const analytics=env.APP_MODE==='production' && url.origin===canonicalOrigin
   const canonical=canonicalOrigin+path
-  const image=canonicalOrigin+'/roman-bronze.jpg'
   const article=page?.article
+  const collectionImage=path==='/' || path==='/features' || path==='/about' || path==='/privacy'
+  const image=collectionImage ? url.origin+'/collection-hero.jpg' : canonicalOrigin+'/roman-bronze.jpg'
   const schema=article ? [{
     '@type':'BlogPosting',headline:page.title,description,url:canonical,mainEntityOfPage:canonical,
     datePublished:article.published,dateModified:article.updated ?? article.published,
@@ -46,7 +47,8 @@ export async function publicPage(request:Request,url:URL,env:Env) {
     .on('head',{element(element){
       const metadata:Record<string,string>={
         'og:site_name':brand,'og:type':article?'article':'website','og:title':title,'og:description':description,
-        'og:url':canonical,'og:image':image,'og:image:alt':'Illustration of a Roman bronze coin'
+        'og:url':canonical,'og:image':image,'og:image:alt':collectionImage ?
+          'Two worn coins and an illustrated banknote in an archival tray' : 'Illustration of a Roman bronze coin'
       }
       if(article) {
         metadata['article:published_time']=new Date(article.published).toISOString()

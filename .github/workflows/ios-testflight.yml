@@ -69,14 +69,23 @@ jobs:
 
           guest_origin = "https://staging.numiagent.com" if os.environ["GUEST_BACKEND"] == "staging" else "https://numiagent.com"
           guest_check = Request(guest_origin + "/api/v1/guest-scans/testflight-readiness", method="POST",
-                                headers={"Origin": guest_origin})
+                                headers={
+                                    "Origin": guest_origin,
+                                    "User-Agent": "NumiAgent-release-verification/1.0",
+                                    "Accept": "application/json",
+                                })
           try:
               with urlopen(guest_check, timeout=20):
                   raise SystemExit("The guest photo endpoint accepted an invalid scan ID")
           except HTTPError as error:
-              result = json.loads(error.read(2048))
-              if error.code != 400 or result.get("error") != "Invalid scan ID or device clock":
-                  raise SystemExit(f"The guest photo endpoint at {guest_origin} is unavailable")
+              if error.code != 400:
+                  raise SystemExit(f"The guest photo endpoint at {guest_origin} returned HTTP {error.code}")
+              try:
+                  result = json.loads(error.read(2048))
+              except ValueError:
+                  raise SystemExit(f"The guest photo endpoint at {guest_origin} returned an invalid response")
+              if result.get("error") != "Invalid scan ID or device clock":
+                  raise SystemExit(f"The guest photo endpoint at {guest_origin} returned an unexpected validation result")
           print("Guest photo endpoint verified at " + guest_origin)
           PY
       - name: Verify native guest photo consent before signing

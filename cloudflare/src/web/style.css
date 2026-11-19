@@ -51,7 +51,7 @@ label{display:grid;gap:5px;font-size:.91rem;font-weight:600;min-width:0}.check{d
 .collection-hero img{height:100%;aspect-ratio:3/2}
 .collection-workflow{align-items:center}
 .collection-workflow>img{width:100%;max-height:290px;border-radius:12px;object-position:center 55%}
-.collection-privacy{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,5vw,68px);margin-block:0 64px;padding:clamp(22px,4vw,48px);background:#eee8da;border-radius:16px}
+.collection-privacy{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,5vw,68px);margin-block:0 64px;padding:clamp(22px,4vw,48px);background:#eee8da;color:var(--ink);border-radius:16px}
 .collection-privacy h2{font-size:clamp(2.25rem,4.1vw,4rem);letter-spacing:-.035em}
 .collection-privacy a{display:inline-block;margin-top:14px}
 @media(max-width:660px){.collection-privacy{grid-template-columns:1fr;margin-bottom:32px}}

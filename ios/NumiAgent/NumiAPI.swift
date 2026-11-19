@@ -150,6 +150,15 @@ final class NumiAPI {
     private let network: URLSession
     private let sessionStore = SessionKeychain()
 
+    private var guestScanOrigin: String {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--guest-scan-staging") {
+            return "https://staging.numiagent.com"
+        }
+        #endif
+        return Self.origin
+    }
+
     init() {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpShouldSetCookies = false
@@ -192,13 +201,14 @@ final class NumiAPI {
         authenticated: Bool = true,
         scanKey: String? = nil
     ) async throws -> (Data, HTTPURLResponse) {
-        var components = URLComponents(string: Self.origin)!
+        let requestOrigin = scanKey == nil ? Self.origin : guestScanOrigin
+        var components = URLComponents(string: requestOrigin)!
         components.path = "/api/v1" + path
         if !query.isEmpty { components.queryItems = query }
         var request = URLRequest(url: components.url!)
         request.httpMethod = method
         request.httpBody = body
-        request.setValue(Self.origin, forHTTPHeaderField: "Origin")
+        request.setValue(requestOrigin, forHTTPHeaderField: "Origin")
         if body != nil { request.setValue(type, forHTTPHeaderField: "Content-Type") }
         if let scanKey { request.setValue("Bearer " + scanKey, forHTTPHeaderField: "Authorization") }
         if authenticated {

@@ -27,6 +27,10 @@ Local records, images and draft manifests live in Application Support with compl
 
 The isolated [staging site](https://staging.numiagent.com/) uses a separate D1 database, R2 bucket, queues and Turnstile widget. It serves the updated marketing and disclosure pages with server-rendered HTML and blocks indexing.
 
+For a device check, run the Xcode Debug scheme with the launch argument `--guest-scan-staging`. This points guest photo searches at staging while leaving the existing account configuration intact. Start scanning as a guest, add both sides, cancel one online consent sheet, then select one side and tap Send selected photos in airplane mode. Reopen the draft after reconnecting and use Retry online search. Switch the argument off for a normal Debug run.
+
 The Workers AI endpoint identified the 1990 U.S. five-cent coin using both unlabelled sides from the [Multi-Camera World Coin Dataset](https://huggingface.co/datasets/irfanhossainsust/multi-camera-world-coin-dataset/tree/3c14042bf841123f65d41733ffa7f28c232e8038), specimen COIN_0256. The staging smoke test simulated a dropped connection before submitting the same job on reconnect. A second test submitted only one photo, discarded the first response and fetched the result again with the same job ID and key. Each completed job recorded one attempt, with zero new accounts, collection records or catalog photos. Empty and extra-field payloads were rejected, foreign origins could not submit, and expired jobs returned 410.
+
+The same endpoint identified the issuer, denomination and year of an [1861 ten-dollar banknote from the National Numismatic Collection](https://commons.wikimedia.org/wiki/File:CSA-T10-$10-1861.jpg) from one photo. These smoke tests cover the live path for each type. They provide two specimen checks, with general accuracy tracked separately by the recognition benchmark.
 
 The current backup implementation holds the encrypted and decoded archive in memory. It caps accepted archives at 128 MiB and caps the saved photo bytes at 64 MiB per export. A larger collection remains usable if it exceeds that export limit.

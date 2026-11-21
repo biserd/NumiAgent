@@ -1,0 +1,12 @@
+Ancient coins
+American Numismatic Society, New York. The type records come from projects of the American Numismatic Society through Syllogeum’s open v1.1 type export. The adapted AncientCoins.json database is offered under the Open Database License 1.0.
+https://syllogeum.org/data
+https://opendatacommons.org/licenses/odbl/1-0/
+
+Modern coins and banknotes
+Issue facts and inscriptions are credited to the U.S. Mint, the U.S. Currency Education Program, the Royal Canadian Mint, the Bank of Canada Museum, the Hong Kong Monetary Authority, and the European Central Bank. Each entry links to its source.
+
+Historic banknotes
+Type facts are transcribed from public-domain Wikimedia Commons records, including photographs from the National Numismatic Collection at the Smithsonian National Museum of American History. Each entry links to its source and credit.
+
+These packs contain text and source links. Photo recognition and catalog search run on the device.

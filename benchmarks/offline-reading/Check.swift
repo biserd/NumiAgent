@@ -25,13 +25,41 @@ struct Check {
         let result = try JSONDecoder().decode(LocalRecognitionResult.self, from: legacy)
         try expect(result.textReading.issuer == "CANADA" && result.photoReading == nil, "older draft compatibility")
 
+        let catalog = OfflineCatalog.shared
+        try expect(catalog.packCounts == ["AncientCoins": 21512, "ModernMoney": 126, "HistoricBanknotes": 58],
+                   "all three packs loaded from app resources")
+        let modern = catalog.identify(["UNITED STATES OF AMERICA", "ONE DIME", "1965"])
+        try expect(modern.suggestions.first?.id == "us-coin-dime" && !modern.likely,
+                   "a readable American dime returns a family")
+        let canadian = catalog.identify(["BANK OF CANADA", "ONE DOLLAR", "1937"])
+        try expect(canadian.suggestions.first?.id == "ca-1937-one-dollar" && canadian.likely,
+                   "the existing issue match works with the expanded catalog")
+        let generic = catalog.identify(["BANK OF CANADA", "ONE DOLLAR"])
+        try expect(generic.suggestions.first?.id == "ca-note-1" && !generic.likely,
+                   "undated currency returns a banknote family")
+        let ancient = catalog.identify(["C PIV ESV TETRICVS CAES", "SPES AVGG"])
+        try expect(ancient.suggestions.first?.id == "ocre-ric.5.tet_i.270",
+                   "two distinct ancient legends find the indexed type")
+        try expect(catalog.identify(["SPES AVGG"]).suggestions.isEmpty,
+                   "a common ancient legend alone leaves attribution unresolved")
+        try expect(catalog.search("Tetricus 270").contains { $0.id == "ocre-ric.5.tet_i.270" },
+                   "manual ancient type lookup")
+        try expect(catalog.search("1923 silver certificate").contains { $0.id == "historic-us-sc-237" },
+                   "manual historic banknote lookup")
+        try expect(catalog.identify(["2020", "NO VISIBLE DENOMINATION"]).suggestions.isEmpty,
+                   "an isolated year leaves the issue unresolved")
+
+        let expected = ["jefferson-nickel.jpg": ("coin", "5 cents"), "silver-certificate.jpg": ("banknote", "1 dollar")]
         for path in CommandLine.arguments.dropFirst() {
             let result = try LocalRecognition.bundledResult(for: [URL(fileURLWithPath: path)])
-            try expect(result.photoReading != nil && result.suggestions.isEmpty, "catalog-free Vision scan")
             let reading = try JSONEncoder().encode(result.textReading)
-            print("\(URL(fileURLWithPath: path).lastPathComponent): \(String(decoding: reading, as: UTF8.self))")
-            print("Vision text: \(result.observations)")
+            let name = URL(fileURLWithPath: path).lastPathComponent
+            print("\(name): \(String(decoding: reading, as: UTF8.self)); catalog: \(result.suggestions.map(\.title))")
+            if let (kind, value) = expected[name] {
+                try expect(result.suggestions.contains { $0.type == kind && $0.denomination == value },
+                           "photo-to-catalog match for \(name)")
+            }
         }
-        print("Standalone catalog-free text checks passed")
+        print("All three packs passed offline catalog checks: \(catalog.packCounts)")
     }
 }

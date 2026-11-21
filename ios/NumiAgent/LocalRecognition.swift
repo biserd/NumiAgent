@@ -7,6 +7,11 @@ struct LocalReference: Codable, Identifiable, Sendable {
     let issuerWords, denominationWords: [String]
     let variantWords: [String]?
     let source: URL
+    var catalogScope: String? = nil
+    var requiredWords: [String]? = nil
+    var obverseLegend: String? = nil
+    var reverseLegend: String? = nil
+    var searchDetails: String? = nil
 }
 
 struct LocalSuggestion: Codable, Identifiable, Sendable {
@@ -205,9 +210,7 @@ enum LocalRecognition {
     static func bundledResult(for urls: [URL]) throws -> LocalRecognitionResult {
         let photos = try urls.map { try Data(contentsOf: $0) }
         let lines = try read(photos, detectLanguages: true)
-        let references = Bundle.main.url(forResource: "LocalCatalog", withExtension: "json")
-            .flatMap { try? catalog(at: $0) } ?? []
-        var scan = result(lines: lines, references: references)
+        var scan = OfflineCatalog.shared.identify(lines)
         scan.photoReading = PhotoTextReading.read(lines)
         return scan
     }
@@ -247,5 +250,142 @@ enum LocalRecognition {
         let likely = strongest.contains("Issuer") && strongest.contains("Denomination") && strongest.contains("Year") &&
             strongest.count > (ranked.dropFirst().first?.observed.count ?? 0)
         return LocalRecognitionResult(suggestions: suggestions, likely: likely, observations: Array(lines.prefix(12)))
+    }
+}
+
+struct OfflineCatalog: Sendable {
+    static let shared = OfflineCatalog(bundle: .main)
+    static let packNames = ["ModernMoney", "AncientCoins", "HistoricBanknotes"]
+
+    private struct Entry: Sendable {
+        let reference: LocalReference
+        let searchText: String
+    }
+
+    private let searchEntries: [Entry]
+    private let ordinary: [LocalReference]
+    private let inscriptions: [String: [LocalReference]]
+    let packCounts: [String: Int]
+
+    init(bundle: Bundle) {
+        let legacy = bundle.url(forResource: "LocalCatalog", withExtension: "json")
+            .flatMap { try? LocalRecognition.catalog(at: $0) } ?? []
+        let packs = Dictionary(uniqueKeysWithValues: Self.packNames.map { name in
+            let rows = bundle.url(forResource: name, withExtension: "json", subdirectory: "OfflineCatalog")
+                .flatMap { try? LocalRecognition.catalog(at: $0) } ?? []
+            return (name, rows)
+        })
+        packCounts = packs.mapValues(\.count)
+        let all = legacy + Self.packNames.flatMap { packs[$0] ?? [] }
+        ordinary = all.filter { $0.catalogScope != "ancient" }
+        searchEntries = all.map { record in
+            let details = [record.title, record.issuer, record.denomination, record.year,
+                           record.searchDetails ?? "", record.obverseLegend ?? "", record.reverseLegend ?? ""]
+            return Entry(reference: record, searchText: LocalRecognition.normalized(details.joined(separator: " ")))
+        }
+        var index: [String: [LocalReference]] = [:]
+        for record in packs["AncientCoins"] ?? [] {
+            let keys = Set([record.obverseLegend, record.reverseLegend].compactMap { $0 }.map(Self.legendKey))
+            for key in keys where key.count >= 6 { index[key, default: []].append(record) }
+        }
+        inscriptions = index
+    }
+
+    static func legendKey(_ text: String) -> String {
+        LocalRecognition.normalized(text).filter { !$0.isWhitespace }
+    }
+
+    func search(_ query: String) -> [LocalSuggestion] {
+        let normalized = LocalRecognition.normalized(query)
+        let terms = normalized.split(separator: " ")
+        guard normalized.count >= 2, !terms.isEmpty else { return [] }
+        return searchEntries.lazy.filter { entry in
+            terms.allSatisfy { entry.searchText.contains($0) }
+        }.prefix(40).map { suggestion($0.reference, evidence: []) }
+    }
+
+    func identify(_ lines: [String]) -> LocalRecognitionResult {
+        let normalizedLines = lines.map(LocalRecognition.normalized).filter { !$0.isEmpty }
+        let words = normalizedLines.map { " " + $0 + " " }
+        func contains(_ choices: [String]) -> Bool {
+            choices.contains { phrase in
+                let value = LocalRecognition.normalized(phrase)
+                return !value.isEmpty && words.contains { $0.contains(" " + value + " ") }
+            }
+        }
+
+        struct Candidate {
+            let record: LocalReference
+            let evidence: [String]
+            let score: Int
+            let precise: Bool
+        }
+        let candidates = ordinary.compactMap { record -> Candidate? in
+            let scope = record.catalogScope
+            let issuer = contains(record.issuerWords)
+            let value = contains(record.denominationWords)
+            let design = contains(record.variantWords ?? [])
+            let year = !record.year.isEmpty && contains([record.year])
+            let required = record.requiredWords.map(contains) ?? true
+            guard required, value, issuer || design else { return nil }
+            guard scope != nil || year, scope != "series" || year || design else { return nil }
+            let labels = [(issuer, "Issuer"), (value, "Denomination"), (design, "Series or design"), (year, "Year")]
+                .compactMap { $0.0 ? $0.1 : nil }
+            let precise = scope == nil && issuer && year
+            // A visible date or series clue distinguishes an issue from its general family.
+            let score = (precise ? 20 : 0) + (year ? 8 : 0) + (design ? 4 : 0) + (issuer ? 2 : 0)
+                + (record.requiredWords != nil ? 1 : 0)
+            return Candidate(record: record, evidence: labels, score: score, precise: precise)
+        }
+        let bestScore = candidates.map(\.score).max()
+        let best = candidates.filter { $0.score == bestScore }
+        let transcript = Array(lines.prefix(12))
+        if !best.isEmpty {
+            let groups = Dictionary(grouping: best) { familyKey($0.record) }
+            guard groups.count <= 3 else { return .init(observations: transcript) }
+            let choices = groups.values.map { group in
+                let first = group[0]
+                if group.count == 1, first.record.catalogScope != "historical" {
+                    return suggestion(first.record, evidence: first.evidence)
+                }
+                return family(first.record, evidence: first.evidence)
+            }.sorted { $0.title < $1.title }
+            return .init(suggestions: choices, likely: best.count == 1 && best[0].precise, observations: transcript)
+        }
+
+        let legends = Set(normalizedLines.map(Self.legendKey))
+        var ancient: [String: (reference: LocalReference, evidence: Set<String>)] = [:]
+        for key in legends {
+            for row in inscriptions[key] ?? [] {
+                if ancient[row.id] == nil { ancient[row.id] = (row, []) }
+                ancient[row.id]?.evidence.insert(key)
+            }
+        }
+        let paired = ancient.values.filter { $0.evidence.count >= 2 }
+        if paired.count == 1, let match = paired.first {
+            return .init(suggestions: [suggestion(match.reference, evidence: ["Matching legends on both sides"])],
+                         observations: transcript)
+        }
+        let possible = paired.isEmpty ? Array(ancient.values) : paired
+        let groups = Dictionary(grouping: possible) { familyKey($0.reference) }
+        if groups.count == 1, let row = possible.first?.reference, !row.issuer.isEmpty, !row.denomination.isEmpty {
+            return .init(suggestions: [family(row, evidence: ["Matching inscription"])], observations: transcript)
+        }
+        return .init(observations: transcript)
+    }
+
+    private func familyKey(_ record: LocalReference) -> String {
+        [record.type, record.issuer, record.denomination].map(LocalRecognition.normalized).joined(separator: ":")
+    }
+
+    private func family(_ record: LocalReference, evidence: [String]) -> LocalSuggestion {
+        let title = [record.issuer, record.denomination].filter { !$0.isEmpty }.joined(separator: " · ")
+        return .init(id: "family-" + familyKey(record), type: record.type, title: title, issuer: record.issuer,
+                     denomination: record.denomination, year: "", reference: nil, evidence: evidence)
+    }
+
+    private func suggestion(_ record: LocalReference, evidence: [String]) -> LocalSuggestion {
+        .init(id: record.id, type: record.type, title: record.title, issuer: record.issuer,
+              denomination: record.denomination, year: record.year, reference: record.source, evidence: evidence)
     }
 }

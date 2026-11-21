@@ -282,6 +282,7 @@ private struct GuestPieceScreen: View {
     @State private var busy = false
     @State private var lookingOnline = false
     @State private var askOnline = false
+    @State private var catalogPicker = false
     @State private var askDelete = false
     @State private var recognitionError: String?
     @State private var onlineError: String?
@@ -335,6 +336,12 @@ private struct GuestPieceScreen: View {
                 GuestOnlineConsent(photos: piece.photos, selected: previouslySelected) { selection in
                     Task { await searchOnline(selection) }
                 }
+            }
+        }
+        .sheet(isPresented: $catalogPicker) {
+            OfflineCatalogPicker { suggestion in
+                apply(suggestion)
+                catalogPicker = false
             }
         }
         .confirmationDialog(isDraft ? "Delete this draft?" : "Delete this piece?", isPresented: $askDelete, titleVisibility: .visible) {
@@ -438,6 +445,8 @@ private struct GuestPieceScreen: View {
             }
             if let recognitionError { Text(recognitionError).font(.footnote) }
             if let onlineError { Text(onlineError).font(.footnote) }
+            Button("Search offline catalog", systemImage: "books.vertical") { catalogPicker = true }
+                .disabled(busy || lookingOnline)
             if !piece.photos.isEmpty && !lookingOnline {
                 Button(piece.onlineJob == nil && onlineError == nil ? "Search online" : "Retry online search", systemImage: "magnifyingglass") {
                     askOnline = true
@@ -590,6 +599,64 @@ struct PhotoTextDetails: View {
                     .textSelection(.enabled)
             }
         }
+    }
+}
+
+private struct OfflineCatalogPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var results: [LocalSuggestion] = []
+    @State private var searched = false
+    let select: (LocalSuggestion) -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
+                    Text("Enter a country, denomination, year, inscription, or catalog number.")
+                        .foregroundStyle(.secondary)
+                } else if searched && results.isEmpty {
+                    Text("No catalog entries found.").foregroundStyle(.secondary)
+                }
+                ForEach(results) { result in
+                    Button {
+                        select(result)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(result.title)
+                            Text(result.type == "coin" ? "Coin" : "Banknote")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                NavigationLink("Catalog sources") {
+                    ScrollView {
+                        Text(Self.credits).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                    }.navigationTitle("Catalog sources")
+                }
+            }
+            .searchable(text: $query, prompt: "Search coins and banknotes")
+            .navigationTitle("Offline catalog")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+            }
+            .task(id: query) {
+                searched = false
+                let term = query
+                let matches = await Task.detached(priority: .userInitiated) { OfflineCatalog.shared.search(term) }.value
+                guard !Task.isCancelled else { return }
+                results = matches
+                searched = true
+            }
+        }
+    }
+
+    private static var credits: String {
+        guard let url = Bundle.main.url(forResource: "Credits", withExtension: "txt", subdirectory: "OfflineCatalog") else {
+            return "Catalog sources are unavailable."
+        }
+        return (try? String(contentsOf: url, encoding: .utf8)) ?? "Catalog sources are unavailable."
     }
 }
 

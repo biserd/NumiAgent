@@ -148,7 +148,7 @@ enum LocalRecognition {
                               width: image.width * 4 / 6, height: image.height * 3 / 5)
             layouts = [image.cropping(to: crop), image].compactMap { $0 }
         }
-        return try layouts.flatMap { variant in
+        return try layouts.flatMap { variant -> [String] in
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
@@ -205,7 +205,7 @@ enum LocalRecognition {
     static func bundledResult(for urls: [URL]) throws -> LocalRecognitionResult {
         let photos = try urls.map { try Data(contentsOf: $0) }
         let lines = try read(photos, detectLanguages: true)
-        let references = try Bundle.main.url(forResource: "LocalCatalog", withExtension: "json")
+        let references = Bundle.main.url(forResource: "LocalCatalog", withExtension: "json")
             .flatMap { try? catalog(at: $0) } ?? []
         var scan = result(lines: lines, references: references)
         scan.photoReading = PhotoTextReading.read(lines)

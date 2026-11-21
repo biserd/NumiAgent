@@ -47,7 +47,7 @@ struct PhotoTextReading: Codable, Sendable {
     }
 
     private static let denominationPattern = try? NSRegularExpression(
-        pattern: #"(?<![\p{L}\p{N}.,])((?:[0-9]{1,6}(?:[.,][0-9]{1,2})?|(?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|and)[ -]){0,5}(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand))\s+(?:dollars?|dimes?|cents?|centavos?|centimes?|euros?|pesos?|pence|penn(?:y|ies)|pounds?|francs?|rupees?|riyals?|dirhams?|dinars?|taka|yen|yuan|won|rubl(?:es?|os?)|lei|złot(?:y|ych)|forints?|kron(?:a|e|er|or)))\b"#,
+        pattern: #"(?<![\p{L}\p{N}.,])((?:[0-9]{1,6}(?:[.,][0-9]{1,2})?|(?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|and)[ -]){0,5}(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand))[\s-]+(?:dollars?|dimes?|cents?|centavos?|centimes?|euros?|pesos?|pence|penn(?:y|ies)|pounds?|francs?|rupees?|riyals?|dirhams?|dinars?|taka|yen|yuan|won|rubl(?:es?|os?)|lei|złot(?:y|ych)|forints?|kron(?:a|e|er|or)))\b"#,
         options: .caseInsensitive
     )
     private static let yearPattern = try? NSRegularExpression(
@@ -96,6 +96,7 @@ enum LocalRecognition {
     static func read(_ photos: [Data], detectLanguages: Bool = false) throws -> [String] {
         var lines: [String] = []
         for photo in photos {
+            var photoLines: [String] = []
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = false
@@ -115,14 +116,84 @@ enum LocalRecognition {
                 }
             }
             let full = strongLines()
-            lines.append(contentsOf: full)
+            photoLines.append(contentsOf: full)
             if full.count < 3 {
                 request.regionOfInterest = CGRect(x: 0.12, y: 0.12, width: 0.76, height: 0.76)
                 try handler.perform([request])
-                lines.append(contentsOf: strongLines().filter { !full.contains($0) })
+                photoLines.append(contentsOf: strongLines().filter { !full.contains($0) })
             }
+            if detectLanguages && PhotoTextReading.read(photoLines).denomination == nil {
+                let fallback = (try? layoutText(photo)) ?? []
+                photoLines.append(contentsOf: fallback.filter { !photoLines.contains($0) })
+            }
+            lines.append(contentsOf: photoLines)
         }
         return lines
+    }
+
+    private static func layoutText(_ data: Data) throws -> [String] {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 1280
+              ] as CFDictionary) else { return [] }
+        let wide = Double(image.width) / Double(image.height)
+        let layouts: [CGImage]
+        if (0.82...1.22).contains(wide) {
+            layouts = circularLegends(image)
+        } else {
+            // A tighter frame increases the size of small printed details for Vision.
+            let crop = CGRect(x: image.width / 6, y: image.height / 5,
+                              width: image.width * 4 / 6, height: image.height * 3 / 5)
+            layouts = [image.cropping(to: crop), image].compactMap { $0 }
+        }
+        return try layouts.flatMap { variant in
+            let request = VNRecognizeTextRequest()
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            request.automaticallyDetectsLanguage = true
+            request.minimumTextHeight = 0.012
+            try VNImageRequestHandler(cgImage: variant, options: [:]).perform([request])
+            return (request.results ?? []).compactMap { observation in
+                guard let text = observation.topCandidates(1).first, text.confidence >= 0.4 else { return nil }
+                return text.string
+            }
+        }
+    }
+
+    private static func circularLegends(_ image: CGImage) -> [CGImage] {
+        let width = image.width, height = image.height
+        let space = CGColorSpaceCreateDeviceGray()
+        var source = [UInt8](repeating: 0, count: width * height)
+        let drew = source.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(data: bytes.baseAddress, width: width, height: height,
+                                          bitsPerComponent: 8, bytesPerRow: width, space: space,
+                                          bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drew else { return [] }
+        let radius = Double(min(width, height)) * 0.47
+        let outWidth = 640, outHeight = 160
+        return [false, true].compactMap { bottom in
+            var strip = [UInt8](repeating: 255, count: outWidth * outHeight)
+            for x in 0..<outWidth {
+                let angle = (148 - 116 * Double(x) / Double(outWidth - 1)) * Double.pi / 180
+                let dx = cos(angle), dy = sin(angle) * (bottom ? 1 : -1)
+                for y in 0..<outHeight {
+                    let t = Double(y) / Double(outHeight - 1)
+                    let distance = radius * (bottom ? 0.44 + 0.56 * t : 1 - 0.56 * t)
+                    let px = Int(Double(width) * 0.5 + distance * dx)
+                    let py = Int(Double(height) * 0.5 + distance * dy)
+                    strip[y * outWidth + x] = source[py * width + px]
+                }
+            }
+            guard let provider = CGDataProvider(data: Data(strip) as CFData) else { return nil }
+            return CGImage(width: outWidth, height: outHeight, bitsPerComponent: 8, bitsPerPixel: 8,
+                           bytesPerRow: outWidth, space: space, bitmapInfo: [], provider: provider,
+                           decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+        }
     }
 
     static func normalized(_ value: String) -> String {

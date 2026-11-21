@@ -30,6 +30,7 @@ struct Check {
             try expect(result.photoReading != nil && result.suggestions.isEmpty, "catalog-free Vision scan")
             let reading = try JSONEncoder().encode(result.textReading)
             print("\(URL(fileURLWithPath: path).lastPathComponent): \(String(decoding: reading, as: UTF8.self))")
+            print("Vision text: \(result.observations)")
         }
         print("Standalone catalog-free text checks passed")
     }

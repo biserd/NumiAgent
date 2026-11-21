@@ -50,6 +50,7 @@ def modern():
         ("dime", "Roosevelt dime", "1 dime", ("one dime", "1 dime"), ("roosevelt", "e pluribus unum")),
         ("quarter", "United States quarter", "25 cents", ("quarter dollar", "25 cents"), ()),
         ("half", "United States half dollar", "50 cents", ("half dollar", "50 cents"), ()),
+        ("dollar", "United States dollar coin", "1 dollar", ("one dollar", "1 dollar"), ()),
     ):
         yield row("us-coin-" + key, "coin", label, "United States", value, US_MINT,
                   issuers=us, amounts=aliases, hints=hints)
@@ -77,6 +78,8 @@ def modern():
     }
     for key, (title, values) in series.items():
         for value in values:
+            if value == 1 and key in ("1935", "1937"):
+                continue  # The original app catalog already supplies these issues.
             unit = "dollar" if value == 1 else "dollars"
             hints = ("viola desmond",) if key == "vertical" else ()
             yield row(f"ca-note-{key}-{value}", "banknote", f"Bank of Canada ${value} · {title}", "Bank of Canada",
@@ -167,8 +170,11 @@ def historic(source):
                 continue
             seen.add(key)
             unit = "dollar" if value == "1" else "dollars"
+            aliases = amount(int(value), unit)
+            if silver and value == "1":
+                aliases = (*aliases, "one silver dollar", "1 silver dollar")
             yield row(key, "banknote", name, issuer, f"{value} {unit}", meta["descriptionurl"], year=year,
-                      issuers=issuers, amounts=amount(int(value), unit), required=required,
+                      issuers=issuers, amounts=aliases, required=required,
                       hints=required, scope="historical")
 
 

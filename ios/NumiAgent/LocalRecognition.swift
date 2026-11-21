@@ -127,9 +127,12 @@ enum LocalRecognition {
                 try handler.perform([request])
                 photoLines.append(contentsOf: strongLines().filter { !full.contains($0) })
             }
-            if detectLanguages && PhotoTextReading.read(photoLines).denomination == nil {
-                let fallback = (try? layoutText(photo)) ?? []
-                photoLines.append(contentsOf: fallback.filter { !photoLines.contains($0) })
+            if detectLanguages {
+                let reading = PhotoTextReading.read(photoLines)
+                if reading.denomination == nil || reading.issuer == nil {
+                    let fallback = (try? layoutText(photo)) ?? []
+                    photoLines.append(contentsOf: fallback.filter { !photoLines.contains($0) })
+                }
             }
             lines.append(contentsOf: photoLines)
         }
@@ -151,7 +154,8 @@ enum LocalRecognition {
             // A tighter frame increases the size of small printed details for Vision.
             let crop = CGRect(x: image.width / 6, y: image.height / 5,
                               width: image.width * 4 / 6, height: image.height * 3 / 5)
-            layouts = [image.cropping(to: crop), image].compactMap { $0 }
+            let header = CGRect(x: image.width / 8, y: 0, width: image.width * 3 / 4, height: image.height * 2 / 5)
+            layouts = [image.cropping(to: crop), image.cropping(to: header), image].compactMap { $0 }
         }
         return try layouts.flatMap { variant -> [String] in
             let request = VNRecognizeTextRequest()

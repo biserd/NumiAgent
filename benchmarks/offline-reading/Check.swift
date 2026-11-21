@@ -26,7 +26,7 @@ struct Check {
         try expect(result.textReading.issuer == "CANADA" && result.photoReading == nil, "older draft compatibility")
 
         let catalog = OfflineCatalog.shared
-        try expect(catalog.packCounts == ["AncientCoins": 21512, "ModernMoney": 126, "HistoricBanknotes": 58],
+        try expect(catalog.packCounts == ["AncientCoins": 21512, "ModernMoney": 125, "HistoricBanknotes": 58],
                    "all three packs loaded from app resources")
         let modern = catalog.identify(["UNITED STATES OF AMERICA", "ONE DIME", "1965"])
         try expect(modern.suggestions.first?.id == "us-coin-dime" && !modern.likely,
@@ -46,19 +46,22 @@ struct Check {
                    "manual ancient type lookup")
         try expect(catalog.search("1923 silver certificate").contains { $0.id == "historic-us-sc-237" },
                    "manual historic banknote lookup")
+        let historic = catalog.identify(["UNITED STATES OF AMERICA", "SILVER CERTIFICATE", "ONE SILVER DOLLAR", "1923"])
+        try expect(historic.suggestions.first?.type == "banknote" && historic.suggestions.first?.denomination == "1 dollar",
+                   "a printed silver certificate denomination matches the historic banknote catalog")
         try expect(catalog.identify(["2020", "NO VISIBLE DENOMINATION"]).suggestions.isEmpty,
                    "an isolated year leaves the issue unresolved")
 
-        let expected = ["jefferson-nickel.jpg": ("coin", "5 cents"), "silver-certificate.jpg": ("banknote", "1 dollar")]
-        for path in CommandLine.arguments.dropFirst() {
-            let result = try LocalRecognition.bundledResult(for: [URL(fileURLWithPath: path)])
+        let paths = Array(CommandLine.arguments.dropFirst())
+        try expect(paths.count == 3, "supply a nickel photo and both sides of a silver certificate")
+        for (label, inputs, kind, value) in [("Jefferson nickel", [paths[0]], "coin", "5 cents"),
+                                             ("Silver certificate", Array(paths.dropFirst()), "banknote", "1 dollar")] {
+            let result = try LocalRecognition.bundledResult(for: inputs.map { URL(fileURLWithPath: $0) })
             let reading = try JSONEncoder().encode(result.textReading)
-            let name = URL(fileURLWithPath: path).lastPathComponent
-            print("\(name): \(String(decoding: reading, as: UTF8.self)); catalog: \(result.suggestions.map(\.title))")
-            if let (kind, value) = expected[name] {
-                try expect(result.suggestions.contains { $0.type == kind && $0.denomination == value },
-                           "photo-to-catalog match for \(name)")
-            }
+            let diagnostic = "\(label): \(String(decoding: reading, as: UTF8.self)); catalog: \(result.suggestions.map(\.title)); Vision text: \(result.observations)\n"
+            try FileHandle.standardError.write(contentsOf: Data(diagnostic.utf8))
+            try expect(result.suggestions.contains { $0.type == kind && $0.denomination == value },
+                       "photo-to-catalog match for \(label)")
         }
         print("All three packs passed offline catalog checks: \(catalog.packCounts)")
     }

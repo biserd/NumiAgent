@@ -18,6 +18,9 @@ jobs:
             ios/NumiAgent
             ios/NumiAgent.xcodeproj
             benchmarks/offline-reading
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Prepare the public smoke-test photo and the macOS test bundle
         run: |
           plutil -lint -- ios/NumiAgent.xcodeproj/project.pbxproj
@@ -38,6 +41,19 @@ jobs:
           curl --fail --silent --show-error --location --retry 2 \
             'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a1/US-%241-SC-1923-Fr.237.jpg/960px-US-%241-SC-1923-Fr.237.jpg' \
             --output "$RUNNER_TEMP/silver-certificate.jpg"
+          python -m pip install pillow==13.0.0
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from PIL import Image
+
+          folder = Path(os.environ["RUNNER_TEMP"])
+          with Image.open(folder / "silver-certificate.jpg") as source:
+              width, height = source.size
+              split = int(height * 0.5)
+              source.crop((0, 0, width, split)).convert("RGB").save(folder / "silver-obverse.jpg")
+              source.crop((0, split, width, height)).convert("RGB").save(folder / "silver-reverse.jpg")
+          PY
       - name: Deny network access and scan both specimens
         run: |
           python3 -m http.server 19724 --bind 127.0.0.1 --directory "$RUNNER_TEMP" > "$RUNNER_TEMP/loopback.log" 2>&1 &
@@ -52,4 +68,4 @@ jobs:
           echo 'Confirmed network denial against the working loopback probe'
           sandbox-exec -p "$profile" "$RUNNER_TEMP/OfflineCatalogCheck.app/Contents/MacOS/check-offline-reading" \
             ios/NumiAgent/Assets.xcassets/DemoNickel.imageset/jefferson-nickel.jpg \
-            "$RUNNER_TEMP/silver-certificate.jpg"
+            "$RUNNER_TEMP/silver-obverse.jpg" "$RUNNER_TEMP/silver-reverse.jpg"

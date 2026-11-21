@@ -123,6 +123,20 @@ final class GuestStore: ObservableObject {
         #endif
         self.root = root ?? appSupport.appending(path: name, directoryHint: .isDirectory)
         reload()
+        #if DEBUG
+        if root == nil, testID != nil, active == nil,
+           ProcessInfo.processInfo.arguments.contains("--guest-consent-fixture") {
+            do {
+                guard let image = UIImage(named: "DemoNickel") else { throw GuestStorageError.missingPhoto }
+                let photo = try CaptureDraftStore.jpeg(image)
+                try openCollection()
+                let id = try draft()
+                try putPhoto(photo, piece: id, side: .front)
+                try putPhoto(photo, piece: id, side: .back)
+                try changePiece(id) { $0.recognition = LocalRecognitionResult() }
+            } catch { self.error = error.localizedDescription }
+        }
+        #endif
     }
 
     var active: GuestCollection? { collections.first { $0.id == activeID } }

@@ -130,23 +130,19 @@ final class GuestV1Tests: XCTestCase {
     func testGuestConsentStartsEmptyAndCanBeDeclined() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-photo-fixtures"]
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"]
         app.launch()
-        let start = app.buttons["Start scanning"]
-        XCTAssertTrue(start.waitForExistence(timeout: 15))
-        start.tap()
-        let front = app.buttons["Use sample front"]
-        XCTAssertTrue(front.waitForExistence(timeout: 10))
-        front.tap()
-        let back = app.buttons["Use sample back"]
-        reveal(back, in: app)
-        back.tap()
+        let resume = app.buttons["Resume batch"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 15), app.debugDescription)
+        resume.tap()
+        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
         let search = app.buttons["guest-search-online"]
         reveal(search, in: app)
         search.tap()
         let send = app.buttons["Send selected photos"]
         XCTAssertTrue(send.waitForExistence(timeout: 10))
         XCTAssertFalse(send.isEnabled)
+        XCTAssertTrue(app.buttons["guest-online-front"].exists)
         let backChoice = app.buttons["guest-online-back"]
         XCTAssertTrue(backChoice.isHittable)
         backChoice.tap()

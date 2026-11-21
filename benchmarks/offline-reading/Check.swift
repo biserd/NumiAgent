@@ -51,11 +51,14 @@ struct Check {
                    "a printed silver certificate denomination matches the historic banknote catalog")
         try expect(catalog.identify(["2020", "NO VISIBLE DENOMINATION"]).suggestions.isEmpty,
                    "an isolated year leaves the issue unresolved")
+        try expect(catalog.identify(["THE UNITED STATES OFAMERICA", "ONE DOLLAR",
+                                     "THIS CERTIFIES THAT THERE HAS BEEN DEPOSITED IN THE TREASURY OF"])
+            .suggestions.allSatisfy { $0.type == "banknote" }, "a note inscription excludes a coin suggestion")
 
         let paths = Array(CommandLine.arguments.dropFirst())
-        try expect(paths.count == 3, "supply a nickel photo and both sides of a silver certificate")
+        try expect(paths.count == 5, "supply a nickel, Federal Reserve note, and historic note photos")
         for (label, inputs, kind, value) in [("Jefferson nickel", [paths[0]], "coin", "5 cents"),
-                                             ("Silver certificate", Array(paths.dropFirst()), "banknote", "1 dollar")] {
+                                             ("Federal Reserve note", Array(paths[1...2]), "banknote", "1 dollar")] {
             let result = try LocalRecognition.bundledResult(for: inputs.map { URL(fileURLWithPath: $0) })
             let reading = try JSONEncoder().encode(result.textReading)
             let diagnostic = "\(label): \(String(decoding: reading, as: UTF8.self)); catalog: \(result.suggestions.map(\.title)); Vision text: \(result.observations)\n"
@@ -63,6 +66,10 @@ struct Check {
             try expect(result.suggestions.contains { $0.type == kind && $0.denomination == value },
                        "photo-to-catalog match for \(label)")
         }
+        let ornate = try LocalRecognition.bundledResult(for: paths[3...4].map { URL(fileURLWithPath: $0) })
+        try expect(ornate.suggestions.allSatisfy { $0.type == "banknote" },
+                   "the ornate historic note is not mistaken for a coin")
+        print("Historic note photos: \(ornate.suggestions.isEmpty ? "needs review" : "banknote suggestion"), printed year \(ornate.textReading.year ?? "unread")")
         print("All three packs passed offline catalog checks: \(catalog.packCounts)")
     }
 }

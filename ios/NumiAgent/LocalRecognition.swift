@@ -311,12 +311,18 @@ struct OfflineCatalog: Sendable {
     func identify(_ lines: [String]) -> LocalRecognitionResult {
         let normalizedLines = lines.map(LocalRecognition.normalized).filter { !$0.isEmpty }
         let words = normalizedLines.map { " " + $0 + " " }
+        let compactLines = Set(normalizedLines.map(Self.legendKey))
         func contains(_ choices: [String]) -> Bool {
             choices.contains { phrase in
                 let value = LocalRecognition.normalized(phrase)
-                return !value.isEmpty && words.contains { $0.contains(" " + value + " ") }
+                guard !value.isEmpty else { return false }
+                if words.contains(where: { $0.contains(" " + value + " ") }) { return true }
+                let compact = Self.legendKey(value)
+                return compact.count >= 10 && (compactLines.contains(compact) || compactLines.contains("the" + compact))
             }
         }
+        let paperClue = contains(["federal reserve note", "bank of canada", "banque du canada", "silver certificate",
+                                  "this certifies that there has been deposited in the treasury of"])
 
         struct Candidate {
             let record: LocalReference
@@ -325,6 +331,7 @@ struct OfflineCatalog: Sendable {
             let precise: Bool
         }
         let candidates = ordinary.compactMap { record -> Candidate? in
+            guard !paperClue || record.type == "banknote" else { return nil }
             let scope = record.catalogScope
             let issuer = contains(record.issuerWords)
             let value = contains(record.denominationWords)

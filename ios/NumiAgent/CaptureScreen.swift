@@ -832,8 +832,10 @@ private struct AccountDraftRecognition: View {
     var body: some View {
         Group {
             if let result {
-                Text(result.likely ? "Likely match" : result.suggestions.isEmpty ? "Needs review" : "Possible matches")
+                Text(result.likely ? "Likely match" : result.suggestions.isEmpty ?
+                     (result.textReading.hasDetails ? "Details read from photos" : "Needs review") : "Possible matches")
                     .font(.headline)
+                PhotoTextDetails(result: result)
                 ForEach(result.suggestions) { suggestion in
                     if let reference = suggestion.reference { Link(suggestion.title, destination: reference) }
                     else { Text(suggestion.title) }

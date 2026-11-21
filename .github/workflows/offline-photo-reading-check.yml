@@ -1,0 +1,30 @@
+name: Check offline photo reading without a catalog
+
+on:
+  push:
+    branches: [codex/offline-photo-reading-check]
+
+permissions:
+  contents: read
+
+jobs:
+  standalone:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            ios/NumiAgent
+            benchmarks/offline-reading
+      - name: Check Swift syntax and run the macOS OCR executable
+        run: |
+          xcrun --sdk macosx swiftc -frontend -parse ios/NumiAgent/{LocalRecognition,GuestWorkspace,CaptureScreen}.swift
+          xcrun --sdk macosx swiftc -O ios/NumiAgent/LocalRecognition.swift \
+            benchmarks/offline-reading/Check.swift -o "$RUNNER_TEMP/check-offline-reading"
+          curl --fail --silent --show-error --location --retry 2 \
+            'https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bd/CSA-T35-%245-1861.jpg/960px-CSA-T35-%245-1861.jpg' \
+            --output "$RUNNER_TEMP/smithsonian-note.jpg"
+          "$RUNNER_TEMP/check-offline-reading" \
+            ios/NumiAgent/Assets.xcassets/DemoNickel.imageset/jefferson-nickel.jpg \
+            "$RUNNER_TEMP/smithsonian-note.jpg"

@@ -411,8 +411,18 @@ private struct GuestPieceScreen: View {
             if lookingOnline || (!piece.photos.isEmpty && piece.recognition == nil && recognitionError == nil) {
                 ProgressView("Finding matches…")
             } else if let result = piece.recognition {
-                Text(result.likely ? "Likely match" : result.suggestions.isEmpty ? "Needs review" : "Possible matches")
+                Text(result.likely ? "Likely match" : result.suggestions.isEmpty ?
+                     (result.textReading.hasDetails ? "Details read from photos" : "Needs review") : "Possible matches")
                     .font(.headline)
+                PhotoTextDetails(result: result)
+                let reading = result.textReading
+                if (piece.issuer.isEmpty && reading.issuer != nil) ||
+                    (piece.denomination.isEmpty && reading.denomination != nil) ||
+                    (piece.year.isEmpty && reading.year != nil) {
+                    Button("Use photo details", systemImage: "text.viewfinder") {
+                        applyReading(reading)
+                    }
+                }
                 ForEach(result.suggestions) { suggestion in
                     VStack(alignment: .leading, spacing: 4) {
                         Button(suggestion.title) { apply(suggestion) }
@@ -421,11 +431,6 @@ private struct GuestPieceScreen: View {
                                 .foregroundStyle(.secondary)
                         }
                         if let reference = suggestion.reference { Link("View reference", destination: reference).font(.footnote) }
-                    }
-                }
-                if !result.observations.isEmpty {
-                    DisclosureGroup("Read from photos") {
-                        Text(result.observations.joined(separator: "\n")).font(.footnote)
                     }
                 }
             } else {
@@ -520,6 +525,7 @@ private struct GuestPieceScreen: View {
                 try store.changePiece(id) {
                     var matches = result.recognition
                     matches.observations = $0.recognition?.observations ?? []
+                    matches.photoReading = $0.recognition?.photoReading
                     if matches.suggestions.isEmpty { matches.suggestions = $0.recognition?.suggestions ?? [] }
                     $0.recognition = matches
                     $0.onlineJob = nil
@@ -555,8 +561,36 @@ private struct GuestPieceScreen: View {
         }
     }
 
+    private func applyReading(_ reading: PhotoTextReading) {
+        act {
+            try store.changePiece(id) { piece in
+                if piece.issuer.isEmpty, let issuer = reading.issuer { piece.issuer = issuer }
+                if piece.denomination.isEmpty, let denomination = reading.denomination { piece.denomination = denomination }
+                if piece.year.isEmpty, let year = reading.year { piece.year = year }
+            }
+        }
+    }
+
     private func save(_ status: GuestStatus) { act { try store.save(id, status: status); done() } }
     private func act(_ action: () throws -> Void) { do { try action() } catch { store.error = error.localizedDescription } }
+}
+
+struct PhotoTextDetails: View {
+    let result: LocalRecognitionResult
+
+    var body: some View {
+        let reading = result.textReading
+        if let issuer = reading.issuer { LabeledContent("Issuer read", value: issuer) }
+        if let denomination = reading.denomination { LabeledContent("Denomination read", value: denomination) }
+        if let year = reading.year { LabeledContent("Year read", value: year) }
+        if !result.observations.isEmpty {
+            DisclosureGroup("Read from photos") {
+                Text(result.observations.joined(separator: "\n"))
+                    .font(.footnote)
+                    .textSelection(.enabled)
+            }
+        }
+    }
 }
 
 extension View {

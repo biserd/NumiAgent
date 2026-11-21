@@ -6,6 +6,7 @@ import type { z } from 'zod'
 export type Job = { id: string; attempt: number }
 export interface Env {
   DB: D1Database
+  REFERENCE_CATALOG?: D1Database
   PHOTOS: R2Bucket
   ASSETS: Fetcher
   OAUTH_KV: KVNamespace

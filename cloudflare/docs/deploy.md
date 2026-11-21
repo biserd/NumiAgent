@@ -14,6 +14,19 @@ Use a separate Workers environment and separate bindings for staging and product
 
 Generate the correct Wrangler configuration with `node scripts/cloudflare-config.mjs staging` (use `production` only for the production resources). Use `wrangler secret put TURNSTILE_SECRET --config wrangler.deploy.json` and optional `FIRECRAWL_API_KEY`, `MARKET_FEED_TOKEN`, and `BUDGET_ALERT_EMAIL` via the same mechanism. Deploy with the manually dispatched workflow after local and staging verification, or apply remote D1 migrations and deploy locally using `--config wrangler.deploy.json`. Confirm the target and resources before executing either operation.
 
+## Reference catalog publication
+
+Set `NUMIS_REFERENCE_D1_ID` to the dedicated `numiagent-reference-catalog` database ID in the production GitHub environment. Staging can use its own `numiagent-reference-catalog-staging` binding. Import from the repository root after preparing the offline release resources. Each import publishes the whole snapshot and rebuilds the text index in the same operation. Apply the private `DB` migrations through the normal deploy workflow.
+
+```sh
+python scripts/offline-catalog/publish.py /path/to/catalog.sql
+cd cloudflare
+npx wrangler d1 execute REFERENCE_CATALOG --remote --file /path/to/catalog.sql --config wrangler.deploy.json
+npx wrangler d1 execute REFERENCE_CATALOG --remote --config wrangler.deploy.json --command 'SELECT dataset,count(*) FROM catalog_entries GROUP BY dataset'
+```
+
+`GET /api/v1/catalog` reports the release fingerprint, source credits, and exact offline data downloads. Developer-key search and lookup use `/api/v1/catalog/search` and `/api/v1/catalog/entries/{id}`. MCP clients use `search_catalog` and `get_catalog_entry` through the existing OAuth flow.
+
 ## Approved marketplace feed contract
 
 The fixed HTTPS feed receives a GET with URL-encoded `q`. It returns a JSON array of up to 50 entries. Each has `url`, `title`, optional `description`, `auctionHouse`, `auction`, `lot`, `state` (active, closed, or unknown), `closesAt` and `verifiedAt` (ISO timestamps). Optional price fields are `kind`, `amount`, `currency`, and `premium` (percentage). The Worker marks an active lot only with a current verification timestamp and future closing date. The result URL host must match the configured domain list. Redirects from feed and Firecrawl requests are rejected. Alerts use only active feed results and refresh opted-in watches at most daily under scheduler and provider budgets.

@@ -14,10 +14,12 @@ import { publicPage } from './publicSite'
 import { exchangeRates, ocre } from './officialData'
 import { verifyPhotoRelease } from './photoRelease'
 import { guestScans } from './guestScans'
+import { catalogEntryId, catalogQuery, getCatalogEntry, getCatalogRelease, searchCatalog } from './referenceCatalog'
 export { PhotoWorkflow } from './ingest'
 
 const api = router()
 api.get('/health',c=>c.json({ok:true}))
+api.get('/catalog',async c=>c.json(await getCatalogRelease(c.env)))
 api.route('/auth',auth)
 api.post('/contact',submitContact)
 api.post('/internal/photo-release',verifyPhotoRelease)
@@ -47,6 +49,16 @@ api.route('/market',market)
 api.route('/watchlists',watchlists)
 api.route('/exchange-rates',exchangeRates)
 api.route('/references/ocre',ocre)
+api.get('/catalog/search',async c=>{
+  const query = catalogQuery.safeParse(c.req.query())
+  if (!query.success) return fail(400,'Enter a catalog query and valid kind, limit, or page')
+  return c.json(await searchCatalog(c.env,query.data))
+})
+api.get('/catalog/entries/:id',async c=>{
+  const entry = catalogEntryId.safeParse(c.req.param())
+  if (!entry.success) return fail(400,'Enter a valid catalog ID')
+  return c.json(await getCatalogEntry(c.env,entry.data.id))
+})
 api.get('/references',c=>{
   const query = z.object({q:z.string().trim().min(2).max(180),kind:z.enum(referenceKinds).optional()}).safeParse(c.req.query())
   if (!query.success) return fail(400,'Enter a reference term and optional ruler, mint, denomination, or metal kind')

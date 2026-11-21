@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { developerKeyScope, developerKeyLifespanDays, developerReadPaths, developerRequestLimit } from '../shared/developerAccess'
+import { catalogEntryPath, developerKeyScope, developerKeyLifespanDays, developerReadPaths, developerRequestLimit } from '../shared/developerAccess'
 import { all, body, digest, fail, limit, now, one, router, run, token, uid } from './core'
 import type { WebContext } from './core'
 
 const readRoutes = developerReadPaths.map(path=>new RegExp('^/api/v1'+path.replace('{id}',
-  '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')+'$','i'))
+  path===catalogEntryPath ? '[^/]+' : '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')+'$','i'))
 const keyPattern = /^Bearer (na_live_[0-9a-f]{64})$/i
 type Key = {id:string;label:string;scope:string;created:number;expires:number}
 

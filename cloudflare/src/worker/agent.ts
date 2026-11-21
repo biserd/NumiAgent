@@ -10,6 +10,8 @@ import { all, digest, limit, now, one, router, run, sameOrigin, uid } from './co
 import type { Env } from './core'
 import { photoStatus } from './ingest'
 import { marketSearch } from './market'
+import { catalogSearch } from '../shared/referenceCatalog'
+import { catalogEntryId, getCatalogEntry, searchCatalog } from './referenceCatalog'
 
 type Grant = { userId:string; consentId:string }
 const scope = 'collection:read'
@@ -91,6 +93,10 @@ function makeServer(env:Env,user:string) {
   const themeId = z.object({themeId:id})
   const unit = z.object({})
   const query = z.string().trim().min(2).max(180)
+  server.registerTool('search_catalog',{...options('Search the public coin and banknote reference catalog by title, issuer, denomination, year, or catalog reference'),
+    inputSchema:catalogSearch},args=>safe(()=>searchCatalog(env,args)))
+  server.registerTool('get_catalog_entry',{...options('Get a public reference record by its catalog ID, with source and license'),
+    inputSchema:catalogEntryId},args=>safe(()=>getCatalogEntry(env,args.id)))
   server.registerTool('search_my_collection',{...options('Search private specimens by text and optional type'),inputSchema:z.object({
     query:z.string().max(180).default(''),type:z.enum(['coin','banknote']).optional(),page:z.number().int().min(0).max(10000).default(0)
   })},args=>safe(()=>listItems(env,user,args.query,args.type,args.page)))

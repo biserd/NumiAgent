@@ -50,6 +50,7 @@ export function publicPages():Plugin {
         configFile:false,
         publicDir:false,
         plugins:[vue({template:{transformAssetUrls:false}})],
+          css:{postcss:{plugins:[]}},
         ssr:{noExternal:true},
         build:{
           ssr:'src/web/server.ts',

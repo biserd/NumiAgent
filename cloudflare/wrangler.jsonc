@@ -18,7 +18,10 @@
     "AI_PER_USER": "400",
     "AI_GLOBAL": "4000"
   },
-  "d1_databases": [{"binding": "DB", "database_name": "numisgraph-local", "database_id": "00000000-0000-0000-0000-000000000001"}],
+  "d1_databases": [
+    {"binding": "DB", "database_name": "numisgraph-local", "database_id": "00000000-0000-0000-0000-000000000001"},
+    {"binding": "REFERENCE_CATALOG", "database_name": "numiagent-reference-catalog-local", "database_id": "00000000-0000-0000-0000-000000000002"}
+  ],
   "kv_namespaces": [{"binding": "OAUTH_KV", "id": "00000000000000000000000000000001"}],
   "r2_buckets": [{"binding": "PHOTOS", "bucket_name": "numisgraph-local"}],
   "queues": {

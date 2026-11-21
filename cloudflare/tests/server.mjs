@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { join, resolve } from 'node:path'
@@ -14,6 +14,11 @@ export async function localServer(port) {
   const init = spawn(process.execPath,[wrangler,'d1','migrations','apply','DB','--local','--persist-to',storage],{env,stdio:'inherit'})
   const [code] = await once(init,'exit')
   if (code!==0) throw new Error('D1 local migration failed')
+  const catalog = join(storage,'catalog.sql')
+  await writeFile(catalog,(await readFile('reference-catalog/schema.sql','utf8'))+'\n'+await readFile('tests/reference-catalog.sql','utf8'))
+  const seed = spawn(process.execPath,[wrangler,'d1','execute','REFERENCE_CATALOG','--local','--persist-to',storage,'--file',catalog],{env,stdio:'inherit'})
+  const [seedCode] = await once(seed,'exit')
+  if (seedCode!==0) throw new Error('D1 reference catalog setup failed')
   const worker=spawn(process.execPath,[wrangler,'dev','--ip','127.0.0.1','--port',String(port),'--inspector-port',String(port+1000),'--persist-to',storage,'--env-file',vars],{env,stdio:['ignore','pipe','pipe']})
   function close() {
     if (worker.exitCode!==null) return

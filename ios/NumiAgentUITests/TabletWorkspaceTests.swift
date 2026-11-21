@@ -139,12 +139,10 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(front.waitForExistence(timeout: 10))
         front.tap()
         let back = app.buttons["Use sample back"]
-        for _ in 0..<5 where !back.isHittable { app.swipeUp() }
-        XCTAssertTrue(back.isHittable)
+        reveal(back, in: app)
         back.tap()
-        let search = app.buttons["Search online"]
-        for _ in 0..<6 where !search.isHittable { app.swipeUp() }
-        XCTAssertTrue(search.isHittable)
+        let search = app.buttons["guest-search-online"]
+        reveal(search, in: app)
         search.tap()
         let send = app.buttons["Send selected photos"]
         XCTAssertTrue(send.waitForExistence(timeout: 10))
@@ -155,10 +153,34 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 10))
         XCTAssertTrue(send.isEnabled)
         app.buttons["Keep on this iPhone"].tap()
-        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        let sheetClosed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: send)
+        XCTAssertEqual(XCTWaiter.wait(for: [sheetClosed], timeout: 10), .completed)
+        reveal(search, in: app)
         search.tap()
         XCTAssertTrue(send.waitForExistence(timeout: 10))
         XCTAssertFalse(send.isEnabled)
+    }
+
+    @MainActor
+    private func reveal(_ button: XCUIElement, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let viewport = app.frame.insetBy(dx: 8, dy: 96)
+        let lower = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.74))
+        let upper = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.43))
+        for _ in 0..<10 {
+            if button.exists {
+                let frame = button.frame
+                if !frame.isEmpty && viewport.contains(CGPoint(x: frame.midX, y: frame.midY)) {
+                    XCTAssertTrue(button.isEnabled, file: file, line: line)
+                    return
+                }
+                if !frame.isEmpty && frame.midY < viewport.minY {
+                    upper.press(forDuration: 0.05, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.1)
+                    continue
+                }
+            }
+            lower.press(forDuration: 0.05, thenDragTo: upper, withVelocity: .slow, thenHoldForDuration: 0.1)
+        }
+        XCTFail("Could not scroll to \(button) in \(app.debugDescription)", file: file, line: line)
     }
 
     @MainActor

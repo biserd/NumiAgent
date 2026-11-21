@@ -25,7 +25,7 @@ The associated domain endpoint serves the team's App ID and routes only the emai
 
 ### Upload from GitHub without a local Mac
 
-Use the manually triggered **Upload NumiAgent to TestFlight** workflow on `main`. Once the App Store Connect record exists, configure these secrets in the `app-store` environment:
+Use the manually triggered **Upload NumiAgent to TestFlight** workflow on `main`. The workflow builds with Xcode 27.2 and verifies the archive retains iOS and iPadOS 17 support. Once the App Store Connect record exists, configure these secrets in the `app-store` environment:
 
 | Secret | Value |
 | --- | --- |

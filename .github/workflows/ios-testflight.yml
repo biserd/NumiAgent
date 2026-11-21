@@ -12,6 +12,9 @@ on:
 permissions:
   contents: read
 
+env:
+  DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+
 concurrency:
   group: numiagent-testflight
   cancel-in-progress: false
@@ -19,7 +22,7 @@ concurrency:
 jobs:
   upload:
     if: github.ref == 'refs/heads/main'
-    runs-on: macos-26
+    runs-on: xcode-27
     environment: app-store
     permissions:
       contents: read
@@ -91,17 +94,19 @@ jobs:
       - name: Verify native guest photo consent before signing
         run: |
           set -euo pipefail
+          xcodebuild -version
+          simulator_sdk="$(xcrun --sdk iphonesimulator --show-sdk-version)"
           simulator="$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
-          phones = [d for runtime in json.load(sys.stdin)["devices"].values()
-                    for d in runtime if d["name"].startswith("iPhone")]
-          assert phones, "No iPhone simulator is installed"
-          print(phones[0]["udid"])
-          ')"
+          runtime = "com.apple.CoreSimulator.SimRuntime.iOS-" + sys.argv[1].replace(".", "-")
+          phones = [d for d in json.load(sys.stdin)["devices"].get(runtime, []) if d["name"].startswith("iPhone")]
+          assert phones, "No iPhone simulator is installed for the selected SDK"
+          print(next((d for d in phones if "Pro Max" in d["name"]), phones[0])["udid"])
+          ' "$simulator_sdk")"
           xcrun simctl boot "$simulator"
           xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Debug \
             -destination "platform=iOS Simulator,id=$simulator" -derivedDataPath "$RUNNER_TEMP/numiagent-consent" \
-            -parallel-testing-enabled NO \
+            -parallel-testing-enabled NO -test-iterations 3 \
             -only-testing:NumiAgentUITests/GuestV1Tests/testGuestConsentStartsEmptyAndCanBeDeclined \
             CODE_SIGNING_ALLOWED=NO test
       - name: Archive, sign, and upload
@@ -154,6 +159,18 @@ jobs:
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NumiAgent.xcarchive" \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER="$profile_uuid" \
             CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" "${build_settings[@]}" archive
+          python3 - "$RUNNER_TEMP/NumiAgent.xcarchive/Products/Applications/NumiAgent.app/Info.plist" <<'PY'
+          import plistlib, sys
+          with open(sys.argv[1], "rb") as file:
+              info = plistlib.load(file)
+          sdk = info["DTSDKName"]
+          minimum = info["MinimumOSVersion"]
+          assert sdk.startswith("iphoneos27."), f"Unexpected release SDK: {sdk}"
+          assert minimum == "17.0", f"Unexpected minimum iOS version: {minimum}"
+          assert set(info["UIDeviceFamily"]) == {1, 2}, "Expected iPhone and iPad support"
+          assert "UILaunchScreen" in info, "Missing the launch screen required for the iOS 27 SDK"
+          print(f"Verified {sdk} release archive with iOS {minimum} minimum and iPhone/iPad support.")
+          PY
           python3 - "$signing/ExportOptions.plist" "$profile_uuid" <<'PY'
           import plistlib, sys
           with open(sys.argv[1], "wb") as file:

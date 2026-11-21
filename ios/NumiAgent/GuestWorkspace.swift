@@ -437,6 +437,7 @@ private struct GuestPieceScreen: View {
                 Button(piece.onlineJob == nil && onlineError == nil ? "Search online" : "Retry online search", systemImage: "magnifyingglass") {
                     askOnline = true
                 }
+                    .accessibilityIdentifier("guest-search-online")
                     .disabled(busy)
             }
         }

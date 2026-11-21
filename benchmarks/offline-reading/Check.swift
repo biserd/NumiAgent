@@ -60,9 +60,9 @@ struct Check {
         let nickel = try LocalRecognition.bundledResult(for: [URL(fileURLWithPath: paths[0])])
         try expect(nickel.suggestions.contains { $0.id == "us-coin-nickel" }, "photo-to-catalog match for the nickel")
         print("Coin photo: \(nickel.suggestions.map(\.title))")
-        let note = try LocalRecognition.bundledResult(for: [URL(fileURLWithPath: paths[1])])
-        let reading = note.textReading.denomination ?? ""
-        try FileHandle.standardError.write(contentsOf: Data("Banknote photo: \(reading); Vision text: \(note.observations)\n".utf8))
+        let scannedBanknote = try LocalRecognition.bundledResult(for: [URL(fileURLWithPath: paths[1])])
+        let reading = scannedBanknote.textReading.denomination ?? ""
+        try FileHandle.standardError.write(contentsOf: Data("Banknote photo: \(reading); Vision text: \(scannedBanknote.observations)\n".utf8))
         try expect(LocalRecognition.normalized(reading) == "five dollars", "printed denomination from the banknote photo")
         let knownNote = catalog.search("confederate 5 1861 35").first { $0.id == "historic-csa-35" }
         try expect(knownNote?.type == "banknote" && knownNote?.denomination == "5 dollars",

@@ -159,6 +159,17 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await usingKey('/items/export.csv')).status,403)
     assert.equal((await api('/me/developer-keys/'+key.id,b,'DELETE')).status,204)
     assert.equal((await usingKey('/items')).status,200)
+    assert.equal((await json(await api('/catalog'))).total,3)
+    assert.equal((await api('/catalog/search?q=Trajan')).status,401)
+    const reference = await json(await usingKey('/catalog/search?q=Trajan%20107&kind=coin&limit=1'))
+    assert.equal(reference.version,'test-release')
+    assert.equal(reference.nextPage,null)
+    assert.equal(reference.entries[0].id,'ocre-ric.2.tr.123')
+    assert.deepEqual(await json(await usingKey('/catalog/entries/'+reference.entries[0].id)),reference.entries[0])
+    assert.equal((await json(await usingKey('/catalog/entries/ocre-ric.1%282%29.aug.10'))).issuer,'Augustus')
+    assert.deepEqual((await json(await usingKey('/catalog/search?q=Trajan&kind=banknote'))).entries,[])
+    assert.equal((await usingKey('/catalog/search?q=%22%2A%22')).status,400)
+    assert.equal((await usingKey('/catalog/entries/no-such-reference')).status,404)
     const invalid=await fetch(base+'/api/v1/items',{method:'POST',headers:{Cookie:a,Origin:'https://different.example'},body:'{}'})
     assert.equal(invalid.status,403)
     const id=randomUUID()
@@ -492,12 +503,14 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     const initialize=await transport('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'integration',version:'1'}},1)
     assert.ok(initialize.result.serverInfo.name)
     const tools=(await transport('tools/list',{},2)).result.tools
-    assert.equal(tools.length,10)
+    assert.equal(tools.length,12)
     for(const [index,name,args,verify] of [
       [3,'search_my_collection',{query:'Trajan'},data=>assert.equal(data.items.length,1)],
       [4,'get_missing_items',{themeId:theme.id},data=>assert.equal(data.missing.length,12)],
       [5,'get_valuation',{itemId:saved.id},data=>assert.equal(data.range.median,132)],
-      [6,'search_market',{query:'Trajan'},data=>assert.equal(data.status,'unavailable')]
+      [6,'search_market',{query:'Trajan'},data=>assert.equal(data.status,'unavailable')],
+      [7,'search_catalog',{q:'Trajan 107',kind:'coin',limit:1},data=>assert.deepEqual(data,reference)],
+      [8,'get_catalog_entry',{id:reference.entries[0].id},data=>assert.deepEqual(data,reference.entries[0])]
     ]) {
       const result=await transport('tools/call',{name,arguments:args},index)
       assert.ok(result.result,JSON.stringify(result))

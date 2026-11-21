@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { bulkItemPatch, contactInput, id, item, photoLink, sale, slot } from '../src/shared/domain.ts'
 import { legacyBatch } from '../src/shared/legacy.ts'
 import { developerReadPaths } from '../src/shared/developerAccess.ts'
+import { catalogEntry, catalogId, catalogRelease, catalogResults, catalogSearch } from '../src/shared/referenceCatalog.ts'
 
 const json = schema => ({'application/json':{schema}})
 const type = value => ({type:value})
@@ -13,7 +14,9 @@ const string = type('string')
 const yes = type('boolean')
 const number = type('number')
 const uuid = {type:'string',format:'uuid'}
+const schema = validator => z.toJSONSchema(validator,{target:'openapi-3.0',io:'output'})
 const definitions = {
+  CatalogEntry:schema(catalogEntry), CatalogRelease:schema(catalogRelease), CatalogSearchResults:schema(catalogResults),
   Item:z.toJSONSchema(item.extend({photos:z.array(photoLink).optional()}),{target:'openapi-3.0',io:'input'}),
   Sale:z.toJSONSchema(sale,{target:'openapi-3.0',io:'input'}),
   Slot:z.toJSONSchema(slot,{target:'openapi-3.0',io:'input'}),
@@ -27,12 +30,13 @@ const definitions = {
     results:array(object({url:{type:'string',format:'uri'},title:string,state:{enum:['active','closed','unknown']},closesAt:string,verifiedAt:string},['url','title','state']))})
 }
 const paths={}
-const endpoint = (method,path,summary,{input,output=type('object'),status=200,publicRoute=false,queries=[],media='application/json',responseMedia='application/json'}={})=>{
+const endpoint = (method,path,summary,{input,output=type('object'),status=200,publicRoute=false,queries=[],pathSchema=uuid,media='application/json',responseMedia='application/json'}={})=>{
   const keys=[...path.matchAll(/\{([^}]+)\}/g)].map(match=>match[1])
   const security=publicRoute ? []:[{session:[]}]
   if (method==='get' && developerReadPaths.includes(path)) security.push({developerKey:[]})
   const operation={summary,security,
-    parameters:[...keys.map(name=>({name,in:'path',required:true,schema:uuid})),...queries.map(name=>({name,in:'query',schema:name==='page'?{type:'integer',minimum:0}:string}))],
+    parameters:[...keys.map(name=>({name,in:'path',required:true,schema:pathSchema})),...queries.map(query=>typeof query==='string' ?
+      {name:query,in:'query',schema:query==='page'?{type:'integer',minimum:0}:string} : {in:'query',...query})],
     responses:{[status]:{description:status===204?'Completed':'Success',...status!==204?{content:{[responseMedia]:{schema:output}}}:{}},
       '400':{description:'Invalid input',content:json(ref('Error'))},'401':{description:'Sign-in required'},'403':{description:'Authorization or origin check failed'},
       '404':{description:'Resource not found'},'429':{description:'Usage quota reached'}}
@@ -108,6 +112,12 @@ endpoint('get','/market/search','Search configured marketplace providers',{queri
 endpoint('get','/references','Look up bundled Nomisma terms by English name or alias',{queries:['q','kind'],
   output:array(object({id:string,kind:string,label:string,sourceLabel:string,aliases:array(string),source:string,attribution:string,license:string}))})
 endpoint('get','/references/ocre','Resolve an OCRE type identifier or official record URL',{queries:['id']})
+endpoint('get','/catalog','Read public catalog release metadata and data downloads',{publicRoute:true,output:ref('CatalogRelease')})
+endpoint('get','/catalog/search','Search public coin and banknote reference records',{
+  queries:Object.entries(catalogSearch.shape).map(([name,validator])=>({name,...(name==='q'?{required:true}:{}),schema:schema(validator)})),
+  output:ref('CatalogSearchResults')})
+endpoint('get','/catalog/entries/{id}','Get a public reference record by its stable catalog ID',{
+  pathSchema:schema(catalogId),output:ref('CatalogEntry')})
 endpoint('get','/exchange-rates','Find a dated ECB reference conversion for a currency pair',{queries:['from','to','date'],
   output:object({currency:string,rate:number,date:string,source:string,provider:string,basis:string})})
 endpoint('get','/watchlists','List saved marketplace searches',{output:array(type('object'))})

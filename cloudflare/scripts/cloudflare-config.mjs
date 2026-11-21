@@ -26,6 +26,13 @@ config.vars = {...config.vars,APP_MODE:environment,APP_ORIGIN:origin.origin,EMAI
   AI_PER_USER:process.env.NUMIS_AI_PER_USER || config.vars.AI_PER_USER,AI_GLOBAL:process.env.NUMIS_AI_GLOBAL || config.vars.AI_GLOBAL,
   MARKET_PER_USER:process.env.NUMIS_MARKET_PER_USER || '30',MARKET_GLOBAL:process.env.NUMIS_MARKET_GLOBAL || '300'}
 config.d1_databases = [{binding:'DB',database_name:namespace,database_id:databaseId}]
+if (process.env.NUMIS_REFERENCE_D1_ID) {
+  config.d1_databases.push({binding:'REFERENCE_CATALOG',
+    database_name:environment==='production' ? 'numiagent-reference-catalog' : 'numiagent-reference-catalog-staging',
+    database_id:need('NUMIS_REFERENCE_D1_ID',/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i)})
+} else if (environment==='production') {
+  throw new Error('Configure NUMIS_REFERENCE_D1_ID for the production reference catalog')
+}
 config.kv_namespaces = [{binding:'OAUTH_KV',id:oauthKvId}]
 config.r2_buckets = [{binding:'PHOTOS',bucket_name:namespace}]
 config.queues = JSON.parse(JSON.stringify(config.queues).replaceAll('-local','-'+environment))

@@ -194,7 +194,7 @@ export const sitePages:Record<string,SitePage> = {
         'Sign in with your NumiAgent email and open Developer. From there you can issue read-only API keys and review or revoke MCP connections. Your integrations use the same collection you see in the web app.'
       ],links:[accessGuide,developerAccess]},
       {title:'REST API',paragraphs:[
-        'Query your catalog, inspect photo imports, read valuation evidence and view collecting goals. Use the REST guide to send your first authenticated request.'
+        'Search 70,587 public coin and banknote references, query your collection, inspect photo imports, read valuation evidence and view collecting goals. Use the REST guide to send your first authenticated request.'
       ],links:[apiGuide,openApi]},
       {title:'Remote MCP server',paragraphs:[
         'Connect a Streamable HTTP MCP client and approve access in your browser. Tools can search your catalog, check theme gaps, return valuation evidence and query configured marketplace sources.'
@@ -215,6 +215,10 @@ export const sitePages:Record<string,SitePage> = {
         'API keys can read collection folders, specimens and counts, import status, private photos and identification candidates, themes and missing slots, saved watchlists, valuations and their history, references, and marketplace search coverage.',
         'OpenAPI marks key-enabled operations with developerKey. Account management, bulk exports and changes to the catalog use the signed-in browser session.'
       ],links:[openApi]},
+      {title:'Search the reference catalog',paragraphs:[
+        'GET /api/v1/catalog lists the current release, source credits, licenses, and downloads. Use your developer key to search /api/v1/catalog/search by title, issuer, denomination, year, or reference. Pass kind=coin or kind=banknote to narrow results. Start at page 0 and follow nextPage. Use /api/v1/catalog/entries/{id} to retrieve a record by its stable catalog ID.'
+      ],code:'curl -fsS -H "Authorization: Bearer $NUMIAGENT_API_KEY" "https://numiagent.com/api/v1/catalog/search?q=Trajan%20denarius&kind=coin"',
+        links:[{href:'/api/v1/catalog',label:'Catalog release and source downloads'},openApi]},
       {title:'Page through results',paragraphs:[
         'GET /api/v1/items accepts q, page, type, collection, and sort. Start at page 0 and use next from each response until it is null. Use the item id to request a specimen or its valuation. Photo endpoints stream the original stored image or return identification status as JSON, depending on the path.'
       ]},
@@ -237,8 +241,10 @@ export const sitePages:Record<string,SitePage> = {
       ],links:[{href:'/developers/mcp/server.json',label:'MCP server manifest'},{href:'/.well-known/oauth-authorization-server',label:'OAuth server metadata'},
         {href:'https://modelcontextprotocol.io/specification/2025-11-25/basic/transports',label:'Streamable HTTP specification'}]},
       {title:'Tools and results',paragraphs:[
-        'Tools return structured results. Try search_my_collection with a name such as Trajan or get_collection_statistics for specimen and photo counts. identify_coin_or_banknote reads candidate results for an existing upload. Marketplace tools report unavailable coverage when a source cannot provide current lots.'
+        'Tools return structured results. Use search_catalog to find public reference entries and get_catalog_entry to read their source and license. Use search_my_collection for your saved specimens or get_collection_statistics for specimen and photo counts. identify_coin_or_banknote reads candidate results for an existing upload. Marketplace tools report unavailable coverage when a source cannot provide current lots.'
       ],code:[
+        'search_catalog                q, kind?, limit?, page?',
+        'get_catalog_entry             id',
         'search_my_collection          query?, type?, page?',
         'get_collection_item           itemId',
         'get_collection_statistics     {}',

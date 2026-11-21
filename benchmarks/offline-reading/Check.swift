@@ -28,6 +28,8 @@ struct Check {
         let catalog = OfflineCatalog.shared
         try expect(catalog.packCounts == ["AncientCoins": 21512, "ModernMoney": 125, "HistoricBanknotes": 58],
                    "all three packs loaded from app resources")
+        try expect(catalog.expandedCounts == ["Nomisma OCRE": 40802, "U.S. Mint": 132, "Smithsonian": 7952],
+                   "all expanded catalog sources loaded from the read-only database")
         let modern = catalog.identify(["UNITED STATES OF AMERICA", "ONE DIME", "1965"])
         try expect(modern.suggestions.first?.id == "us-coin-dime" && !modern.likely,
                    "a readable American dime returns a family")
@@ -37,15 +39,26 @@ struct Check {
         let generic = catalog.identify(["BANK OF CANADA", "ONE DOLLAR"])
         try expect(generic.suggestions.first?.id == "ca-note-1" && !generic.likely,
                    "undated currency returns a banknote family")
-        let ancient = catalog.identify(["C PIV ESV TETRICVS CAES", "SPES AVGG"])
-        try expect(ancient.suggestions.first?.id == "ocre-ric.5.tet_i.270",
-                   "two distinct ancient legends find the indexed type")
+        let ambiguousAncient = catalog.identify(["C PIV ESV TETRICVS CAES", "SPES AVGG"])
+        try expect(ambiguousAncient.suggestions.isEmpty,
+                   "an added Nomisma look-alike with the same two legends prevents an exact match")
+        let ancient = catalog.identify(["IMP C CONSTANTINVS P F AVG", "RESTITVTOR VRBIS SVAE"])
+        try expect(ancient.suggestions.first?.id == "ocre-ric.6.rom.312",
+                   "two distinct ancient legends retrieve the added OCRE type")
+        let quarter = catalog.identify(["UNITED STATES OF AMERICA", "QUARTER DOLLAR", "MAYA ANGELOU", "2022"])
+        try expect(quarter.suggestions.first?.id == "usmint-awq-2022-maya-angelou" && quarter.likely,
+                   "printed date, design, denomination and issuer identify the Mint issue")
+        let genericQuarter = catalog.identify(["UNITED STATES OF AMERICA", "QUARTER DOLLAR", "2022"])
+        try expect(genericQuarter.suggestions.first?.id == "us-coin-quarter" && !genericQuarter.likely,
+                   "a date and denomination alone leave the Mint design unresolved")
         try expect(catalog.identify(["SPES AVGG"]).suggestions.isEmpty,
                    "a common ancient legend alone leaves attribution unresolved")
         try expect(catalog.search("Tetricus 270").contains { $0.id == "ocre-ric.5.tet_i.270" },
                    "manual ancient type lookup")
         try expect(catalog.search("1923 silver certificate").contains { $0.id == "historic-us-sc-237" },
                    "manual historic banknote lookup")
+        try expect(catalog.search("1855 greensborough").contains { $0.id == "smithsonian-nmah_1385863" },
+                   "manual lookup of an added Smithsonian banknote")
         let historic = catalog.identify(["UNITED STATES OF AMERICA", "SILVER CERTIFICATE", "ONE SILVER DOLLAR", "1923"])
         try expect(historic.suggestions.first?.type == "banknote" && historic.suggestions.first?.denomination == "1 dollar",
                    "a printed silver certificate denomination matches the historic banknote catalog")
@@ -69,5 +82,6 @@ struct Check {
                    "manual lookup can finish an ornate note with a readable denomination")
         print("Banknote lookup: \(knownNote?.title ?? "unresolved")")
         print("All three packs passed offline catalog checks: \(catalog.packCounts)")
+        print("Expanded offline source checks passed: \(catalog.expandedCounts)")
     }
 }

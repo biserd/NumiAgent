@@ -1,0 +1,86 @@
+{
+  "dataset": "syllogeum-open-v1.1",
+  "gallery_accessions": 66640,
+  "gallery_types": 21171,
+  "missing_queries": [],
+  "methods": {
+    "one_side": {
+      "cutoff": null,
+      "calibration": {
+        "reference_available": 211,
+        "first_correct": 25,
+        "among_top_three": 57,
+        "review": 226,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 226
+      },
+      "test": {
+        "reference_available": 122,
+        "first_correct": 18,
+        "among_top_three": 43,
+        "review": 165,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 165
+      },
+      "worn": {
+        "reference_available": 16,
+        "first_correct": 4,
+        "among_top_three": 7,
+        "review": 21,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 21
+      },
+      "lookalikes": {
+        "reference_available": 122,
+        "first_correct": 18,
+        "among_top_three": 43,
+        "review": 122,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 122
+      }
+    },
+    "two_sides": {
+      "cutoff": null,
+      "calibration": {
+        "reference_available": 211,
+        "first_correct": 82,
+        "among_top_three": 130,
+        "review": 226,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 226
+      },
+      "test": {
+        "reference_available": 122,
+        "first_correct": 43,
+        "among_top_three": 70,
+        "review": 165,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 165
+      },
+      "worn": {
+        "reference_available": 16,
+        "first_correct": 7,
+        "among_top_three": 11,
+        "review": 21,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 21
+      },
+      "lookalikes": {
+        "reference_available": 122,
+        "first_correct": 43,
+        "among_top_three": 70,
+        "review": 122,
+        "accepted_correct": 0,
+        "accepted_wrong": 0,
+        "total": 122
+      }
+    }
+  }
+}

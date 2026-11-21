@@ -37,7 +37,7 @@ jobs:
           </dict></plist>
           PLIST
           xcrun --sdk macosx swiftc -O ios/NumiAgent/LocalRecognition.swift \
-            benchmarks/offline-reading/Check.swift -o "$app/MacOS/check-offline-reading"
+            benchmarks/offline-reading/Check.swift -lsqlite3 -o "$app/MacOS/check-offline-reading"
       - name: Deny network access and scan both specimens
         run: |
           python - <<'PY'

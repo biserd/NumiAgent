@@ -1,0 +1,1957 @@
+[
+  {
+    "specimen_id": "ans-0000.999.15538",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/0000.999.15538"
+  },
+  {
+    "specimen_id": "ans-0000.999.6927",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/0000.999.6927"
+  },
+  {
+    "specimen_id": "ans-1905.57.367",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1905.57.367"
+  },
+  {
+    "specimen_id": "ans-1933.999.277",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1933.999.277"
+  },
+  {
+    "specimen_id": "ans-1933.999.335",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1933.999.335"
+  },
+  {
+    "specimen_id": "ans-1933.999.483",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1933.999.483"
+  },
+  {
+    "specimen_id": "ans-1935.117.403",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1935.117.403"
+  },
+  {
+    "specimen_id": "ans-1944.100.10788",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.10788"
+  },
+  {
+    "specimen_id": "ans-1944.100.11641",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11641"
+  },
+  {
+    "specimen_id": "ans-1944.100.11649",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11649"
+  },
+  {
+    "specimen_id": "ans-1944.100.11689",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11689"
+  },
+  {
+    "specimen_id": "ans-1944.100.1363",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.1363"
+  },
+  {
+    "specimen_id": "ans-1944.100.21082",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.21082"
+  },
+  {
+    "specimen_id": "ans-1944.100.22365",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22365"
+  },
+  {
+    "specimen_id": "ans-1944.100.22369",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22369"
+  },
+  {
+    "specimen_id": "ans-1944.100.22377",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22377"
+  },
+  {
+    "specimen_id": "ans-1944.100.22409",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22409"
+  },
+  {
+    "specimen_id": "ans-1944.100.22562",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22562"
+  },
+  {
+    "specimen_id": "ans-1944.100.23198",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23198"
+  },
+  {
+    "specimen_id": "ans-1944.100.23203",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23203"
+  },
+  {
+    "specimen_id": "ans-1944.100.23260",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23260"
+  },
+  {
+    "specimen_id": "ans-1944.100.25391",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.25391"
+  },
+  {
+    "specimen_id": "ans-1944.100.27178",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.27178"
+  },
+  {
+    "specimen_id": "ans-1944.100.32814",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32814"
+  },
+  {
+    "specimen_id": "ans-1944.100.32815",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32815"
+  },
+  {
+    "specimen_id": "ans-1944.100.36146",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36146"
+  },
+  {
+    "specimen_id": "ans-1944.100.36169",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36169"
+  },
+  {
+    "specimen_id": "ans-1944.100.36209",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36209"
+  },
+  {
+    "specimen_id": "ans-1944.100.36228",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36228"
+  },
+  {
+    "specimen_id": "ans-1944.100.36233",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36233"
+  },
+  {
+    "specimen_id": "ans-1944.100.36608",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36608"
+  },
+  {
+    "specimen_id": "ans-1944.100.4191",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.4191"
+  },
+  {
+    "specimen_id": "ans-1944.100.45559",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.45559"
+  },
+  {
+    "specimen_id": "ans-1944.100.45579",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.45579"
+  },
+  {
+    "specimen_id": "ans-1944.100.7575",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7575"
+  },
+  {
+    "specimen_id": "ans-1944.100.7578",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7578"
+  },
+  {
+    "specimen_id": "ans-1944.100.7588",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7588"
+  },
+  {
+    "specimen_id": "ans-1944.100.7644",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7644"
+  },
+  {
+    "specimen_id": "ans-1944.100.7654",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7654"
+  },
+  {
+    "specimen_id": "ans-1944.100.7659",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7659"
+  },
+  {
+    "specimen_id": "ans-1944.100.7663",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7663"
+  },
+  {
+    "specimen_id": "ans-1944.100.9026",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9026"
+  },
+  {
+    "specimen_id": "ans-1944.100.9038",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9038"
+  },
+  {
+    "specimen_id": "ans-1944.100.9208",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9208"
+  },
+  {
+    "specimen_id": "ans-1947.97.189",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1947.97.189"
+  },
+  {
+    "specimen_id": "ans-1948.19.1585",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1948.19.1585"
+  },
+  {
+    "specimen_id": "ans-1948.19.942",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1948.19.942"
+  },
+  {
+    "specimen_id": "ans-1948.78.15",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1948.78.15"
+  },
+  {
+    "specimen_id": "ans-1948.8.185",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1948.8.185"
+  },
+  {
+    "specimen_id": "ans-1956.127.1120",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.1120"
+  },
+  {
+    "specimen_id": "ans-1956.127.1809",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.1809"
+  },
+  {
+    "specimen_id": "ans-1956.127.1812",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.1812"
+  },
+  {
+    "specimen_id": "ans-1956.127.275",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.275"
+  },
+  {
+    "specimen_id": "ans-1956.127.309",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.309"
+  },
+  {
+    "specimen_id": "ans-1956.127.311",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.311"
+  },
+  {
+    "specimen_id": "ans-1956.127.604",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.604"
+  },
+  {
+    "specimen_id": "ans-1956.127.606",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.606"
+  },
+  {
+    "specimen_id": "ans-1956.127.615",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.615"
+  },
+  {
+    "specimen_id": "ans-1956.127.672",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.672"
+  },
+  {
+    "specimen_id": "ans-1956.127.673",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.673"
+  },
+  {
+    "specimen_id": "ans-1956.127.674",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.674"
+  },
+  {
+    "specimen_id": "ans-1956.127.675",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.675"
+  },
+  {
+    "specimen_id": "ans-1974.95.67",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1974.95.67"
+  },
+  {
+    "specimen_id": "ans-1984.146.1039",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.146.1039"
+  },
+  {
+    "specimen_id": "ans-1984.146.1984",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.146.1984"
+  },
+  {
+    "specimen_id": "ans-1984.146.505",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.146.505"
+  },
+  {
+    "specimen_id": "ans-1984.67.1163",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1163"
+  },
+  {
+    "specimen_id": "ans-1984.67.1204",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1204"
+  },
+  {
+    "specimen_id": "ans-1984.67.1218",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1218"
+  },
+  {
+    "specimen_id": "ans-1984.67.1255",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1255"
+  },
+  {
+    "specimen_id": "ans-1984.67.232",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.232"
+  },
+  {
+    "specimen_id": "ans-1984.67.2347",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2347"
+  },
+  {
+    "specimen_id": "ans-1984.67.235",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.235"
+  },
+  {
+    "specimen_id": "ans-1984.67.2356",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2356"
+  },
+  {
+    "specimen_id": "ans-1984.67.2418",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2418"
+  },
+  {
+    "specimen_id": "ans-1984.67.2443",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2443"
+  },
+  {
+    "specimen_id": "ans-1984.67.2598",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2598"
+  },
+  {
+    "specimen_id": "ans-1984.67.2615",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2615"
+  },
+  {
+    "specimen_id": "ans-1984.67.2823",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2823"
+  },
+  {
+    "specimen_id": "ans-1984.67.300",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.300"
+  },
+  {
+    "specimen_id": "ans-1984.67.365",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.365"
+  },
+  {
+    "specimen_id": "ans-1984.67.3955",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.3955"
+  },
+  {
+    "specimen_id": "ans-1987.26.191",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1987.26.191"
+  },
+  {
+    "specimen_id": "ans-1990.64.27",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1990.64.27"
+  },
+  {
+    "specimen_id": "ans-1991.3.21",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1991.3.21"
+  },
+  {
+    "specimen_id": "ans-1991.3.23",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1991.3.23"
+  },
+  {
+    "specimen_id": "ans-1992.77.54",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1992.77.54"
+  },
+  {
+    "specimen_id": "ans-1992.77.73",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1992.77.73"
+  },
+  {
+    "specimen_id": "ans-1992.77.77",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1992.77.77"
+  },
+  {
+    "specimen_id": "ans-1992.77.85",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1992.77.85"
+  },
+  {
+    "specimen_id": "ans-1995.11.697",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.11.697"
+  },
+  {
+    "specimen_id": "ans-2004.14.189",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/2004.14.189"
+  },
+  {
+    "specimen_id": "ans-1909.356.1",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1909.356.1"
+  },
+  {
+    "specimen_id": "ans-1911.23.154",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1911.23.154"
+  },
+  {
+    "specimen_id": "ans-1911.23.257",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1911.23.257"
+  },
+  {
+    "specimen_id": "ans-1922.38.21",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1922.38.21"
+  },
+  {
+    "specimen_id": "ans-1925.36.5",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1925.36.5"
+  },
+  {
+    "specimen_id": "ans-1933.999.487",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1933.999.487"
+  },
+  {
+    "specimen_id": "ans-1935.117.343",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1935.117.343"
+  },
+  {
+    "specimen_id": "ans-1944.100.11190",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11190"
+  },
+  {
+    "specimen_id": "ans-1944.100.11278",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11278"
+  },
+  {
+    "specimen_id": "ans-1944.100.11631",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11631"
+  },
+  {
+    "specimen_id": "ans-1944.100.11650",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11650"
+  },
+  {
+    "specimen_id": "ans-1944.100.11653",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11653"
+  },
+  {
+    "specimen_id": "ans-1944.100.11664",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11664"
+  },
+  {
+    "specimen_id": "ans-1944.100.11668",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11668"
+  },
+  {
+    "specimen_id": "ans-1944.100.11669",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.11669"
+  },
+  {
+    "specimen_id": "ans-1944.100.13272",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.13272"
+  },
+  {
+    "specimen_id": "ans-1944.100.13324",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.13324"
+  },
+  {
+    "specimen_id": "ans-1944.100.18364",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.18364"
+  },
+  {
+    "specimen_id": "ans-1944.100.21074",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.21074"
+  },
+  {
+    "specimen_id": "ans-1944.100.22372",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22372"
+  },
+  {
+    "specimen_id": "ans-1944.100.22394",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22394"
+  },
+  {
+    "specimen_id": "ans-1944.100.22401",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22401"
+  },
+  {
+    "specimen_id": "ans-1944.100.22408",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22408"
+  },
+  {
+    "specimen_id": "ans-1944.100.22414",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22414"
+  },
+  {
+    "specimen_id": "ans-1944.100.22425",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.22425"
+  },
+  {
+    "specimen_id": "ans-1944.100.23202",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23202"
+  },
+  {
+    "specimen_id": "ans-1944.100.23216",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23216"
+  },
+  {
+    "specimen_id": "ans-1944.100.23242",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23242"
+  },
+  {
+    "specimen_id": "ans-1944.100.23246",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23246"
+  },
+  {
+    "specimen_id": "ans-1944.100.23249",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.23249"
+  },
+  {
+    "specimen_id": "ans-1944.100.25431",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.25431"
+  },
+  {
+    "specimen_id": "ans-1944.100.25560",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.25560"
+  },
+  {
+    "specimen_id": "ans-1944.100.27044",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.27044"
+  },
+  {
+    "specimen_id": "ans-1944.100.30542",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.30542"
+  },
+  {
+    "specimen_id": "ans-1944.100.30886",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.30886"
+  },
+  {
+    "specimen_id": "ans-1944.100.32813",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32813"
+  },
+  {
+    "specimen_id": "ans-1944.100.32819",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32819"
+  },
+  {
+    "specimen_id": "ans-1944.100.32821",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32821"
+  },
+  {
+    "specimen_id": "ans-1944.100.32823",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32823"
+  },
+  {
+    "specimen_id": "ans-1944.100.32929",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32929"
+  },
+  {
+    "specimen_id": "ans-1944.100.32939",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32939"
+  },
+  {
+    "specimen_id": "ans-1944.100.32948",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32948"
+  },
+  {
+    "specimen_id": "ans-1944.100.32949",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.32949"
+  },
+  {
+    "specimen_id": "ans-1944.100.33121",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.33121"
+  },
+  {
+    "specimen_id": "ans-1944.100.36071",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36071"
+  },
+  {
+    "specimen_id": "ans-1944.100.36127",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36127"
+  },
+  {
+    "specimen_id": "ans-1944.100.36131",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36131"
+  },
+  {
+    "specimen_id": "ans-1944.100.36156",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36156"
+  },
+  {
+    "specimen_id": "ans-1944.100.36218",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36218"
+  },
+  {
+    "specimen_id": "ans-1944.100.36221",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36221"
+  },
+  {
+    "specimen_id": "ans-1944.100.36223",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36223"
+  },
+  {
+    "specimen_id": "ans-1944.100.36227",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36227"
+  },
+  {
+    "specimen_id": "ans-1944.100.36244",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36244"
+  },
+  {
+    "specimen_id": "ans-1944.100.36293",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.36293"
+  },
+  {
+    "specimen_id": "ans-1944.100.48344",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.48344"
+  },
+  {
+    "specimen_id": "ans-1944.100.5603",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.5603"
+  },
+  {
+    "specimen_id": "ans-1944.100.7547",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7547"
+  },
+  {
+    "specimen_id": "ans-1944.100.7557",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7557"
+  },
+  {
+    "specimen_id": "ans-1944.100.7568",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7568"
+  },
+  {
+    "specimen_id": "ans-1944.100.7600",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7600"
+  },
+  {
+    "specimen_id": "ans-1944.100.7636",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7636"
+  },
+  {
+    "specimen_id": "ans-1944.100.7638",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7638"
+  },
+  {
+    "specimen_id": "ans-1944.100.7640",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7640"
+  },
+  {
+    "specimen_id": "ans-1944.100.7648",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7648"
+  },
+  {
+    "specimen_id": "ans-1944.100.7748",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7748"
+  },
+  {
+    "specimen_id": "ans-1944.100.7929",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.7929"
+  },
+  {
+    "specimen_id": "ans-1944.100.8772",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.8772"
+  },
+  {
+    "specimen_id": "ans-1944.100.8862",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.8862"
+  },
+  {
+    "specimen_id": "ans-1944.100.9032",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9032"
+  },
+  {
+    "specimen_id": "ans-1944.100.9033",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9033"
+  },
+  {
+    "specimen_id": "ans-1944.100.9034",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9034"
+  },
+  {
+    "specimen_id": "ans-1944.100.9035",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9035"
+  },
+  {
+    "specimen_id": "ans-1944.100.9111",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9111"
+  },
+  {
+    "specimen_id": "ans-1944.100.9379",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1944.100.9379"
+  },
+  {
+    "specimen_id": "ans-1948.19.1183",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1948.19.1183"
+  },
+  {
+    "specimen_id": "ans-1948.19.933",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1948.19.933"
+  },
+  {
+    "specimen_id": "ans-1948.19.934",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1948.19.934"
+  },
+  {
+    "specimen_id": "ans-1954.18.82",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1954.18.82"
+  },
+  {
+    "specimen_id": "ans-1955.191.20",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1955.191.20"
+  },
+  {
+    "specimen_id": "ans-1956.127.1801",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.1801"
+  },
+  {
+    "specimen_id": "ans-1956.127.599",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.599"
+  },
+  {
+    "specimen_id": "ans-1956.127.601",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.601"
+  },
+  {
+    "specimen_id": "ans-1956.127.603",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.603"
+  },
+  {
+    "specimen_id": "ans-1956.127.612",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.612"
+  },
+  {
+    "specimen_id": "ans-1956.127.664",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.664"
+  },
+  {
+    "specimen_id": "ans-1956.127.678",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.678"
+  },
+  {
+    "specimen_id": "ans-1956.127.680",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.680"
+  },
+  {
+    "specimen_id": "ans-1956.127.681",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.681"
+  },
+  {
+    "specimen_id": "ans-1956.127.684",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.127.684"
+  },
+  {
+    "specimen_id": "ans-1956.28.93",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1956.28.93"
+  },
+  {
+    "specimen_id": "ans-1967.153.175",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1967.153.175"
+  },
+  {
+    "specimen_id": "ans-1974.140.23",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1974.140.23"
+  },
+  {
+    "specimen_id": "ans-1974.95.109",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1974.95.109"
+  },
+  {
+    "specimen_id": "ans-1974.95.148",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1974.95.148"
+  },
+  {
+    "specimen_id": "ans-1978.205.10",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1978.205.10"
+  },
+  {
+    "specimen_id": "ans-1984.146.1036",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.146.1036"
+  },
+  {
+    "specimen_id": "ans-1984.146.1050",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.146.1050"
+  },
+  {
+    "specimen_id": "ans-1984.146.1095",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.146.1095"
+  },
+  {
+    "specimen_id": "ans-1984.67.1091",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1091"
+  },
+  {
+    "specimen_id": "ans-1984.67.1205",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1205"
+  },
+  {
+    "specimen_id": "ans-1984.67.1269",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1269"
+  },
+  {
+    "specimen_id": "ans-1984.67.173",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.173"
+  },
+  {
+    "specimen_id": "ans-1984.67.1740",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1740"
+  },
+  {
+    "specimen_id": "ans-1984.67.1743",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1743"
+  },
+  {
+    "specimen_id": "ans-1984.67.1808",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.1808"
+  },
+  {
+    "specimen_id": "ans-1984.67.200",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.200"
+  },
+  {
+    "specimen_id": "ans-1984.67.2335",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2335"
+  },
+  {
+    "specimen_id": "ans-1984.67.2348",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2348"
+  },
+  {
+    "specimen_id": "ans-1984.67.2349",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2349"
+  },
+  {
+    "specimen_id": "ans-1984.67.2363",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2363"
+  },
+  {
+    "specimen_id": "ans-1984.67.2387",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2387"
+  },
+  {
+    "specimen_id": "ans-1984.67.2403",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2403"
+  },
+  {
+    "specimen_id": "ans-1984.67.2415",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2415"
+  },
+  {
+    "specimen_id": "ans-1984.67.253",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.253"
+  },
+  {
+    "specimen_id": "ans-1984.67.2574",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2574"
+  },
+  {
+    "specimen_id": "ans-1984.67.2582",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2582"
+  },
+  {
+    "specimen_id": "ans-1984.67.2819",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2819"
+  },
+  {
+    "specimen_id": "ans-1984.67.2842",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2842"
+  },
+  {
+    "specimen_id": "ans-1984.67.2843",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.2843"
+  },
+  {
+    "specimen_id": "ans-1984.67.298",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.298"
+  },
+  {
+    "specimen_id": "ans-1984.67.411",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.411"
+  },
+  {
+    "specimen_id": "ans-1984.67.694",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1984.67.694"
+  },
+  {
+    "specimen_id": "ans-1989.11.113",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1989.11.113"
+  },
+  {
+    "specimen_id": "ans-1992.77.49",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1992.77.49"
+  },
+  {
+    "specimen_id": "ans-1992.77.66",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1992.77.66"
+  },
+  {
+    "specimen_id": "ans-1995.11.1045",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.11.1045"
+  },
+  {
+    "specimen_id": "ans-1995.11.1492",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.11.1492"
+  },
+  {
+    "specimen_id": "ans-1995.11.1723",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.11.1723"
+  },
+  {
+    "specimen_id": "ans-1995.11.868",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.11.868"
+  },
+  {
+    "specimen_id": "ans-1995.11.877",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.11.877"
+  },
+  {
+    "specimen_id": "ans-1995.11.936",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.11.936"
+  },
+  {
+    "specimen_id": "ans-1995.49.68",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1995.49.68"
+  },
+  {
+    "specimen_id": "ans-1996.73.5",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1996.73.5"
+  },
+  {
+    "specimen_id": "ans-1999.79.1",
+    "split": "calibration",
+    "source_url": "https://numismatics.org/collection/1999.79.1"
+  },
+  {
+    "specimen_id": "ans-0000.999.11200",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/0000.999.11200"
+  },
+  {
+    "specimen_id": "ans-1911.23.160",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1911.23.160"
+  },
+  {
+    "specimen_id": "ans-1920.102.7",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1920.102.7"
+  },
+  {
+    "specimen_id": "ans-1922.38.74",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1922.38.74"
+  },
+  {
+    "specimen_id": "ans-1933.999.238",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1933.999.238"
+  },
+  {
+    "specimen_id": "ans-1935.117.156",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1935.117.156"
+  },
+  {
+    "specimen_id": "ans-1935.117.424",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1935.117.424"
+  },
+  {
+    "specimen_id": "ans-1941.131.704",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1941.131.704"
+  },
+  {
+    "specimen_id": "ans-1944.100.10886",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.10886"
+  },
+  {
+    "specimen_id": "ans-1944.100.10925",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.10925"
+  },
+  {
+    "specimen_id": "ans-1944.100.11633",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.11633"
+  },
+  {
+    "specimen_id": "ans-1944.100.11662",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.11662"
+  },
+  {
+    "specimen_id": "ans-1944.100.11670",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.11670"
+  },
+  {
+    "specimen_id": "ans-1944.100.1290",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.1290"
+  },
+  {
+    "specimen_id": "ans-1944.100.21259",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.21259"
+  },
+  {
+    "specimen_id": "ans-1944.100.21513",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.21513"
+  },
+  {
+    "specimen_id": "ans-1944.100.21662",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.21662"
+  },
+  {
+    "specimen_id": "ans-1944.100.21815",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.21815"
+  },
+  {
+    "specimen_id": "ans-1944.100.22373",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.22373"
+  },
+  {
+    "specimen_id": "ans-1944.100.22376",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.22376"
+  },
+  {
+    "specimen_id": "ans-1944.100.22403",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.22403"
+  },
+  {
+    "specimen_id": "ans-1944.100.22405",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.22405"
+  },
+  {
+    "specimen_id": "ans-1944.100.22415",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.22415"
+  },
+  {
+    "specimen_id": "ans-1944.100.23215",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.23215"
+  },
+  {
+    "specimen_id": "ans-1944.100.23235",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.23235"
+  },
+  {
+    "specimen_id": "ans-1944.100.23254",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.23254"
+  },
+  {
+    "specimen_id": "ans-1944.100.23270",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.23270"
+  },
+  {
+    "specimen_id": "ans-1944.100.23526",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.23526"
+  },
+  {
+    "specimen_id": "ans-1944.100.23882",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.23882"
+  },
+  {
+    "specimen_id": "ans-1944.100.25885",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.25885"
+  },
+  {
+    "specimen_id": "ans-1944.100.25900",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.25900"
+  },
+  {
+    "specimen_id": "ans-1944.100.27176",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.27176"
+  },
+  {
+    "specimen_id": "ans-1944.100.27218",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.27218"
+  },
+  {
+    "specimen_id": "ans-1944.100.27232",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.27232"
+  },
+  {
+    "specimen_id": "ans-1944.100.30253",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.30253"
+  },
+  {
+    "specimen_id": "ans-1944.100.30494",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.30494"
+  },
+  {
+    "specimen_id": "ans-1944.100.30800",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.30800"
+  },
+  {
+    "specimen_id": "ans-1944.100.30841",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.30841"
+  },
+  {
+    "specimen_id": "ans-1944.100.32469",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.32469"
+  },
+  {
+    "specimen_id": "ans-1944.100.32760",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.32760"
+  },
+  {
+    "specimen_id": "ans-1944.100.32865",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.32865"
+  },
+  {
+    "specimen_id": "ans-1944.100.32873",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.32873"
+  },
+  {
+    "specimen_id": "ans-1944.100.32920",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.32920"
+  },
+  {
+    "specimen_id": "ans-1944.100.32924",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.32924"
+  },
+  {
+    "specimen_id": "ans-1944.100.32942",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.32942"
+  },
+  {
+    "specimen_id": "ans-1944.100.33011",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.33011"
+  },
+  {
+    "specimen_id": "ans-1944.100.33097",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.33097"
+  },
+  {
+    "specimen_id": "ans-1944.100.33183",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.33183"
+  },
+  {
+    "specimen_id": "ans-1944.100.36054",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36054"
+  },
+  {
+    "specimen_id": "ans-1944.100.36147",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36147"
+  },
+  {
+    "specimen_id": "ans-1944.100.36167",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36167"
+  },
+  {
+    "specimen_id": "ans-1944.100.36181",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36181"
+  },
+  {
+    "specimen_id": "ans-1944.100.36184",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36184"
+  },
+  {
+    "specimen_id": "ans-1944.100.36191",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36191"
+  },
+  {
+    "specimen_id": "ans-1944.100.36193",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36193"
+  },
+  {
+    "specimen_id": "ans-1944.100.36198",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36198"
+  },
+  {
+    "specimen_id": "ans-1944.100.36222",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.36222"
+  },
+  {
+    "specimen_id": "ans-1944.100.39820",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.39820"
+  },
+  {
+    "specimen_id": "ans-1944.100.3999",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.3999"
+  },
+  {
+    "specimen_id": "ans-1944.100.44754",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.44754"
+  },
+  {
+    "specimen_id": "ans-1944.100.44835",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.44835"
+  },
+  {
+    "specimen_id": "ans-1944.100.44840",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.44840"
+  },
+  {
+    "specimen_id": "ans-1944.100.48160",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.48160"
+  },
+  {
+    "specimen_id": "ans-1944.100.48242",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.48242"
+  },
+  {
+    "specimen_id": "ans-1944.100.49747",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.49747"
+  },
+  {
+    "specimen_id": "ans-1944.100.51776",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.51776"
+  },
+  {
+    "specimen_id": "ans-1944.100.52328",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.52328"
+  },
+  {
+    "specimen_id": "ans-1944.100.5871",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.5871"
+  },
+  {
+    "specimen_id": "ans-1944.100.7398",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7398"
+  },
+  {
+    "specimen_id": "ans-1944.100.7544",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7544"
+  },
+  {
+    "specimen_id": "ans-1944.100.7545",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7545"
+  },
+  {
+    "specimen_id": "ans-1944.100.7546",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7546"
+  },
+  {
+    "specimen_id": "ans-1944.100.7585",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7585"
+  },
+  {
+    "specimen_id": "ans-1944.100.7642",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7642"
+  },
+  {
+    "specimen_id": "ans-1944.100.7651",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7651"
+  },
+  {
+    "specimen_id": "ans-1944.100.7671",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7671"
+  },
+  {
+    "specimen_id": "ans-1944.100.7879",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7879"
+  },
+  {
+    "specimen_id": "ans-1944.100.7977",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.7977"
+  },
+  {
+    "specimen_id": "ans-1944.100.9018",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.9018"
+  },
+  {
+    "specimen_id": "ans-1944.100.9019",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.9019"
+  },
+  {
+    "specimen_id": "ans-1944.100.9024",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.9024"
+  },
+  {
+    "specimen_id": "ans-1944.100.9036",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.9036"
+  },
+  {
+    "specimen_id": "ans-1944.100.9516",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1944.100.9516"
+  },
+  {
+    "specimen_id": "ans-1948.19.1006",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1948.19.1006"
+  },
+  {
+    "specimen_id": "ans-1948.19.1306",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1948.19.1306"
+  },
+  {
+    "specimen_id": "ans-1948.19.1415",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1948.19.1415"
+  },
+  {
+    "specimen_id": "ans-1948.19.750",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1948.19.750"
+  },
+  {
+    "specimen_id": "ans-1948.19.864",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1948.19.864"
+  },
+  {
+    "specimen_id": "ans-1952.21.2",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1952.21.2"
+  },
+  {
+    "specimen_id": "ans-1956.127.1117",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.1117"
+  },
+  {
+    "specimen_id": "ans-1956.127.127",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.127"
+  },
+  {
+    "specimen_id": "ans-1956.127.498",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.498"
+  },
+  {
+    "specimen_id": "ans-1956.127.605",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.605"
+  },
+  {
+    "specimen_id": "ans-1956.127.607",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.607"
+  },
+  {
+    "specimen_id": "ans-1956.127.608",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.608"
+  },
+  {
+    "specimen_id": "ans-1956.127.609",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.609"
+  },
+  {
+    "specimen_id": "ans-1956.127.613",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.613"
+  },
+  {
+    "specimen_id": "ans-1956.127.668",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.668"
+  },
+  {
+    "specimen_id": "ans-1956.127.669",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.669"
+  },
+  {
+    "specimen_id": "ans-1956.127.676",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.676"
+  },
+  {
+    "specimen_id": "ans-1956.127.679",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.127.679"
+  },
+  {
+    "specimen_id": "ans-1956.163.219",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1956.163.219"
+  },
+  {
+    "specimen_id": "ans-1957.172.1503",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1957.172.1503"
+  },
+  {
+    "specimen_id": "ans-1960.175.43",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1960.175.43"
+  },
+  {
+    "specimen_id": "ans-1961.180.7",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1961.180.7"
+  },
+  {
+    "specimen_id": "ans-1961.62.1",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1961.62.1"
+  },
+  {
+    "specimen_id": "ans-1968.131.490",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1968.131.490"
+  },
+  {
+    "specimen_id": "ans-1969.214.11",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1969.214.11"
+  },
+  {
+    "specimen_id": "ans-1969.26.4",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1969.26.4"
+  },
+  {
+    "specimen_id": "ans-1973.999.19",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1973.999.19"
+  },
+  {
+    "specimen_id": "ans-1976.198.1",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1976.198.1"
+  },
+  {
+    "specimen_id": "ans-1979.73.1",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1979.73.1"
+  },
+  {
+    "specimen_id": "ans-1980.109.394",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1980.109.394"
+  },
+  {
+    "specimen_id": "ans-1980.129.1",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1980.129.1"
+  },
+  {
+    "specimen_id": "ans-1984.146.1037",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.146.1037"
+  },
+  {
+    "specimen_id": "ans-1984.146.175",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.146.175"
+  },
+  {
+    "specimen_id": "ans-1984.146.529",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.146.529"
+  },
+  {
+    "specimen_id": "ans-1984.146.562",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.146.562"
+  },
+  {
+    "specimen_id": "ans-1984.146.727",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.146.727"
+  },
+  {
+    "specimen_id": "ans-1984.146.950",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.146.950"
+  },
+  {
+    "specimen_id": "ans-1984.146.969",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.146.969"
+  },
+  {
+    "specimen_id": "ans-1984.67.1014",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.1014"
+  },
+  {
+    "specimen_id": "ans-1984.67.1189",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.1189"
+  },
+  {
+    "specimen_id": "ans-1984.67.1240",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.1240"
+  },
+  {
+    "specimen_id": "ans-1984.67.1626",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.1626"
+  },
+  {
+    "specimen_id": "ans-1984.67.1755",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.1755"
+  },
+  {
+    "specimen_id": "ans-1984.67.1801",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.1801"
+  },
+  {
+    "specimen_id": "ans-1984.67.225",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.225"
+  },
+  {
+    "specimen_id": "ans-1984.67.2316",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2316"
+  },
+  {
+    "specimen_id": "ans-1984.67.2328",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2328"
+  },
+  {
+    "specimen_id": "ans-1984.67.2362",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2362"
+  },
+  {
+    "specimen_id": "ans-1984.67.2367",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2367"
+  },
+  {
+    "specimen_id": "ans-1984.67.2398",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2398"
+  },
+  {
+    "specimen_id": "ans-1984.67.2417",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2417"
+  },
+  {
+    "specimen_id": "ans-1984.67.2438",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2438"
+  },
+  {
+    "specimen_id": "ans-1984.67.2453",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2453"
+  },
+  {
+    "specimen_id": "ans-1984.67.2579",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2579"
+  },
+  {
+    "specimen_id": "ans-1984.67.2601",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2601"
+  },
+  {
+    "specimen_id": "ans-1984.67.2840",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2840"
+  },
+  {
+    "specimen_id": "ans-1984.67.2853",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2853"
+  },
+  {
+    "specimen_id": "ans-1984.67.2864",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2864"
+  },
+  {
+    "specimen_id": "ans-1984.67.2875",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.2875"
+  },
+  {
+    "specimen_id": "ans-1984.67.3373",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.3373"
+  },
+  {
+    "specimen_id": "ans-1984.67.3405",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.3405"
+  },
+  {
+    "specimen_id": "ans-1984.67.347",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.347"
+  },
+  {
+    "specimen_id": "ans-1984.67.360",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.360"
+  },
+  {
+    "specimen_id": "ans-1984.67.382",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.382"
+  },
+  {
+    "specimen_id": "ans-1984.67.422",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.422"
+  },
+  {
+    "specimen_id": "ans-1984.67.447",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1984.67.447"
+  },
+  {
+    "specimen_id": "ans-1985.140.117",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1985.140.117"
+  },
+  {
+    "specimen_id": "ans-1985.140.172",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1985.140.172"
+  },
+  {
+    "specimen_id": "ans-1987.26.154",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1987.26.154"
+  },
+  {
+    "specimen_id": "ans-1987.26.158",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1987.26.158"
+  },
+  {
+    "specimen_id": "ans-1988.5.64",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1988.5.64"
+  },
+  {
+    "specimen_id": "ans-1991.9.90",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1991.9.90"
+  },
+  {
+    "specimen_id": "ans-1992.77.44",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1992.77.44"
+  },
+  {
+    "specimen_id": "ans-1992.77.56",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1992.77.56"
+  },
+  {
+    "specimen_id": "ans-1992.77.62",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1992.77.62"
+  },
+  {
+    "specimen_id": "ans-1994.123.78",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1994.123.78"
+  },
+  {
+    "specimen_id": "ans-1994.59.4",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1994.59.4"
+  },
+  {
+    "specimen_id": "ans-1995.11.1192",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1995.11.1192"
+  },
+  {
+    "specimen_id": "ans-1995.11.120",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1995.11.120"
+  },
+  {
+    "specimen_id": "ans-1995.11.699",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1995.11.699"
+  },
+  {
+    "specimen_id": "ans-1995.11.726",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1995.11.726"
+  },
+  {
+    "specimen_id": "ans-1996.104.7",
+    "split": "test",
+    "source_url": "https://numismatics.org/collection/1996.104.7"
+  }
+]

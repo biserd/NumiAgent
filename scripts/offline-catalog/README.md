@@ -13,3 +13,16 @@ python -B scripts/offline-catalog/generate.py ios/NumiAgent/OfflineCatalog --sou
 - The modern pack uses issue and series facts from the official sources listed by each entry. It covers selected U.S., Canadian, Hong Kong, and euro issues.
 
 The standalone macOS workflow compiles the same recognition code against the bundled resources. It confirms network denial with a working local control connection. It checks automatic nickel matching, banknote OCR with manual issue lookup, ancient inscription matching, and ambiguous input. The historic note test photo is public domain and credited to the [Smithsonian National Numismatic Collection](https://commons.wikimedia.org/wiki/File:CSA-T35-%245-1861.jpg). The physical iPhone or iPad airplane-mode check requires a device build.
+
+## Expanded catalog
+
+`ExpandedCatalog.sqlite` adds 40,802 OCRE types, 132 U.S. Mint quarter designs and 7,952 Smithsonian banknote records. Search opens the database read-only. Ancient photo matching checks indexed legends across both packs. A U.S. quarter design match requires the design inscription, year and denomination. Smithsonian notes are reference records for manual search.
+
+The [immutable December 2019 OCRE archive](https://github.com/neelsmith/nomisma/blob/b6a6a5141dc998350b8acbf2983322dbca6680d4/cex/ocre-2019-12-04.cex) is verified against its Git blob and deduplicated against the existing Syllogeum type URIs. The OCRE subset of the generated database is distributed under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). The U.S. Mint issue facts come from published program lists. The Smithsonian import scans the 256 NMAH JSON Lines shards named `00.txt` through `ff.txt` in the [Open Access bucket](https://smithsonian-open-access.s3-us-west-2.amazonaws.com/metadata/edan/index.txt). It requires the National Numismatic Collection and CC0 metadata flags and excludes plate impressions and remainders.
+
+```powershell
+python -B scripts/offline-catalog/expand.py ocre-2019-12-04.cex PATH_TO_NMAH_SHARDS `
+  ios/NumiAgent/OfflineCatalog scripts/offline-catalog/expansion-sources.json
+```
+
+`expansion-sources.json` records the exact source hashes and dataset counts. It also pins the resulting SQLite resource. The Syllogeum experiment is documented in [benchmarks/syllogeum-open](../../benchmarks/syllogeum-open/README.md).

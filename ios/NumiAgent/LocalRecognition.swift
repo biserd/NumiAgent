@@ -1,5 +1,6 @@
 import Foundation
 import ImageIO
+import SQLite3
 import Vision
 
 struct LocalReference: Codable, Identifiable, Sendable {
@@ -269,9 +270,12 @@ struct OfflineCatalog: Sendable {
     private let searchEntries: [Entry]
     private let ordinary: [LocalReference]
     private let inscriptions: [String: [LocalReference]]
+    private let expanded: ExpandedOfflineCatalog?
     let packCounts: [String: Int]
 
     init(bundle: Bundle) {
+        expanded = bundle.url(forResource: "ExpandedCatalog", withExtension: "sqlite", subdirectory: "OfflineCatalog")
+            .map { ExpandedOfflineCatalog(url: $0) }
         let legacy = bundle.url(forResource: "LocalCatalog", withExtension: "json")
             .flatMap { try? LocalRecognition.catalog(at: $0) } ?? []
         let packs = Dictionary(uniqueKeysWithValues: Self.packNames.map { name in
@@ -303,10 +307,14 @@ struct OfflineCatalog: Sendable {
         let normalized = LocalRecognition.normalized(query)
         let terms = normalized.split(separator: " ")
         guard normalized.count >= 2, !terms.isEmpty else { return [] }
-        return searchEntries.lazy.filter { entry in
+        let bundled = Array(searchEntries.lazy.filter { entry in
             terms.allSatisfy { entry.searchText.contains($0) }
-        }.prefix(40).map { suggestion($0.reference, evidence: []) }
+        }.prefix(20).map { $0.reference })
+        let additions = expanded?.search(terms.map(String.init), limit: 40 - bundled.count) ?? []
+        return (bundled + additions).map { suggestion($0, evidence: []) }
     }
+
+    var expandedCounts: [String: Int] { expanded?.counts() ?? [:] }
 
     func identify(_ lines: [String]) -> LocalRecognitionResult {
         let normalizedLines = lines.map(LocalRecognition.normalized).filter { !$0.isEmpty }
@@ -330,7 +338,12 @@ struct OfflineCatalog: Sendable {
             let score: Int
             let precise: Bool
         }
-        let candidates = ordinary.compactMap { record -> Candidate? in
+        let years = Set(normalizedLines.flatMap { $0.split(separator: " ") }.compactMap { word -> String? in
+            guard word.count == 4, word.allSatisfy(\.isASCII), Int(word) != nil else { return nil }
+            return String(word)
+        })
+        let mintIssues = expanded?.mintIssues(years) ?? []
+        let candidates = (ordinary + mintIssues).compactMap { record -> Candidate? in
             guard !paperClue || record.type == "banknote" else { return nil }
             let scope = record.catalogScope
             let issuer = contains(record.issuerWords)
@@ -340,9 +353,10 @@ struct OfflineCatalog: Sendable {
             let required = record.requiredWords.map(contains) ?? true
             guard required, value, issuer || design else { return nil }
             guard scope != nil || year, scope != "series" || year || design else { return nil }
+            if scope == "mint-design", !(year && design) { return nil }
             let labels = [(issuer, "Issuer"), (value, "Denomination"), (design, "Series or design"), (year, "Year")]
                 .compactMap { $0.0 ? $0.1 : nil }
-            let precise = scope == nil && issuer && year
+            let precise = (scope == nil || scope == "mint-design") && issuer && year
             // A visible date or series clue distinguishes an issue from its general family.
             let score = (precise ? 20 : 0) + (year ? 8 : 0) + (design ? 4 : 0) + (issuer ? 2 : 0)
                 + (record.requiredWords != nil ? 1 : 0)
@@ -364,13 +378,17 @@ struct OfflineCatalog: Sendable {
             return .init(suggestions: choices, likely: best.count == 1 && best[0].precise, observations: transcript)
         }
 
-        let legends = Set(normalizedLines.map(Self.legendKey))
+        let legends = Set(normalizedLines.map(Self.legendKey).filter { $0.count >= 6 })
         var ancient: [String: (reference: LocalReference, evidence: Set<String>)] = [:]
         for key in legends {
             for row in inscriptions[key] ?? [] {
                 if ancient[row.id] == nil { ancient[row.id] = (row, []) }
                 ancient[row.id]?.evidence.insert(key)
             }
+        }
+        for row in expanded?.matchingLegends(legends) ?? [] {
+            let matches = Set([row.obverseLegend, row.reverseLegend].compactMap { $0 }).intersection(legends)
+            if !matches.isEmpty { ancient[row.id] = (row, matches) }
         }
         let paired = ancient.values.filter { $0.evidence.count >= 2 }
         if paired.count == 1, let match = paired.first {
@@ -398,5 +416,81 @@ struct OfflineCatalog: Sendable {
     private func suggestion(_ record: LocalReference, evidence: [String]) -> LocalSuggestion {
         .init(id: record.id, type: record.type, title: record.title, issuer: record.issuer,
               denomination: record.denomination, year: record.year, reference: record.source, evidence: evidence)
+    }
+}
+
+private struct ExpandedOfflineCatalog: Sendable {
+    let url: URL
+
+    private static let columns = "id, kind, title, issuer, denomination, year, source, obverse_key, reverse_key, design_marker"
+
+    func search(_ terms: [String], limit: Int) -> [LocalReference] {
+        guard !terms.isEmpty, terms.count <= 20, limit > 0 else { return [] }
+        let clause = terms.map { _ in "search_text LIKE ?" }.joined(separator: " AND ")
+        return query("SELECT \(Self.columns) FROM entries WHERE \(clause) ORDER BY title, id LIMIT \(limit)",
+                     bindings: terms.map { "%\($0)%" })
+    }
+
+    func matchingLegends(_ keys: Set<String>) -> [LocalReference] {
+        let unique = Array(keys.sorted().prefix(32))
+        guard !unique.isEmpty else { return [] }
+        let parameters = unique.map { _ in "?" }.joined(separator: ",")
+        // Preserve all matches so a common legend cannot be made unique by a result limit.
+        let statement = """
+            SELECT \(Self.columns) FROM entries
+            WHERE (obverse_key <> '' AND obverse_key IN (\(parameters)))
+               OR (reverse_key <> '' AND reverse_key IN (\(parameters)))
+            """
+        return query(statement, bindings: unique + unique)
+    }
+
+    func counts() -> [String: Int] {
+        read("SELECT collection, COUNT(*) FROM entries GROUP BY collection", bindings: []) { stmt in
+            (text(stmt, 0), Int(sqlite3_column_int64(stmt, 1)))
+        }.reduce(into: [:]) { $0[$1.0] = $1.1 }
+    }
+
+    func mintIssues(_ years: Set<String>) -> [LocalReference] {
+        let dates = Array(years.sorted().prefix(16))
+        guard !dates.isEmpty else { return [] }
+        let parameters = dates.map { _ in "?" }.joined(separator: ",")
+        return query("SELECT \(Self.columns) FROM entries WHERE collection = 'U.S. Mint' AND year IN (\(parameters))",
+                     bindings: dates)
+    }
+
+    private func query(_ sql: String, bindings: [String]) -> [LocalReference] {
+        read(sql, bindings: bindings) { stmt -> LocalReference? in
+            guard let source = URL(string: text(stmt, 6)), source.scheme == "https" else { return nil }
+            let design = text(stmt, 9)
+            let mintDesign = !design.isEmpty
+            return LocalReference(id: text(stmt, 0), type: text(stmt, 1), title: text(stmt, 2),
+                                  issuer: text(stmt, 3), denomination: text(stmt, 4), year: text(stmt, 5),
+                                  issuerWords: mintDesign ? ["united states of america", "united states"] : [],
+                                  denominationWords: mintDesign ? ["quarter dollar", "25 cents"] : [],
+                                  variantWords: mintDesign ? [design] : nil, source: source,
+                                  catalogScope: mintDesign ? "mint-design" : nil,
+                                  obverseLegend: text(stmt, 7), reverseLegend: text(stmt, 8))
+        }.compactMap { $0 }
+    }
+
+    private func read<T>(_ sql: String, bindings: [String], map: (OpaquePointer) -> T) -> [T] {
+        var connection: OpaquePointer?
+        let status = sqlite3_open_v2(url.path, &connection, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nil)
+        defer { sqlite3_close(connection) }
+        guard status == SQLITE_OK, let connection else { return [] }
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(connection, sql, -1, &statement, nil) == SQLITE_OK, let statement else { return [] }
+        defer { sqlite3_finalize(statement) }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for (offset, value) in bindings.enumerated() {
+            guard sqlite3_bind_text(statement, Int32(offset + 1), value, -1, transient) == SQLITE_OK else { return [] }
+        }
+        var result: [T] = []
+        while sqlite3_step(statement) == SQLITE_ROW { result.append(map(statement)) }
+        return result
+    }
+
+    private func text(_ statement: OpaquePointer, _ column: Int32) -> String {
+        sqlite3_column_text(statement, column).map { String(cString: $0) } ?? ""
     }
 }

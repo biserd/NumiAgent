@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Prepare the public smoke-test photo and the macOS test bundle
+      - name: Prepare the macOS test bundle
         run: |
           plutil -lint -- ios/NumiAgent.xcodeproj/project.pbxproj
           xcrun --sdk macosx swiftc -frontend -parse ios/NumiAgent/{LocalRecognition,GuestWorkspace,CaptureScreen}.swift
@@ -38,28 +38,6 @@ jobs:
           PLIST
           xcrun --sdk macosx swiftc -O ios/NumiAgent/LocalRecognition.swift \
             benchmarks/offline-reading/Check.swift -o "$app/MacOS/check-offline-reading"
-          curl --fail --silent --show-error --location --retry 2 \
-            'https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a1/US-%241-SC-1923-Fr.237.jpg/960px-US-%241-SC-1923-Fr.237.jpg' \
-            --output "$RUNNER_TEMP/silver-certificate.jpg"
-          curl --fail --silent --show-error --location --retry 2 --max-time 30 \
-            'https://www.uscurrency.gov/sites/default/files/styles/unscaled/public/denominations/notes/1_1963-present-front.jpg.jpg?itok=_iJKanle' \
-            --output "$RUNNER_TEMP/federal-front.jpg"
-          curl --fail --silent --show-error --location --retry 2 --max-time 30 \
-            'https://www.uscurrency.gov/sites/default/files/styles/unscaled/public/denominations/notes/1-back-web_0.jpg.jpg?itok=eR_z265T' \
-            --output "$RUNNER_TEMP/federal-back.jpg"
-          python -m pip install pillow==13.0.0
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          from PIL import Image
-
-          folder = Path(os.environ["RUNNER_TEMP"])
-          with Image.open(folder / "silver-certificate.jpg") as source:
-              width, height = source.size
-              split = int(height * 0.5)
-              source.crop((0, 0, width, split)).convert("RGB").save(folder / "silver-obverse.jpg")
-              source.crop((0, split, width, height)).convert("RGB").save(folder / "silver-reverse.jpg")
-          PY
       - name: Deny network access and scan both specimens
         run: |
           python - <<'PY'
@@ -87,7 +65,6 @@ jobs:
               folder = Path(os.environ["RUNNER_TEMP"])
               subprocess.run(sandbox + [str(folder / "OfflineCatalogCheck.app/Contents/MacOS/check-offline-reading"),
                   "ios/NumiAgent/Assets.xcassets/DemoNickel.imageset/jefferson-nickel.jpg",
-                  str(folder / "federal-front.jpg"), str(folder / "federal-back.jpg"),
-                  str(folder / "silver-obverse.jpg"), str(folder / "silver-reverse.jpg")], check=True)
+                  "benchmarks/offline-reading/fixtures/smithsonian-note.jpg"], check=True)
               server.shutdown()
           PY

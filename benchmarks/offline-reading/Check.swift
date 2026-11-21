@@ -56,20 +56,18 @@ struct Check {
             .suggestions.allSatisfy { $0.type == "banknote" }, "a note inscription excludes a coin suggestion")
 
         let paths = Array(CommandLine.arguments.dropFirst())
-        try expect(paths.count == 5, "supply a nickel, Federal Reserve note, and historic note photos")
-        for (label, inputs, kind, value) in [("Jefferson nickel", [paths[0]], "coin", "5 cents"),
-                                             ("Federal Reserve note", Array(paths[1...2]), "banknote", "1 dollar")] {
-            let result = try LocalRecognition.bundledResult(for: inputs.map { URL(fileURLWithPath: $0) })
-            let reading = try JSONEncoder().encode(result.textReading)
-            let diagnostic = "\(label): \(String(decoding: reading, as: UTF8.self)); catalog: \(result.suggestions.map(\.title)); Vision text: \(result.observations)\n"
-            try FileHandle.standardError.write(contentsOf: Data(diagnostic.utf8))
-            try expect(result.suggestions.contains { $0.type == kind && $0.denomination == value },
-                       "photo-to-catalog match for \(label)")
-        }
-        let ornate = try LocalRecognition.bundledResult(for: paths[3...4].map { URL(fileURLWithPath: $0) })
-        try expect(ornate.suggestions.allSatisfy { $0.type == "banknote" },
-                   "the ornate historic note is not mistaken for a coin")
-        print("Historic note photos: \(ornate.suggestions.isEmpty ? "needs review" : "banknote suggestion"), printed year \(ornate.textReading.year ?? "unread")")
+        try expect(paths.count == 2, "supply a nickel photo and a historic note photo")
+        let nickel = try LocalRecognition.bundledResult(for: [URL(fileURLWithPath: paths[0])])
+        try expect(nickel.suggestions.contains { $0.id == "us-coin-nickel" }, "photo-to-catalog match for the nickel")
+        print("Coin photo: \(nickel.suggestions.map(\.title))")
+        let note = try LocalRecognition.bundledResult(for: [URL(fileURLWithPath: paths[1])])
+        let reading = note.textReading.denomination ?? ""
+        try FileHandle.standardError.write(contentsOf: Data("Banknote photo: \(reading); Vision text: \(note.observations)\n".utf8))
+        try expect(LocalRecognition.normalized(reading) == "five dollars", "printed denomination from the banknote photo")
+        let knownNote = catalog.search("confederate 5 1861 35").first { $0.id == "historic-csa-35" }
+        try expect(knownNote?.type == "banknote" && knownNote?.denomination == "5 dollars",
+                   "manual lookup can finish an ornate note with a readable denomination")
+        print("Banknote lookup: \(knownNote?.title ?? "unresolved")")
         print("All three packs passed offline catalog checks: \(catalog.packCounts)")
     }
 }

@@ -201,7 +201,7 @@ private struct GuestPrivacyView: View {
                     Text("Guest photos, drafts and collection details are saved here. The app excludes them from automatic device backups. You can save your own encrypted backup in Files or export a spreadsheet and choose whether to include private fields.")
                 }
                 Section("Online identification") {
-                    Text("Local identification runs on this device. When you choose Search online, you select which photos to send to NumiAgent for processing by Cloudflare Workers AI.")
+                    Text("Local identification runs on this device. Search online sends the photos shown for that piece to NumiAgent for processing by Cloudflare Workers AI.")
                 }
                 Section("Browser access") {
                     Text("You can open a separate web collection and sign in with your email. Opening the browser or signing in leaves your guest collection on this device.")
@@ -222,106 +222,94 @@ private struct GuestPrivacyView: View {
     }
 }
 
-private struct GuestOnlineConsent: View {
-    @Environment(\.dismiss) private var dismiss
-    let photos: [GuestSide: UUID]
-    @State var selected: Set<UUID>
-    let send: (Set<UUID>) -> Void
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    ForEach(GuestSide.allCases) { side in
-                        if let photo = photos[side] {
-                            let isSelected = selected.contains(photo)
-                            Button {
-                                if isSelected { selected.remove(photo) } else { selected.insert(photo) }
-                            } label: {
-                                HStack {
-                                    Text(side.title + " photo")
-                                    Spacer()
-                                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(.tint)
-                                        .accessibilityHidden(true)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(isSelected ? .isSelected : [])
-                            .accessibilityIdentifier("guest-online-" + side.rawValue)
-                        }
-                    }
-                    Text("NumiAgent sends only the selected photos for processing by Cloudflare Workers AI. Your notes, purchase details, and email stay out of this search.")
-                    Button("Send selected photos") {
-                        dismiss()
-                        send(selected)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(selected.isEmpty)
-                    Button("Keep on this iPhone", role: .cancel) { dismiss() }
-                } header: {
-                    Text("\(selected.count) selected")
-                }
-            }
-            .navigationTitle("Search online")
-        }
-    }
-}
-
 private struct GuestPieceScreen: View {
     @ObservedObject var store: GuestStore
     let api: NumiAPI
     let id: UUID
     let newPiece: (() -> Void)?
     let done: () -> Void
-    @State private var picking: PhotosPickerItem?
+    @State private var picking: [PhotosPickerItem] = []
     @State private var photoPicker = false
     @State private var selectedSide = GuestSide.front
     @State private var camera = false
     @State private var busy = false
     @State private var lookingOnline = false
-    @State private var askOnline = false
     @State private var catalogPicker = false
     @State private var askDelete = false
     @State private var recognitionError: String?
     @State private var onlineError: String?
     @State private var pendingPair: GuestPiece?
+    @State private var zoomedSide: GuestSide?
+    @State private var showAlternatives = false
+    @State private var selectedMatch = false
+    @State private var onlineCompleted = false
 
     var body: some View {
         Group {
             if let piece = store.piece(id) {
-                Form {
-                    photoSection(piece)
-                    matchesSection(piece)
-                    details
-                    Section {
-                        Button("Save confirmed", systemImage: "checkmark") { save(.confirmed) }
-                        Button("Save as unidentified") { save(.unidentified) }
-                        if isDraft {
-                            Button("Save and scan next") {
-                                act { try store.save(id, status: piece.title.isEmpty ? .unidentified : .confirmed) }
-                                if store.piece(id)?.onlineJob == nil, !isDraft { newPiece?() }
-                            }
-                            Button("Save for later") { act { try store.park(id); done() } }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(isDraft ? "Scan a piece" : piece.displayTitle)
+                                .font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                            if isDraft { Text("Coins and banknotes").foregroundStyle(.secondary) }
                         }
-                        Button(isDraft ? "Delete draft" : "Delete piece", role: .destructive) { askDelete = true }
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .top, spacing: 20) {
+                                photoSection(piece).frame(maxWidth: .infinity, alignment: .topLeading)
+                                recordSection(piece).frame(maxWidth: .infinity, alignment: .topLeading)
+                            }.frame(minWidth: 660, maxWidth: .infinity)
+                            VStack(alignment: .leading, spacing: 16) {
+                                photoSection(piece)
+                                recordSection(piece)
+                            }
+                        }
                     }
+                    .frame(maxWidth: 1040, alignment: .leading).padding(20)
+                    .frame(maxWidth: .infinity)
                 }
+                .background(CollectorDesign.background)
                 .scrollDismissesKeyboard(.interactively)
                 .navigationTitle(isDraft ? draftTitle : piece.displayTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu("Piece actions", systemImage: "ellipsis.circle") {
+                            Button("Search offline catalog", systemImage: "books.vertical") { catalogPicker = true }
+                            if !piece.title.isBlank && !canConfirm(piece) {
+                                Button("Confirm and save", systemImage: "checkmark") { save(.confirmed) }
+                            }
+                            if isDraft, let newPiece {
+                                Button("Save and scan next", systemImage: "camera") {
+                                    act { try store.save(id, status: canConfirm(piece) ? .confirmed : .unidentified); newPiece() }
+                                }
+                            }
+                            if isDraft { Button("Save for later", systemImage: "tray") { done() } }
+                            Button(isDraft ? "Delete draft" : "Delete piece", systemImage: "trash", role: .destructive) { askDelete = true }
+                        }
+                    }
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) { saveBar(piece) }
                 .task(id: photoVersion(piece)) { await recognize(piece) }
             }
         }
-        .photosPicker(isPresented: $photoPicker, selection: $picking, matching: .images)
-        .onChange(of: picking) { _, pick in
-            guard let pick else { return }
-            let side = selectedSide
+        .photosPicker(isPresented: $photoPicker, selection: $picking,
+                      maxSelectionCount: max(1, 2 - (store.piece(id)?.photos.count ?? 0)),
+                      selectionBehavior: .ordered, matching: .images)
+        .onChange(of: picking) { _, picks in
+            guard !picks.isEmpty, !busy, let collectionID = store.activeID else { return }
             busy = true
             Task {
-                defer { busy = false; picking = nil }
-                do { try store.putPhoto(CaptureDraftStore.jpeg(try await loadCaptureImage(pick)), piece: id, side: side) }
-                catch { store.error = error.localizedDescription }
+                defer { busy = false; picking = [] }
+                var failed = 0
+                for pick in picks {
+                    do {
+                        let photo = try await loadCaptureImage(pick)
+                        guard store.activeID == collectionID, let piece = store.piece(id), let side = nextSide(piece) else { break }
+                        try store.putPhoto(CaptureDraftStore.jpeg(photo), piece: id, side: side)
+                    } catch { failed += 1 }
+                }
+                if failed > 0 { store.error = "\(failed) photos could not be imported. Accepted photos are saved." }
             }
         }
         .fullScreenCover(isPresented: $camera) {
@@ -330,12 +318,9 @@ private struct GuestPieceScreen: View {
                 camera = false
             }.ignoresSafeArea()
         }
-        .sheet(isPresented: $askOnline) {
-            if let piece = store.piece(id) {
-                let previouslySelected = Set(piece.onlineJob?.photos ?? []).intersection(piece.photos.values)
-                GuestOnlineConsent(photos: piece.photos, selected: previouslySelected) { selection in
-                    Task { await searchOnline(selection) }
-                }
+        .sheet(item: $zoomedSide) { side in
+            if let id = store.piece(id)?.photos[side], let photo = UIImage(contentsOfFile: store.photoURL(id).path) {
+                GuestPhotoPreview(photo: photo)
             }
         }
         .sheet(isPresented: $catalogPicker) {
@@ -347,7 +332,7 @@ private struct GuestPieceScreen: View {
         .confirmationDialog(isDraft ? "Delete this draft?" : "Delete this piece?", isPresented: $askDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { act { try store.delete(id); done() } }
         }
-        .confirmationDialog("Use this draft photo as the back?", isPresented: Binding(
+        .confirmationDialog("Add this draft photo to the piece?", isPresented: Binding(
             get: { pendingPair != nil }, set: { if !$0 { pendingPair = nil } }
         ), titleVisibility: .visible, presenting: pendingPair) { candidate in
             Button("Pair photos") { act { try store.pairDraft(candidate.id, with: id) } }
@@ -366,116 +351,227 @@ private struct GuestPieceScreen: View {
         return "Piece \(saved + current + 1) of \(saved + drafts.count)"
     }
 
+    private func nextSide(_ piece: GuestPiece) -> GuestSide? {
+        GuestSide.allCases.first { piece.photos[$0] == nil }
+    }
+
+    private func photoNumber(_ side: GuestSide) -> Int { side == .front ? 1 : 2 }
+
     private func photoSection(_ piece: GuestPiece) -> some View {
-        Section("Photos") {
-            ForEach(GuestSide.allCases) { side in
-                if let photo = piece.photos[side], let image = UIImage(contentsOfFile: store.photoURL(photo).path) {
-                    Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 220)
-                        .accessibilityLabel(side.title + " photo")
-                }
-                HStack {
-                    Button(side.title + (piece.photos[side] == nil ? " photo" : " retake"), systemImage: "camera") { take(side) }
-                        .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
-                    Button("Import " + side.rawValue, systemImage: "photo") {
-                        selectedSide = side
-                        photoPicker = true
-                    }
-                }.buttonStyle(.borderless)
-                if piece.photos[side] != nil {
-                    Button("Remove " + side.rawValue, role: .destructive) { act { try store.removePhoto(side, from: id) } }
-                }
-                #if DEBUG
-                if ProcessInfo.processInfo.arguments.contains("--guest-photo-fixtures"),
-                   let image = UIImage(named: "DemoNickel") {
-                    Button("Use sample " + side.rawValue) {
-                        act { try store.putPhoto(CaptureDraftStore.jpeg(image), piece: id, side: side) }
-                    }
-                }
-                #endif
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Photos").font(.headline).accessibilityAddTraits(.isHeader)
+                Spacer()
+                Text("\(piece.photos.count) of 2").font(.subheadline).foregroundStyle(.secondary)
+                    .accessibilityLabel("\(piece.photos.count) of 2 photos")
             }
-            if !piece.photos.isEmpty {
-                Button("Swap front and back", systemImage: "arrow.left.arrow.right") { act { try store.swapPhotos(id) } }
-            }
-            if isDraft && piece.photos[.front] != nil && piece.photos[.back] == nil {
-                let candidates = (store.active?.drafts ?? []).filter {
-                    $0.id != id && $0.photos.count == 1 && $0.photos[.front] != nil &&
-                    [$0.title, $0.notes, $0.serial, $0.purchasePrice, $0.purchaseCurrency, $0.issuer, $0.year, $0.denomination].allSatisfy(\.isEmpty)
-                }
-                if !candidates.isEmpty {
-                    Menu("Pair back from another draft") {
-                        ForEach(candidates) { other in
-                            let position = (store.active?.drafts.firstIndex { $0.id == other.id } ?? 0) + 1
-                            Button("Draft \(position)") { pendingPair = other }
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(GuestSide.allCases) { side in
+                        if let photo = piece.photos[side], let image = UIImage(contentsOfFile: store.photoURL(photo).path) {
+                            Image(uiImage: image).resizable().scaledToFit()
+                                .frame(maxWidth: .infinity).frame(height: 115)
+                                .padding(6)
+                                .background(CollectorDesign.highlight.opacity(0.5), in: .rect(cornerRadius: 12))
+                                .accessibilityLabel("Photo \(photoNumber(side))")
+                                .overlay(alignment: .bottomTrailing) {
+                                    Button { zoomedSide = side } label: {
+                                        Image(systemName: "magnifyingglass").frame(width: 44, height: 44)
+                                            .background(CollectorDesign.surface, in: .rect(cornerRadius: 10))
+                                            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(CollectorDesign.tint.opacity(0.35)))
+                                    }.buttonStyle(.plain)
+                                        .foregroundStyle(.tint).padding(5)
+                                        .accessibilityLabel("Zoom photo \(photoNumber(side))")
+                                }
+                        } else {
+                            Image(systemName: "photo").font(.title2).foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity).frame(height: 127)
+                                .background(CollectorDesign.highlight.opacity(0.42), in: .rect(cornerRadius: 12))
+                                .accessibilityHidden(true)
                         }
                     }
                 }
-            }
+                if let side = nextSide(piece) {
+                    Text(piece.photos.isEmpty ? "Add one or both sides in any order." : "Add the other side to improve your match.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { photoActions(side, isEmpty: piece.photos.isEmpty) }
+                        VStack(spacing: 8) { photoActions(side, isEmpty: piece.photos.isEmpty) }
+                    }
+                    #if DEBUG
+                    if ProcessInfo.processInfo.arguments.contains("--guest-photo-fixtures"), let image = UIImage(named: "DemoNickel") {
+                        scanButton("Add sample photo", icon: "photo") {
+                            act { try store.putPhoto(CaptureDraftStore.jpeg(image), piece: id, side: side) }
+                        }
+                    }
+                    #endif
+                }
+                if !piece.photos.isEmpty {
+                    Menu {
+                        ForEach(GuestSide.allCases) { side in
+                            if piece.photos[side] != nil {
+                                Button("Retake photo \(photoNumber(side))", systemImage: "camera") { take(side) }
+                                    .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+                                Button("Remove photo \(photoNumber(side))", role: .destructive) { act { try store.removePhoto(side, from: id) } }
+                            }
+                        }
+                        if isDraft, piece.photos.count == 1 {
+                            let candidates = store.active?.drafts.filter { other in
+                                other.id != id && other.photos.count == 1 && other.photos[.front] != nil &&
+                                [other.title, other.notes, other.serial, other.purchasePrice, other.purchaseCurrency,
+                                 other.issuer, other.year, other.denomination].allSatisfy(\.isEmpty)
+                            } ?? []
+                            if !candidates.isEmpty {
+                                Menu("Pair a photo from another draft") {
+                                    ForEach(candidates) { other in
+                                        let position = (store.active?.drafts.firstIndex { $0.id == other.id } ?? 0) + 1
+                                        Button("Draft \(position)") { pendingPair = other }
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("Manage photos", systemImage: "photo.on.rectangle")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(CollectorDesign.tint.opacity(0.35)))
+                    }.buttonStyle(.plain).foregroundStyle(.tint)
+                }
+                if busy { ProgressView("Importing photos…") }
+            }.padding(14).background(CollectorDesign.surface, in: .rect(cornerRadius: 16))
         }.disabled(busy || lookingOnline)
     }
 
-    private func matchesSection(_ piece: GuestPiece) -> some View {
-        Section("Identification") {
-            if lookingOnline || (!piece.photos.isEmpty && piece.recognition == nil && recognitionError == nil) {
-                ProgressView("Finding matches…")
-            } else if let result = piece.recognition {
-                Text(result.likely ? "Likely match" : result.suggestions.isEmpty ?
-                     (result.textReading.hasDetails ? "Details read from photos" : "Needs review") : "Possible matches")
-                    .font(.headline)
-                PhotoTextDetails(result: result)
-                let reading = result.textReading
-                if (piece.issuer.isEmpty && reading.issuer != nil) ||
-                    (piece.denomination.isEmpty && reading.denomination != nil) ||
-                    (piece.year.isEmpty && reading.year != nil) {
-                    Button("Use photo details", systemImage: "text.viewfinder") {
-                        applyReading(reading)
-                    }
-                }
-                ForEach(result.suggestions) { suggestion in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Button(suggestion.title) { apply(suggestion) }
-                        if !suggestion.evidence.isEmpty {
-                            Text(suggestion.evidence.joined(separator: " · ")).font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        if let reference = suggestion.reference { Link("View reference", destination: reference).font(.footnote) }
-                    }
-                }
-            } else {
-                Text("Needs review").font(.headline)
+    @ViewBuilder
+    private func photoActions(_ side: GuestSide, isEmpty: Bool) -> some View {
+        scanButton("Take photo", icon: "camera", prominent: isEmpty) { take(side) }
+            .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+        scanButton("Import photos", icon: "photo.on.rectangle") { photoPicker = true }
+    }
+
+    private func recordSection(_ piece: GuestPiece) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if piece.photos.isEmpty {
+                CollectorNotice(title: "Identification starts automatically", message: "Add a photo to scan this piece on your device.", icon: "text.viewfinder")
+            } else if lookingOnline {
+                ProgressView("Searching online…").padding(12)
+            } else if !busy, piece.recognition == nil && recognitionError == nil {
+                ProgressView("Reading photos…").padding(12)
+            } else if let onlineError {
+                CollectorNotice(title: "Online search", message: onlineError, icon: "exclamationmark.circle", warning: true)
+            } else if let recognitionError {
+                CollectorNotice(title: "Needs review", message: recognitionError, icon: "exclamationmark.circle", warning: true)
+            } else if piece.recognition?.likely == true || selectedMatch {
+                CollectorNotice(title: selectedMatch ? "Match selected" : "Likely match",
+                                message: "Review the filled details before saving.", icon: "checkmark.circle")
+            } else if !busy {
+                CollectorNotice(title: "Needs review", message: "Review the details the scan could read. Leave uncertain fields blank.",
+                                icon: "info.circle", warning: true)
             }
-            if let recognitionError { Text(recognitionError).font(.footnote) }
-            if let onlineError { Text(onlineError).font(.footnote) }
-            Button("Search offline catalog", systemImage: "books.vertical") { catalogPicker = true }
-                .disabled(busy || lookingOnline)
-            if !piece.photos.isEmpty && !lookingOnline {
-                Button(piece.onlineJob == nil && onlineError == nil ? "Search online" : "Retry online search", systemImage: "magnifyingglass") {
-                    askOnline = true
+            if !piece.photos.isEmpty && !lookingOnline && !onlineCompleted && piece.recognition?.likely != true {
+                let retry = piece.onlineJob != nil || onlineError != nil
+                let photoDescription = piece.photos.count == 1 ? "the photo shown" : "both photos shown"
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("This sends \(photoDescription) to NumiAgent for processing by Cloudflare Workers AI. Notes and private details stay on this device.")
+                        .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("guest-online-disclosure")
+                    scanButton(retry ? "Retry online search" : "Search online", icon: "magnifyingglass", prominent: true) {
+                        Task { await searchOnline() }
+                    }.accessibilityIdentifier("guest-search-online").disabled(busy)
                 }
-                    .accessibilityIdentifier("guest-search-online")
-                    .disabled(busy)
+            }
+            details
+            if let result = piece.recognition, !result.suggestions.isEmpty, !result.likely {
+                scanButton(showAlternatives ? "Hide possible matches" : "See possible matches",
+                           icon: showAlternatives ? "chevron.up" : "chevron.down") { showAlternatives.toggle() }
+                if showAlternatives {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(result.suggestions) { suggestion in
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(suggestion.title).font(.headline)
+                                if !suggestion.evidence.isEmpty {
+                                    Text(suggestion.evidence.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary)
+                                }
+                                scanButton("Use match", icon: "checkmark") { apply(suggestion) }
+                                if let reference = suggestion.reference { Link("View reference", destination: reference).font(.footnote) }
+                            }
+                        }
+                    }.padding(14).background(CollectorDesign.surface, in: .rect(cornerRadius: 16))
+                }
+            }
+            if let result = piece.recognition, !result.observations.isEmpty {
+                DisclosureGroup("Read from photos") {
+                    Text(result.observations.joined(separator: "\n")).font(.footnote).textSelection(.enabled)
+                }.padding(.horizontal, 6)
             }
         }
     }
 
     private var details: some View {
-        Section("Details") {
-            Picker("Type", selection: field(\.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text("Record details").font(.headline).accessibilityAddTraits(.isHeader)
+                Spacer()
+                Text("Editable").font(.caption).foregroundStyle(.secondary)
+            }
+            detailRow("Name", field: .title)
+            detailRow("Issuer or country", field: .issuer)
+            detailRow("Denomination", field: .denomination)
+            detailRow("Year", field: .year)
+            Picker("Type", selection: field(.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
                 .pickerStyle(.segmented)
-            TextField("Title", text: field(\.title))
-            TextField("Issuer or country", text: field(\.issuer))
-            TextField("Denomination", text: field(\.denomination))
-            TextField("Year", text: field(\.year))
-            TextField("Notes", text: field(\.notes), axis: .vertical)
+            TextField("Notes", text: text(\.notes), axis: .vertical).padding(8)
             DisclosureGroup("Private details") {
-                TextField("Serial number", text: field(\.serial))
-                TextField("Purchase price", text: field(\.purchasePrice)).keyboardType(.decimalPad)
-                TextField("Currency", text: field(\.purchaseCurrency)).textInputAutocapitalization(.characters)
+                TextField("Serial number", text: text(\.serial))
+                TextField("Purchase price", text: text(\.purchasePrice)).keyboardType(.decimalPad)
+                TextField("Currency", text: text(\.purchaseCurrency)).textInputAutocapitalization(.characters)
             }
             if let reference = store.piece(id)?.reference { Link("Saved reference", destination: reference) }
-        }
+        }.padding(14).background(CollectorDesign.surface, in: .rect(cornerRadius: 16))
     }
 
-    private func field(_ path: WritableKeyPath<GuestPiece, String>) -> Binding<String> {
+    private func detailRow(_ title: String, field key: GuestDetailField) -> some View {
+        HStack(spacing: 8) {
+            Text(title).foregroundStyle(.secondary).accessibilityHidden(true)
+            TextField(title, text: field(key), prompt: Text("Enter value").foregroundStyle(.secondary))
+                .multilineTextAlignment(.trailing)
+                .accessibilityLabel(title).accessibilityIdentifier("guest-field-" + key.rawValue)
+        }.padding(.horizontal, 9).frame(minHeight: 44)
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Color.secondary.opacity(0.24)))
+    }
+
+    private func scanButton(_ title: String, icon: String, prominent: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon).font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 6).frame(maxWidth: .infinity, minHeight: 44)
+                .foregroundStyle(prominent ? Color.white : CollectorDesign.tint)
+                .background(prominent ? CollectorDesign.forest : CollectorDesign.surface, in: .rect(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(CollectorDesign.tint.opacity(prominent ? 0 : 0.45)))
+                .contentShape(.rect(cornerRadius: 10))
+        }.buttonStyle(.plain)
+    }
+
+    private func canConfirm(_ piece: GuestPiece) -> Bool {
+        (piece.status == .confirmed || selectedMatch || piece.recognition?.likely == true) && !piece.title.isBlank
+    }
+
+    private func saveBar(_ piece: GuestPiece) -> some View {
+        let confirmed = canConfirm(piece)
+        return VStack(spacing: 4) {
+            scanButton(confirmed ? "Save to collection" : "Save for review", icon: "checkmark",
+                       prominent: confirmed) { save(confirmed ? .confirmed : .unidentified) }
+                .accessibilityIdentifier("guest-save-record").disabled(busy || lookingOnline)
+            Text(confirmed ? "You can edit this record later." : "Keep this piece even if the match is uncertain.")
+                .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }.padding(.horizontal, 20).padding(.vertical, 9).frame(maxWidth: 1040).frame(maxWidth: .infinity)
+            .background(CollectorDesign.surface)
+    }
+
+    private func field(_ field: GuestDetailField) -> Binding<String> {
+        Binding(get: { store.piece(id)?[keyPath: field.field] ?? "" }, set: { input in
+            act { try store.changePiece(id) { $0.edit(field, value: input) } }
+        })
+    }
+
+    private func text(_ path: WritableKeyPath<GuestPiece, String>) -> Binding<String> {
         Binding(get: { store.piece(id)?[keyPath: path] ?? "" }, set: { input in
             act { try store.changePiece(id) { $0[keyPath: path] = input } }
         })
@@ -495,9 +591,11 @@ private struct GuestPieceScreen: View {
     }
 
     private func recognize(_ piece: GuestPiece) async {
-        guard !piece.photos.isEmpty, piece.recognition == nil else { return }
         recognitionError = nil
         onlineError = nil
+        onlineCompleted = false
+        selectedMatch = false
+        guard !piece.photos.isEmpty, piece.recognition == nil else { return }
         let version = photoVersion(piece)
         let urls = version.map { store.photoURL($0) }
         do {
@@ -506,27 +604,40 @@ private struct GuestPieceScreen: View {
             }.value
             guard !Task.isCancelled, let current = store.piece(id), photoVersion(current) == version,
                   current.recognition == nil else { return }
-            try store.changePiece(id) { $0.recognition = result }
+            try store.changePiece(id) {
+                $0.recognition = result
+                $0.fill(from: result)
+            }
         } catch {
             if !Task.isCancelled { recognitionError = "Couldn’t read these photos. You can still enter details." }
         }
     }
 
-    private func searchOnline(_ selected: Set<UUID>) async {
-        guard !lookingOnline, let piece = store.piece(id) else { return }
+    private func searchOnline() async {
+        guard !lookingOnline, !busy, let piece = store.piece(id) else { return }
         let version = photoVersion(piece)
-        let photos = version.filter { selected.contains($0) }
-        guard !photos.isEmpty else { return }
-        let front = piece.photos[.front].flatMap { selected.contains($0) ? $0 : nil }
-        let back = piece.photos[.back].flatMap { selected.contains($0) ? $0 : nil }
+        guard !version.isEmpty else { return }
         lookingOnline = true
         onlineError = nil
         defer { lookingOnline = false }
         do {
-            let job = piece.onlineJob.flatMap { $0.expired || $0.photos != photos ? nil : $0 } ?? GuestOnlineJob(photos: photos)
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--guest-consent-fixture") {
+                let match = LocalSuggestion(id: "guest-fixture", type: "coin", title: "2007 Jefferson nickel", issuer: "United States",
+                                            denomination: "5 cents", year: "2007", reference: nil, evidence: [])
+                try store.changePiece(id) {
+                    let result = LocalRecognitionResult(suggestions: [match], likely: true)
+                    $0.recognition = result
+                    $0.fill(from: result)
+                }
+                onlineCompleted = true
+                return
+            }
+            #endif
+            let job = piece.onlineJob.flatMap { $0.expired || $0.photos != version ? nil : $0 } ?? GuestOnlineJob(photos: version)
             try store.changePiece(id) { $0.onlineJob = job }
-            let frontData = try front.map { try Data(contentsOf: store.photoURL($0)) }
-            let backData = try back.map { try Data(contentsOf: store.photoURL($0)) }
+            let frontData = try piece.photos[.front].map { try Data(contentsOf: store.photoURL($0)) }
+            let backData = try piece.photos[.back].map { try Data(contentsOf: store.photoURL($0)) }
             let result = try await api.searchGuestPhotos(id: job.id, key: job.key, front: frontData, back: backData)
             guard let current = store.piece(id), photoVersion(current) == version,
                   current.onlineJob?.id == job.id else { return }
@@ -535,10 +646,12 @@ private struct GuestPieceScreen: View {
                     var matches = result.recognition
                     matches.observations = $0.recognition?.observations ?? []
                     matches.photoReading = $0.recognition?.photoReading
-                    if matches.suggestions.isEmpty { matches.suggestions = $0.recognition?.suggestions ?? [] }
+                    if matches.suggestions.isEmpty, let local = $0.recognition { matches = local }
                     $0.recognition = matches
+                    $0.fill(from: matches)
                     $0.onlineJob = nil
                 }
+                onlineCompleted = true
                 if result.recognition.suggestions.isEmpty {
                     onlineError = "No online matches found. You can still use the local suggestions or enter details yourself."
                 }
@@ -560,28 +673,55 @@ private struct GuestPieceScreen: View {
     private func apply(_ suggestion: LocalSuggestion) {
         act {
             try store.changePiece(id) { piece in
-                piece.type = suggestion.type
-                piece.title = suggestion.title
-                if !suggestion.issuer.isEmpty { piece.issuer = suggestion.issuer }
-                if !suggestion.denomination.isEmpty { piece.denomination = suggestion.denomination }
-                if !suggestion.year.isEmpty { piece.year = suggestion.year }
+                let fields: [(GuestDetailField, String)] = [(.type, suggestion.type), (.title, suggestion.title),
+                    (.issuer, suggestion.issuer), (.denomination, suggestion.denomination), (.year, suggestion.year)]
+                for (field, value) in fields where !value.isBlank {
+                    guard piece.manuallyEditedFields?.contains(field) != true else { continue }
+                    piece.edit(field, value: value)
+                }
                 piece.reference = suggestion.reference
+                piece.automaticReference = nil
             }
-        }
-    }
-
-    private func applyReading(_ reading: PhotoTextReading) {
-        act {
-            try store.changePiece(id) { piece in
-                if piece.issuer.isEmpty, let issuer = reading.issuer { piece.issuer = issuer }
-                if piece.denomination.isEmpty, let denomination = reading.denomination { piece.denomination = denomination }
-                if piece.year.isEmpty, let year = reading.year { piece.year = year }
-            }
+            selectedMatch = true
+            showAlternatives = false
         }
     }
 
     private func save(_ status: GuestStatus) { act { try store.save(id, status: status); done() } }
     private func act(_ action: () throws -> Void) { do { try action() } catch { store.error = error.localizedDescription } }
+}
+
+private struct GuestPhotoPreview: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+    @GestureState private var magnification: CGFloat = 1
+    let photo: UIImage
+
+    var body: some View {
+        NavigationStack {
+            GeometryReader { proxy in
+                ScrollView([.horizontal, .vertical]) {
+                    Image(uiImage: photo).resizable().scaledToFit()
+                        .frame(width: proxy.size.width * zoom, height: proxy.size.height * zoom)
+                        .accessibilityLabel("Coin or banknote photo")
+                }.gesture(MagnificationGesture().updating($magnification) { amount, state, _ in state = amount }
+                    .onEnded { scale = min(max(scale * $0, 1), 5) })
+                    .onTapGesture(count: 2) { scale = scale == 1 ? 2 : 1 }
+            }
+            .background(Color(uiColor: .systemBackground))
+            .navigationTitle("Photo").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                ToolbarItem(placement: .primaryAction) {
+                    Button(scale == 1 ? "Zoom in" : "Reset zoom", systemImage: scale == 1 ? "plus.magnifyingglass" : "minus.magnifyingglass") {
+                        scale = scale == 1 ? 2 : 1
+                    }
+                }
+            }
+        }
+    }
+
+    private var zoom: CGFloat { min(max(scale * magnification, 1), 5) }
 }
 
 struct PhotoTextDetails: View {

@@ -47,7 +47,24 @@ struct GuestScanResult: Decodable {
                                    issuer: item.issuer ?? "", denomination: item.denomination ?? "",
                                    year: item.year ?? "", reference: reference, evidence: evidence)
         }
-        return .init(suggestions: matches, observations: [])
+        let likely = candidates.count == 1 && candidates.first.map {
+            $0.confidence >= 0.90 && !$0.hasOpenRomanVariant
+        } == true && matches.first?.reference != nil
+        return .init(suggestions: matches, likely: likely, observations: [])
+    }
+}
+
+enum GuestDetailField: String, Codable, Hashable {
+    case type, title, issuer, denomination, year
+
+    var field: WritableKeyPath<GuestPiece, String> {
+        switch self {
+        case .type: \.type
+        case .title: \.title
+        case .issuer: \.issuer
+        case .denomination: \.denomination
+        case .year: \.year
+        }
     }
 }
 
@@ -67,10 +84,73 @@ struct GuestPiece: Codable, Identifiable {
     var photos: [GuestSide: UUID] = [:]
     var recognition: LocalRecognitionResult?
     var onlineJob: GuestOnlineJob?
+    var automaticFields: Set<GuestDetailField>?
+    var manuallyEditedFields: Set<GuestDetailField>?
+    var automaticReference: Bool?
 
     var displayTitle: String {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? (type == "banknote" ? "Unidentified banknote" : "Unidentified coin") : title
+    }
+
+    mutating func edit(_ field: GuestDetailField, value: String) {
+        self[keyPath: field.field] = value
+        var edited = manuallyEditedFields ?? []
+        edited.insert(field)
+        manuallyEditedFields = edited
+        automaticFields?.remove(field)
+    }
+
+    mutating func fill(from result: LocalRecognitionResult) {
+        let likely = result.likely ? result.suggestions.first : nil
+        let reading = result.textReading
+        func agreed(_ key: KeyPath<LocalSuggestion, String>) -> String? {
+            guard let first = result.suggestions.first?[keyPath: key], !first.isBlank,
+                  result.suggestions.allSatisfy({ $0[keyPath: key].localizedCaseInsensitiveCompare(first) == .orderedSame }) else { return nil }
+            return first
+        }
+        let fields: [(GuestDetailField, String?)] = [
+            (.type, agreed(\.type)), (.title, likely?.title),
+            (.issuer, reading.issuer ?? agreed(\.issuer)),
+            (.denomination, reading.denomination ?? agreed(\.denomination)),
+            (.year, reading.year ?? likely?.year)
+        ]
+        var filled = automaticFields ?? []
+        for (field, value) in fields {
+            guard manuallyEditedFields?.contains(field) != true else { continue }
+            let current = self[keyPath: field.field]
+            guard current.isBlank || filled.contains(field) || (field == .type && current == "coin") else { continue }
+            if let value, !value.isBlank {
+                self[keyPath: field.field] = value
+                filled.insert(field)
+            }
+        }
+        automaticFields = filled
+        if (reference == nil || automaticReference == true), let source = likely?.reference {
+            reference = source
+            automaticReference = true
+        }
+    }
+
+    mutating func resetPhotoEvidence() {
+        for field in automaticFields ?? [] { self[keyPath: field.field] = field == .type ? "coin" : "" }
+        automaticFields = nil
+        if automaticReference == true { reference = nil }
+        automaticReference = nil
+        recognition = nil
+        onlineJob = nil
+    }
+
+    mutating func markSaved(_ status: GuestStatus) {
+        self.status = status
+        onlineJob = nil
+        if status == .confirmed {
+            automaticFields = nil
+            automaticReference = nil
+            var edited = manuallyEditedFields ?? []
+            edited.insert(.type)
+            manuallyEditedFields = edited
+        }
     }
 }
 
@@ -133,7 +213,10 @@ final class GuestStore: ObservableObject {
                 let id = try draft()
                 try putPhoto(photo, piece: id, side: .front)
                 try putPhoto(photo, piece: id, side: .back)
-                try changePiece(id) { $0.recognition = LocalRecognitionResult() }
+                try changePiece(id) {
+                    $0.recognition = LocalRecognitionResult()
+                    $0.edit(.issuer, value: "Collector correction")
+                }
             } catch { self.error = error.localizedDescription }
         }
         #endif
@@ -235,10 +318,11 @@ final class GuestStore: ObservableObject {
                   other.issuer.isEmpty, other.denomination.isEmpty, other.year.isEmpty,
                   let photo = other.photos[.front],
                   let index = collection.drafts.firstIndex(where: { $0.id == target }),
-                  collection.drafts[index].photos[.back] == nil else { throw GuestStorageError.unavailable }
-            collection.drafts[index].photos[.back] = photo
-            collection.drafts[index].onlineJob = nil
-            collection.drafts[index].recognition = nil
+                  let side = GuestSide.allCases.first(where: { collection.drafts[index].photos[$0] == nil }) else {
+                throw GuestStorageError.unavailable
+            }
+            collection.drafts[index].photos[side] = photo
+            collection.drafts[index].resetPhotoEvidence()
             collection.drafts.removeAll { $0.id == source }
             collection.activeDraft = target
         }
@@ -270,8 +354,7 @@ final class GuestStore: ObservableObject {
         do {
             try changePiece(id) { piece in
                 piece.photos[side] = photo
-                piece.recognition = nil
-                piece.onlineJob = nil
+                piece.resetPhotoEvidence()
             }
         } catch {
             try? files.removeItem(at: url)
@@ -284,8 +367,7 @@ final class GuestStore: ObservableObject {
         guard let collection = active, let old = piece(id)?.photos[side] else { return }
         try changePiece(id) { piece in
             piece.photos[side] = nil
-            piece.recognition = nil
-            piece.onlineJob = nil
+            piece.resetPhotoEvidence()
         }
         removeUnreferenced([old], from: collection.id)
     }
@@ -295,8 +377,7 @@ final class GuestStore: ObservableObject {
             let front = piece.photos[.front]
             piece.photos[.front] = piece.photos[.back]
             piece.photos[.back] = front
-            piece.onlineJob = nil
-            piece.recognition = nil
+            piece.resetPhotoEvidence()
         }
     }
 
@@ -308,13 +389,11 @@ final class GuestStore: ObservableObject {
         try change { collection in
             if let index = collection.drafts.firstIndex(where: { $0.id == id }) {
                 var piece = collection.drafts.remove(at: index)
-                piece.status = status
-                piece.onlineJob = nil
+                piece.markSaved(status)
                 collection.pieces.append(piece)
                 collection.activeDraft = collection.drafts.last?.id
             } else if let index = collection.pieces.firstIndex(where: { $0.id == id }) {
-                collection.pieces[index].status = status
-                collection.pieces[index].onlineJob = nil
+                collection.pieces[index].markSaved(status)
             } else { throw GuestStorageError.unavailable }
         }
     }

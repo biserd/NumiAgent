@@ -127,7 +127,7 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
-    func testGuestConsentStartsEmptyAndCanBeDeclined() {
+    func testGuestSearchUsesInlineConsentAndFillsRecord() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"]
@@ -135,26 +135,23 @@ final class GuestV1Tests: XCTestCase {
         let resume = app.buttons["Resume batch"]
         XCTAssertTrue(resume.waitForExistence(timeout: 15), app.debugDescription)
         resume.tap()
-        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Zoom photo 1"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Zoom photo 2"].firstMatch.exists)
         let search = app.buttons["guest-search-online"]
         reveal(search, in: app)
+        let disclosure = app.staticTexts["guest-online-disclosure"]
+        XCTAssertTrue(disclosure.exists)
+        XCTAssertTrue(disclosure.label.contains("both photos shown"))
+        XCTAssertTrue(disclosure.label.contains("Cloudflare Workers AI"))
+        XCTAssertNotEqual(app.textFields["guest-field-title"].value as? String, "2007 Jefferson nickel")
         search.tap()
-        let send = app.buttons["Send selected photos"]
-        XCTAssertTrue(send.waitForExistence(timeout: 10))
-        XCTAssertFalse(send.isEnabled)
-        XCTAssertTrue(app.buttons["guest-online-front"].exists)
-        let backChoice = app.buttons["guest-online-back"]
-        XCTAssertTrue(backChoice.isHittable)
-        backChoice.tap()
-        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 10))
-        XCTAssertTrue(send.isEnabled)
-        app.buttons["Keep on this iPhone"].tap()
-        let sheetClosed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: send)
-        XCTAssertEqual(XCTWaiter.wait(for: [sheetClosed], timeout: 10), .completed)
-        reveal(search, in: app)
-        search.tap()
-        XCTAssertTrue(send.waitForExistence(timeout: 10))
-        XCTAssertFalse(send.isEnabled)
+        let title = app.textFields["guest-field-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 10))
+        XCTAssertEqual(title.value as? String, "2007 Jefferson nickel")
+        XCTAssertEqual(app.textFields["guest-field-issuer"].value as? String, "Collector correction")
+        XCTAssertEqual(app.textFields["guest-field-year"].value as? String, "2007")
+        XCTAssertFalse(app.buttons["Send selected photos"].exists)
+        XCTAssertEqual(app.buttons["guest-save-record"].label, "Save to collection")
     }
 
     @MainActor
@@ -188,23 +185,23 @@ final class GuestV1Tests: XCTestCase {
         let start = app.buttons["Start scanning"]
         XCTAssertTrue(start.waitForExistence(timeout: 15))
         start.tap()
-        let front = app.buttons["Use sample front"]
+        let front = app.buttons["Add sample photo"]
         XCTAssertTrue(front.waitForExistence(timeout: 10))
         front.tap()
-        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Zoom photo 1"].firstMatch.waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
         let resume = app.buttons["Resume batch"]
         XCTAssertTrue(resume.waitForExistence(timeout: 15))
         XCTAssertFalse(start.exists)
         resume.tap()
-        XCTAssertTrue(app.images["Front photo"].firstMatch.waitForExistence(timeout: 10))
-        let back = app.buttons["Use sample back"]
+        XCTAssertTrue(app.buttons["Zoom photo 1"].firstMatch.waitForExistence(timeout: 10))
+        let back = app.buttons["Add sample photo"]
         if !back.isHittable { app.swipeUp() }
         XCTAssertTrue(back.isHittable)
         back.tap()
-        XCTAssertTrue(app.images["Back photo"].firstMatch.waitForExistence(timeout: 10))
-        let save = app.buttons["Save as unidentified"]
+        XCTAssertTrue(app.buttons["Zoom photo 2"].firstMatch.waitForExistence(timeout: 10))
+        let save = app.buttons["guest-save-record"]
         for _ in 0..<8 where !save.isHittable { app.swipeUp() }
         XCTAssertTrue(save.isHittable)
         save.tap()
@@ -240,10 +237,10 @@ final class GuestV1Tests: XCTestCase {
     private func addManually(_ title: String, to app: XCUIApplication, isBanknote: Bool) {
         app.buttons["Add item"].tap()
         app.buttons["Enter details manually"].tap()
-        let field = app.textFields["Title"]
+        let field = app.textFields["guest-field-title"]
         for _ in 0..<5 where !field.isHittable { app.swipeUp() }
         XCTAssertTrue(field.isHittable)
-        let save = app.buttons["Save as unidentified"]
+        let save = app.buttons["guest-save-record"]
         if isBanknote {
             let banknote = app.segmentedControls.buttons["Banknote"].firstMatch
             if !banknote.isHittable { app.swipeDown() }

@@ -107,7 +107,7 @@ jobs:
           xcodebuild -project ios/NumiAgent.xcodeproj -scheme NumiAgent -configuration Debug \
             -destination "platform=iOS Simulator,id=$simulator" -derivedDataPath "$RUNNER_TEMP/numiagent-consent" \
             -parallel-testing-enabled NO -test-iterations 3 \
-            -only-testing:NumiAgentUITests/GuestV1Tests/testGuestConsentStartsEmptyAndCanBeDeclined \
+            -only-testing:NumiAgentUITests/GuestV1Tests/testGuestSearchUsesInlineConsentAndFillsRecord \
             CODE_SIGNING_ALLOWED=NO test
       - name: Archive, sign, and upload
         env:

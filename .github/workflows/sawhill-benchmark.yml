@@ -1,0 +1,46 @@
+name: Benchmark Sawhill offline coin matching
+
+on:
+  push:
+    branches: [codex/sawhill-benchmark]
+    paths:
+      - .github/workflows/sawhill-benchmark.yml
+      - benchmarks/sawhill/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prepare the pinned Sawhill gallery and queries
+        run: python -u benchmarks/sawhill/prepare.py "$RUNNER_TEMP/sawhill"
+      - name: Convert the pinned DINOv2-Small encoder
+        env:
+          HF_HUB_DISABLE_XET: '1'
+        run: |
+          python -m pip install -r ios/benchmark/requirements.txt
+          python ios/benchmark/convert_models.py "$RUNNER_TEMP" dinov2-small
+          xcrun coremlcompiler compile "$RUNNER_TEMP/dinov2-small.mlpackage" "$RUNNER_TEMP"
+      - name: Run Vision and Core ML on identical stills
+        run: |
+          mkdir -p "$RUNNER_TEMP/sawhill-report"
+          xcrun swiftc -O ios/NumiAgent/LocalRecognition.swift benchmarks/sawhill/Runner.swift -o "$RUNNER_TEMP/sawhill-runner"
+          "$RUNNER_TEMP/sawhill-runner" "$RUNNER_TEMP/sawhill" "$RUNNER_TEMP/dinov2-small.mlmodelc" "$RUNNER_TEMP/sawhill-report/predictions.json"
+      - name: Score the disjoint holdout and save evidence
+        run: |
+          report="$RUNNER_TEMP/sawhill-report"
+          cp "$RUNNER_TEMP/sawhill/manifest.json" "$report/"
+          python benchmarks/sawhill/score.py "$report/manifest.json" "$report/predictions.json" "$report/results.json" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sawhill-offline-results
+          path: ${{ runner.temp }}/sawhill-report/
+          retention-days: 30

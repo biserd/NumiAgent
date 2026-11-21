@@ -1,0 +1,11 @@
+# Sawhill offline coin matching benchmark
+
+This benchmark runs a standalone macOS executable and does not build the iOS app. It uses Apple Vision feature prints revision 2 and the same pinned DINOv2-Small encoder conversion as the existing recognition study. Vision OCR plus word overlap is a text-only baseline given the same reference photos. The shipped issue catalog returns no verified Sawhill accession, so it is not used as the text baseline.
+
+The fixture uses the processed stills from Sawhill revision `af177c884a6949a42b607e2c46d6660f633d754f`. The published train and test folders are disjoint by physical accession. Both sides are required for this benchmark. One train accession lacks one side and is excluded. In each partition, a fixed accession hash assigns half the coins to a reference gallery and half to a set of unknowns. An enrolled specimen's two scan-style views (`scan_p1_color_large.png`) are its reference. Every query uses its two direct-lighting stills (`direct_color_2.png`). The script checks file hashes for identical image bytes and records them in the manifest. The acquisition names identify different image variants of a specimen. Separate capture sessions are not verified. The score considers both orientations of a two-sided pair.
+
+This setup measures retrieval of previously enrolled test specimens and abstention on unknown specimens. It does not measure classification of historically related types across different physical coins. No automatic draft labels are used. Measure field extraction and open-set family attribution separately with verified type labels and newly captured iPhone photos.
+
+For each method, freeze distance and runner-up separation on the calibration set by maximizing correct matches at zero accepted calibration errors. The report counts correct suggestions, wrong known matches, unknowns incorrectly accepted, and abstentions on the untouched test set. It reports paired bootstrap confidence intervals for gains in correct suggestions per 100 test pieces. Zero observed errors on this sample does not establish a zero production error rate.
+
+[MacKenzie Art Gallery Sawhill Numismatic Collection, CC BY 4.0](https://huggingface.co/datasets/COIN-Research-Group/sawhill-dataset)

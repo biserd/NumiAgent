@@ -56,16 +56,31 @@ jobs:
           PY
       - name: Deny network access and scan both specimens
         run: |
-          python3 -m http.server 19724 --bind 127.0.0.1 --directory "$RUNNER_TEMP" > "$RUNNER_TEMP/loopback.log" 2>&1 &
-          trap 'kill "$!"' EXIT
-          probe='http://127.0.0.1:19724/silver-certificate.jpg'
-          curl --fail --silent --retry 3 --retry-connrefused --max-time 4 "$probe" --output /dev/null
-          profile='(version 1) (allow default) (deny network*)'
-          if sandbox-exec -p "$profile" /usr/bin/curl --fail --silent --max-time 3 "$probe" --output /dev/null; then
-            echo 'Expected sandbox to block a confirmed working network connection'
-            exit 1
-          fi
-          echo 'Confirmed network denial against the working loopback probe'
-          sandbox-exec -p "$profile" "$RUNNER_TEMP/OfflineCatalogCheck.app/Contents/MacOS/check-offline-reading" \
-            ios/NumiAgent/Assets.xcassets/DemoNickel.imageset/jefferson-nickel.jpg \
-            "$RUNNER_TEMP/silver-obverse.jpg" "$RUNNER_TEMP/silver-reverse.jpg"
+          python - <<'PY'
+          import os
+          import subprocess
+          import threading
+          from http.server import BaseHTTPRequestHandler, HTTPServer
+          from pathlib import Path
+
+          class Probe(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  self.send_response(204)
+                  self.end_headers()
+
+          with HTTPServer(("127.0.0.1", 0), Probe) as server:
+              threading.Thread(target=server.serve_forever, daemon=True).start()
+              url = f"http://127.0.0.1:{server.server_port}/probe"
+              curl = ["/usr/bin/curl", "--noproxy", "*", "--fail", "--silent", "--show-error", "--max-time", "5", url]
+              subprocess.run(curl, check=True)
+              sandbox = ["/usr/bin/sandbox-exec", "-p", "(version 1) (allow default) (deny network*)"]
+              denied = subprocess.run(sandbox + curl, capture_output=True, text=True)
+              if denied.returncode != 7:
+                  raise SystemExit(f"Expected the sandbox to deny the working socket. Got: {denied.returncode} {denied.stderr}")
+              print("Confirmed network denial against the working loopback probe", flush=True)
+              folder = Path(os.environ["RUNNER_TEMP"])
+              subprocess.run(sandbox + [str(folder / "OfflineCatalogCheck.app/Contents/MacOS/check-offline-reading"),
+                  "ios/NumiAgent/Assets.xcassets/DemoNickel.imageset/jefferson-nickel.jpg",
+                  str(folder / "silver-obverse.jpg"), str(folder / "silver-reverse.jpg")], check=True)
+              server.shutdown()
+          PY

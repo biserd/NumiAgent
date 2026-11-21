@@ -1,0 +1,340 @@
+{
+  "dataset": "Syllogeum Open v1.1 ANS subset",
+  "photos": 782,
+  "original_photo_long_edge_pixels": {
+    "min": 175,
+    "median": 175,
+    "max": 218
+  },
+  "photo_hash_manifest_sha256": "dabf2e687097c624932de2f30b0de75f31cbe7cb1e1ed45341b801989fd1105c",
+  "methods": {
+    "whole_photo": {
+      "ocr_receipt_sha256": "fa7bc88b2b7dfcc7567f29474ac53568826e9db9f6da9cc97e01f485e6f7a881",
+      "engine": "Windows.Media.Ocr en-US",
+      "ocr_inputs": 3128,
+      "shortlist_size": 20,
+      "gallery_accessions": 66640,
+      "catalog_coin_references": 62318,
+      "cutoffs": {
+        "visual": null,
+        "fused": null
+      },
+      "groups": {
+        "calibration": {
+          "visual": {
+            "reference_available": 211,
+            "first_correct": 82,
+            "among_top_three": 130,
+            "review": 226,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 226
+          },
+          "fused": {
+            "reference_available": 211,
+            "first_correct": 82,
+            "among_top_three": 130,
+            "review": 226,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 226
+          },
+          "ocr_text_pieces": 15,
+          "ocr_anchor_pieces": 0,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 181,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "test": {
+          "visual": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 165,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 165
+          },
+          "fused": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 165,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 165
+          },
+          "ocr_text_pieces": 7,
+          "ocr_anchor_pieces": 0,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 106,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "worn": {
+          "visual": {
+            "reference_available": 16,
+            "first_correct": 7,
+            "among_top_three": 11,
+            "review": 21,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 21
+          },
+          "fused": {
+            "reference_available": 16,
+            "first_correct": 7,
+            "among_top_three": 11,
+            "review": 21,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 21
+          },
+          "ocr_text_pieces": 1,
+          "ocr_anchor_pieces": 0,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 14,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "lookalikes": {
+          "visual": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 122,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 122
+          },
+          "fused": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 122,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 122
+          },
+          "ocr_text_pieces": 5,
+          "ocr_anchor_pieces": 0,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 106,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "outside_gallery": {
+          "visual": {
+            "reference_available": 0,
+            "first_correct": 0,
+            "among_top_three": 0,
+            "review": 43,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 43
+          },
+          "fused": {
+            "reference_available": 0,
+            "first_correct": 0,
+            "among_top_three": 0,
+            "review": 43,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 43
+          },
+          "ocr_text_pieces": 2,
+          "ocr_anchor_pieces": 0,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 0,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    },
+    "unwrapped_rim": {
+      "ocr_receipt_sha256": "7b39a2e909db3a4acba7bef2028c50afd93f8898dc99272d4d175ddd397e73aa",
+      "engine": "Windows.Media.Ocr en-US",
+      "ocr_inputs": 3128,
+      "shortlist_size": 20,
+      "gallery_accessions": 66640,
+      "catalog_coin_references": 62318,
+      "cutoffs": {
+        "visual": null,
+        "fused": null
+      },
+      "groups": {
+        "calibration": {
+          "visual": {
+            "reference_available": 211,
+            "first_correct": 82,
+            "among_top_three": 130,
+            "review": 226,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 226
+          },
+          "fused": {
+            "reference_available": 211,
+            "first_correct": 82,
+            "among_top_three": 130,
+            "review": 226,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 226
+          },
+          "ocr_text_pieces": 13,
+          "ocr_anchor_pieces": 2,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 181,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "test": {
+          "visual": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 165,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 165
+          },
+          "fused": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 165,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 165
+          },
+          "ocr_text_pieces": 15,
+          "ocr_anchor_pieces": 3,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 106,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "worn": {
+          "visual": {
+            "reference_available": 16,
+            "first_correct": 7,
+            "among_top_three": 11,
+            "review": 21,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 21
+          },
+          "fused": {
+            "reference_available": 16,
+            "first_correct": 7,
+            "among_top_three": 11,
+            "review": 21,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 21
+          },
+          "ocr_text_pieces": 0,
+          "ocr_anchor_pieces": 0,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 14,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "lookalikes": {
+          "visual": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 122,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 122
+          },
+          "fused": {
+            "reference_available": 122,
+            "first_correct": 43,
+            "among_top_three": 70,
+            "review": 122,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 122
+          },
+          "ocr_text_pieces": 11,
+          "ocr_anchor_pieces": 2,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 106,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        },
+        "outside_gallery": {
+          "visual": {
+            "reference_available": 0,
+            "first_correct": 0,
+            "among_top_three": 0,
+            "review": 43,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 43
+          },
+          "fused": {
+            "reference_available": 0,
+            "first_correct": 0,
+            "among_top_three": 0,
+            "review": 43,
+            "accepted_correct": 0,
+            "accepted_wrong": 0,
+            "total": 43
+          },
+          "ocr_text_pieces": 4,
+          "ocr_anchor_pieces": 1,
+          "catalog_evidence_pieces": 0,
+          "correct_in_full_shortlist": 0,
+          "gained_first": 0,
+          "lost_first": 0,
+          "first_gain_per_100_ci95": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    }
+  }
+}

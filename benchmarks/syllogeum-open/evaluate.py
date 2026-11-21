@@ -93,15 +93,15 @@ def gallery_records(indexed, available, queries, grouped):
     return gallery
 
 
-def rank_types(scores, type_index, types):
+def rank_types(scores, type_index, types, shortlist_size):
     strongest = np.full(len(types), -np.inf, dtype=np.float32)
     np.maximum.at(strongest, type_index, scores)
-    best = np.argsort(-strongest, kind="stable")[:3]
+    best = np.argsort(-strongest, kind="stable")[:shortlist_size]
     return [{"type": types[i], "similarity": float(strongest[i])} for i in best if np.isfinite(strongest[i])]
 
 
 def confidence(row):
-    first, second, _ = row["ranked"]
+    first, second = row["ranked"][:2]
     return 2 * first["similarity"] - second["similarity"]
 
 
@@ -123,7 +123,7 @@ def score(rows, threshold):
         best = row["ranked"][0]["type"]
         counts["reference_available"] += row["in_gallery"]
         counts["first_correct"] += best == gold
-        counts["among_top_three"] += any(item["type"] == gold for item in row["ranked"])
+        counts["among_top_three"] += any(item["type"] == gold for item in row["ranked"][:3])
         if threshold is None or confidence(row) < threshold:
             counts["review"] += 1
         elif best == gold:
@@ -141,7 +141,10 @@ def main():
     parser.add_argument("manifest", type=Path)
     parser.add_argument("wear_labels", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--shortlist-size", type=int, default=3)
     args = parser.parse_args()
+    if not 3 <= args.shortlist_size <= 50:
+        parser.error("shortlist size must be between 3 and 50")
     for name, expected in CHECKSUMS.items():
         file = args.sightings if name == "sightings.csv.gz" else args.vectors / name
         if digest(file) != expected:
@@ -184,13 +187,13 @@ def main():
         single = np.maximum(aa, ab)
         paired = np.maximum(aa + bb, ab + ba) * 0.5
         for i, row in enumerate(batch):
-            metadata = {key: row[key] for key in ("specimen_id", "split", "type", "source_url", "authority", "denomination", "mint")}
+            metadata = {key: row[key] for key in ("specimen_id", "split", "type", "source_url", "authority", "denomination", "mint", "obv_image", "rev_image")}
             key = family(row)
             metadata.update({"in_gallery": row["type"] in type_at,
                              "worn": row["specimen_id"] in worn,
                              "lookalikes": all(key) and row["type"] in families[key] and len(families[key]) >= 2})
             for name, matrix in (("one_side", single), ("two_sides", paired)):
-                evaluations[name].append({**metadata, "ranked": rank_types(matrix[i], type_index, types)})
+                evaluations[name].append({**metadata, "ranked": rank_types(matrix[i], type_index, types, args.shortlist_size)})
 
     output = {"dataset": "syllogeum-open-v1.1", "gallery_accessions": len(gallery), "gallery_types": len(types),
               "missing_queries": missing, "methods": {}, "predictions": evaluations}

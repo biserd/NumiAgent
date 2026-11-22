@@ -1,5 +1,6 @@
 import { render } from '../../dist-server/render.js'
 import { brand, canonicalOrigin, landingSeo, sitePages } from '../web/sitePages'
+import { launchEmailPath } from '../web/launch'
 import type { Env } from './core'
 
 const googleMeasurementId='G-X6DV07YFCJ'
@@ -7,20 +8,23 @@ const googleMeasurementId='G-X6DV07YFCJ'
 export async function publicPage(request:Request,url:URL,env:Env) {
   const path=url.pathname.replace(/\/+$/,'') || '/'
   const page=Object.hasOwn(sitePages,path) ? sitePages[path] : undefined
-  if (!page && path!=='/') return
+  const launchEmail=path===launchEmailPath
+  if (!page && path!=='/' && !launchEmail) return
   if (!['GET','HEAD'].includes(request.method)) return new Response(null,{status:405,headers:{Allow:'GET, HEAD'}})
   if (url.pathname!==path) {
     const destination=new URL(url)
     destination.pathname=path
     return Response.redirect(destination,308)
   }
-  const title=page ? page.seoTitle ?? (page.title.includes(brand) ? page.title : page.title+' | '+brand) : landingSeo.title
-  const description=page?.description ?? landingSeo.description
-  const analytics=env.APP_MODE==='production' && url.origin===canonicalOrigin
+  const title=page ? page.seoTitle ?? (page.title.includes(brand) ? page.title : page.title+' | '+brand) : launchEmail ? 'NumiAgent launch email' : landingSeo.title
+  const description=page?.description ?? (launchEmail ? 'Manage your NumiAgent launch notification.' : landingSeo.description)
+  const analytics=!launchEmail && env.APP_MODE==='production' && url.origin===canonicalOrigin
+  const appStoreAvailable=env.APP_STORE_AVAILABLE==='true'
   const canonical=canonicalOrigin+path
   const article=page?.article
   const collectionImage=path==='/' || path==='/features' || path==='/about' || path==='/privacy'
-  const image=collectionImage ? url.origin+'/collection-hero.jpg' : canonicalOrigin+'/roman-bronze.jpg'
+  const image=path==='/' ? canonicalOrigin+'/launch-media/iphone-ipad.jpg' :
+    page?.image ? canonicalOrigin+page.image.path : collectionImage ? url.origin+'/collection-hero.jpg' : canonicalOrigin+'/roman-bronze.jpg'
   const schema=article ? [{
     '@type':'BlogPosting',headline:page.title,description,url:canonical,mainEntityOfPage:canonical,
     datePublished:article.published,dateModified:article.updated ?? article.published,
@@ -38,7 +42,7 @@ export async function publicPage(request:Request,url:URL,env:Env) {
     name:page?.title ?? brand,description,url:canonical,inLanguage:'en'
   }]
   const structured=JSON.stringify({'@context':'https://schema.org','@graph':schema}).replace(/</g,'\\u003c')
-  const [shell,markup]=await Promise.all([env.ASSETS.fetch(new URL('/',env.APP_ORIGIN)),render(path)])
+  const [shell,markup]=await Promise.all([env.ASSETS.fetch(new URL('/',env.APP_ORIGIN)),render(path,appStoreAvailable)])
   if (!shell.ok) throw new Error('Public HTML shell is unavailable')
   const output=new HTMLRewriter()
     .on('title',{element(element){element.setInnerContent(title)}})
@@ -47,8 +51,8 @@ export async function publicPage(request:Request,url:URL,env:Env) {
     .on('head',{element(element){
       const metadata:Record<string,string>={
         'og:site_name':brand,'og:type':article?'article':'website','og:title':title,'og:description':description,
-        'og:url':canonical,'og:image':image,'og:image:alt':collectionImage ?
-          'Two worn coins and an illustrated banknote in an archival tray' : 'Illustration of a Roman bronze coin'
+        'og:url':canonical,'og:image':image,'og:image:alt':path==='/' ? 'NumiAgent collection and identification screens on iPhone and iPad' : page?.image?.alt ?? (collectionImage ?
+          'Two worn coins and an illustrated banknote in an archival tray' : 'Illustration of a Roman bronze coin')
       }
       if(article) {
         metadata['article:published_time']=new Date(article.published).toISOString()
@@ -59,8 +63,13 @@ export async function publicPage(request:Request,url:URL,env:Env) {
       }
       element.append('<script type="application/ld+json">'+structured+'</script>',{html:true})
       if (analytics) element.append('<meta name="numiagent-ga4" content="'+googleMeasurementId+'">',{html:true})
+      if (launchEmail) element.append('<meta name="robots" content="noindex, nofollow">',{html:true})
     }})
-    .on('#app',{element(element){element.setAttribute('data-rendered','server');element.setInnerContent(markup,{html:true})}})
+    .on('#app',{element(element){
+      element.setAttribute('data-rendered','server')
+      if (appStoreAvailable) element.setAttribute('data-app-store-available','true')
+      element.setInnerContent(markup,{html:true})
+    }})
     .transform(shell)
   const headers=new Headers(output.headers)
   const csp=headers.get('Content-Security-Policy')
@@ -72,7 +81,8 @@ export async function publicPage(request:Request,url:URL,env:Env) {
   }
   headers.delete('ETag')
   headers.delete('Last-Modified')
-  headers.set('Cache-Control','public, max-age=60')
+  headers.set('Cache-Control',launchEmail?'no-store':'public, max-age=60')
+  if (launchEmail) headers.set('X-Robots-Tag','noindex, nofollow')
   return new Response(request.method==='HEAD' ? null : output.body,{headers})
 }
 

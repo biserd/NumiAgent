@@ -2,6 +2,7 @@
 import { siteLinks } from './sitePages'
 import { blogPosts } from './blogPosts'
 import AnalyticsPreference from './AnalyticsPreference.vue'
+import { iosLandingPath } from './launch'
 defineProps<{footer?:boolean;landing?:boolean;path?:string}>()
 </script>
 <template>
@@ -20,10 +21,11 @@ defineProps<{footer?:boolean;landing?:boolean;path?:string}>()
     <nav aria-label="Main">
       <a :href="landing?'#workflow':'/#workflow'">How it works</a>
       <a class="nav-features" href="/features">Features</a>
+      <a class="nav-ios" :href="iosLandingPath">iPhone &amp; iPad</a>
       <a class="nav-blog" href="/blog">Blog</a>
       <a href="/about">About</a>
       <a href="/developers">Developers</a>
-      <a class="header-button" href="/app">Sign in <span aria-hidden="true">↗</span></a>
+      <a class="header-button" href="/app" data-marketing-event="web_catalog_click">Sign in <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
 </template>

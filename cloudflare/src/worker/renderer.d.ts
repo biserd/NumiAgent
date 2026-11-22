@@ -1,3 +1,3 @@
 declare module '*dist-server/render.js' {
-  export function render(path:string):Promise<string>
+  export function render(path:string,appStoreAvailable:boolean):Promise<string>
 }

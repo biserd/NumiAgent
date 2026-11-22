@@ -68,15 +68,18 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await api('/internal/photo-release',null,'POST',{})).status,401)
     const landing=await (await fetch(base+'/')).text()
     assert.match(landing,/id="app" data-rendered="server"/)
-    assert.match(landing,/class="hero-art collection-hero"/)
+    assert.match(landing,/class="hero-art native-hero"/)
     assert.match(landing,/aria-label="Collector guides"/)
     assert.match(landing,/Private Coin &amp; Banknote Collection App/)
-    assert.match(landing,/collection-hero\.jpg/)
+    assert.match(landing,/launch-media\/iphone-ipad\.jpg/)
+    assert.match(landing,/href="#launch">Notify me at launch/)
+    assert.match(landing,/launch-media\/two-photos-one-record\.mp4/)
     for(const issue of ['Too many photos to sort?','Stuck on an unfamiliar piece?','Unsure what it’s worth?','What’s still missing?']){
       assert.ok(landing.includes(issue),issue)
     }
     for(const [path,heading] of [['/about','About NumiAgent'],['/features','NumiAgent features'],['/terms','Terms of Service'],['/privacy','Privacy Policy'],['/help','Collector guide'],['/contact','Contact NumiAgent'],
-      ['/developers','NumiAgent for developers'],['/developers/access','API and MCP access'],['/developers/api','REST API guide'],['/developers/mcp','MCP connection guide']]){
+      ['/developers','NumiAgent for developers'],['/developers/access','API and MCP access'],['/developers/api','REST API guide'],['/developers/mcp','MCP connection guide'],
+      ['/coin-collection-app-iphone','Coin collection app for iPhone and iPad'],['/identify-coin-from-photo','Identify a coin from a photo'],['/banknote-inventory-app','Banknote inventory app for iPhone and iPad']]){
       const response=await fetch(base+path)
       assert.equal(response.status,200)
       const markup=await response.text()
@@ -89,31 +92,45 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal(blog.status,200)
     const posts=Array.from((await blog.text()).matchAll(/href="(\/blog\/[^"]+)"/g),match=>match[1])
       .filter(path=>path!=='/blog/rss.xml')
-    assert.equal(new Set(posts).size,6)
+    assert.equal(new Set(posts).size,7)
     assert.ok(sitemap.includes('<loc>https://numiagent.com/blog</loc>'))
     const feed=await fetch(base+'/blog/rss.xml')
     assert.equal(feed.status,200)
     assert.match(feed.headers.get('content-type'),/application\/rss\+xml/)
     const rss=await feed.text()
     for(const path of new Set(posts)){
-      assert.ok(sitemap.includes('<loc>https://numiagent.com'+path+'</loc><lastmod>2026-11-15</lastmod>'))
+      const tools=path==='/blog/best-numismatic-tools-and-iphone-apps'
+      const modified=tools ? '2026-11-22' : '2026-11-15'
+      assert.ok(sitemap.includes('<loc>https://numiagent.com'+path+'</loc><lastmod>'+modified+'</lastmod>'))
       assert.ok(rss.includes('<guid>https://numiagent.com'+path+'</guid>'))
       const article=await fetch(base+path)
       assert.equal(article.status,200)
       const markup=await article.text()
       const isNew=['/blog/identify-roman-coins','/blog/catalog-banknote-collection'].includes(path)
-      const published=isNew ? '2026-11-15' : '2026-11-14'
+      const published=tools ? modified : isNew ? '2026-11-15' : '2026-11-14'
       assert.ok(markup.includes('<time datetime="'+published+'">'))
       assert.match(markup,/id="app" data-rendered="server"/)
       assert.match(markup,/"@type":"BlogPosting"/)
       assert.match(markup,/"@type":"BreadcrumbList"/)
-      assert.match(markup,/"dateModified":"2026-11-15"/)
+      assert.ok(markup.includes('"dateModified":"'+modified+'"'))
       assert.match(markup,/<nav[^>]*aria-label="Breadcrumb"[^>]*>.*?href="\/blog"/s)
       const articleBody=markup.split('<div class="information-content wrap">')[1].split('<aside')[0]
       assert.match(articleBody,/<p>(?:(?!<\/p>).)*<a href="\/features#[a-z-]+"/s)
       const peers=new Set(Array.from(articleBody.matchAll(/href="(\/blog\/[^"]+)"/g),match=>match[1]))
       assert.ok(peers.size>=2 && [...peers].every(peer=>peer!==path && posts.includes(peer)))
     }
+    const manageLaunch=await fetch(base+'/launch-email')
+    assert.equal(manageLaunch.headers.get('cache-control'),'no-store')
+    assert.equal(manageLaunch.headers.get('x-robots-tag'),'noindex, nofollow')
+    assert.doesNotMatch(await manageLaunch.text(),/numiagent-ga4/)
+    assert.doesNotMatch(sitemap,/\/launch-email/)
+    const signup=await json(await api('/launch-waitlist',null,'POST',{email:'Test-Launch@example.test'}),202)
+    const signupToken=new URL(signup.confirmation).hash.slice('#confirm='.length)
+    assert.match(signupToken,/^[a-f0-9]{64}$/)
+    assert.deepEqual(await json(await api('/launch-waitlist',null,'POST',{email:'test-launch@example.test'}),202),{accepted:true})
+    assert.deepEqual(await json(await api('/launch-waitlist/manage',null,'POST',{action:'confirm',token:signupToken})),{status:'confirmed'})
+    assert.deepEqual(await json(await api('/launch-waitlist/manage',null,'POST',{action:'unsubscribe',token:signupToken})),{status:'unsubscribed'})
+    assert.equal((await api('/launch-waitlist/manage',null,'POST',{action:'confirm',token:signupToken})).status,400)
     const normalized=await fetch(base+'/blog/?source=test',{redirect:'manual'})
     assert.equal(normalized.status,308)
     assert.equal(normalized.headers.get('Location'),base+'/blog?source=test')

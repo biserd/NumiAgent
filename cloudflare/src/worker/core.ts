@@ -16,6 +16,7 @@ export interface Env {
   EMAIL?: SendEmail
   APP_MODE: string
   APP_ORIGIN: string
+  APP_STORE_AVAILABLE?: string
   EMAIL_FROM?: string
   TURNSTILE_SITE_KEY?: string
   TURNSTILE_SECRET?: string

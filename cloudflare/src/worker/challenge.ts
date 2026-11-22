@@ -1,7 +1,7 @@
 import { fail, isLocal } from './core'
 import type { WebContext } from './core'
 
-export async function requireChallenge(c:WebContext,action:'login'|'contact',challenge?:string) {
+export async function requireChallenge(c:WebContext,action:'login'|'contact'|'launch_waitlist',challenge?:string) {
   if (isLocal(c.env)) return
   const secret=c.env.TURNSTILE_SECRET
   if (!secret) return fail(503,'Security check is temporarily unavailable')

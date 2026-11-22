@@ -19,6 +19,7 @@ const namespace = 'numisgraph-'+environment
 const config = JSON.parse(await readFile('wrangler.jsonc','utf8'))
 config.name = namespace
 config.vars = {...config.vars,APP_MODE:environment,APP_ORIGIN:origin.origin,EMAIL_FROM:from,TURNSTILE_SITE_KEY:siteKey,
+  APP_STORE_AVAILABLE:process.env.NUMIS_APP_STORE_AVAILABLE === 'true' ? 'true' : 'false',
   VISION_MODEL:process.env.NUMIS_VISION_MODEL || config.vars.VISION_MODEL,
   MARKET_DOMAINS:process.env.NUMIS_MARKET_DOMAINS ?? '',MARKET_FEED_URL:process.env.NUMIS_MARKET_FEED_URL ?? '',
   EBAY_MARKET_ENABLED:process.env.NUMIS_EBAY_MARKET_ENABLED==='true'?'true':'false',

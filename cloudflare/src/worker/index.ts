@@ -14,6 +14,7 @@ import { publicPage } from './publicSite'
 import { exchangeRates, ocre } from './officialData'
 import { verifyPhotoRelease } from './photoRelease'
 import { guestScans } from './guestScans'
+import { waitlist, waitlistRetentionDays } from './launchWaitlist'
 import { catalogEntryId, catalogQuery, getCatalogEntry, getCatalogRelease, searchCatalog } from './referenceCatalog'
 export { PhotoWorkflow } from './ingest'
 
@@ -22,6 +23,7 @@ api.get('/health',c=>c.json({ok:true}))
 api.get('/catalog',async c=>c.json(await getCatalogRelease(c.env)))
 api.route('/auth',auth)
 api.post('/contact',submitContact)
+api.route('/launch-waitlist',waitlist)
 api.post('/internal/photo-release',verifyPhotoRelease)
 api.route('/guest-scans',guestScans)
 api.use('*',async(c,next)=>{
@@ -116,7 +118,9 @@ async function maintenance(env:Env) {
     env.DB.prepare('DELETE FROM developer_keys WHERE expires<=?').bind(now()),
     env.DB.prepare('DELETE FROM guest_scans WHERE expires<=?').bind(now()),
     env.DB.prepare('DELETE FROM limits WHERE window<?').bind(now()-8*86400),
-    env.DB.prepare('DELETE FROM contact_messages WHERE created<?').bind(now()-contactRetentionDays*86400)
+    env.DB.prepare('DELETE FROM contact_messages WHERE created<?').bind(now()-contactRetentionDays*86400),
+    env.DB.prepare('DELETE FROM launch_waitlist WHERE (confirmed_at IS NULL AND requested_at<=?) OR confirmed_at<=?')
+      .bind(now()-86400,now()-waitlistRetentionDays*86400)
   ])
   for (const user of await all<{id:string}>(env,'SELECT id FROM users WHERE deleting=1 LIMIT 20')) {
     try { await deleteAccount(env,user.id) } catch { console.error('Account deletion will retry') }

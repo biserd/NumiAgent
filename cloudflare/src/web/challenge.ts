@@ -24,7 +24,7 @@ async function load() {
   return loading
 }
 
-export async function mountChallenge(target:HTMLElement,sitekey:string,action:'login'|'contact',update:(token:string)=>void) {
+export async function mountChallenge(target:HTMLElement,sitekey:string,action:'login'|'contact'|'launch_waitlist',update:(token:string)=>void) {
   const widget=await load()
   if (!target.isConnected) return null
   const id=widget.render(target,{sitekey,action,callback:update,'expired-callback':()=>update(''),'error-callback':()=>update('')})

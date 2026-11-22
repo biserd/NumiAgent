@@ -3,7 +3,9 @@ import { developerLinks, sitePages, type SitePage } from './sitePages'
 import { blogDate, blogPosts } from './blogPosts'
 import SiteNav from './SiteNav.vue'
 import ContactForm from './ContactForm.vue'
-defineProps<{page:SitePage;path:string}>()
+import LaunchActions from './LaunchActions.vue'
+import { iosLandingPath } from './launch'
+defineProps<{page:SitePage;path:string;appStoreAvailable:boolean}>()
 </script>
 <template>
   <div class="public-page">
@@ -25,8 +27,14 @@ defineProps<{page:SitePage;path:string}>()
           <template v-if="page.article.updated"> · Updated <time :datetime="page.article.updated">{{blogDate(page.article.updated)}}</time></template>
         </p>
         <small v-if="page.effective">Effective {{page.effective}}</small>
+        <LaunchActions v-if="page.launchActions && !page.article" :available="appStoreAvailable"/>
       </div>
       <div class="information-content wrap">
+        <div v-if="path===iosLandingPath" class="launch-gallery">
+          <figure><img src="/launch-media/iphone-identification.jpg" alt="iPhone capture tab showing a nickel photo and a Jefferson nickel identification suggestion" width="660" height="1434"><figcaption>Review a photo identification on iPhone.</figcaption></figure>
+          <figure><img src="/launch-media/iphone-collection.jpg" alt="Searchable iPhone collection with coins and a banknote" width="660" height="1434"><figcaption>Find a saved coin or banknote.</figcaption></figure>
+          <figure><img src="/launch-media/ipad-collection.jpg" alt="iPad layout showing the collection beside an open coin record" width="774" height="1032"><figcaption>Open the collection and a specimen side by side on iPad.</figcaption></figure>
+        </div>
         <template v-if="path==='/blog'">
           <div class="post-grid">
             <article v-for="post in blogPosts" :key="post.path">
@@ -48,6 +56,7 @@ defineProps<{page:SitePage;path:string}>()
             <a v-for="link in section.links" :key="link.href" :href="link.href">{{link.label}} <span aria-hidden="true">↗</span></a>
           </div>
         </section>
+        <LaunchActions v-if="page.launchActions" :available="appStoreAvailable"/>
         <aside v-if="page.article" class="related-guides" aria-labelledby="related-guides-title">
           <h2 id="related-guides-title">Related collector guides</h2>
           <ul>

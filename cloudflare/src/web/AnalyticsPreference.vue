@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { trackMarketing } from './launch'
 
 const storageKey='numiagent.analytics'
 type Choice='allow'|'decline'
@@ -49,14 +50,27 @@ function choose(choice:Choice) {
   }
 }
 
+function trackLink(event:MouseEvent) {
+  if (event.type==='auxclick' && event.button!==1) return
+  const link=event.target instanceof Element ? event.target.closest('a[data-marketing-event]') : null
+  const name=link?.getAttribute('data-marketing-event')
+  if (name==='app_store_click' || name==='web_catalog_click') trackMarketing(name)
+}
+
 onMounted(()=>{
   const id=document.querySelector<HTMLMetaElement>('meta[name="numiagent-ga4"]')?.content
   if (!id || !/^G-[A-Z0-9]+$/.test(id)) return
   measurementId.value=id
+  document.addEventListener('click',trackLink)
+  document.addEventListener('auxclick',trackLink)
   let saved:string|null=null
   try { saved=localStorage.getItem(storageKey) } catch { /* Without storage ask again on the next page. */ }
   if (saved==='allow') start(id)
   else open.value=saved!=='decline'
+})
+onUnmounted(()=>{
+  document.removeEventListener('click',trackLink)
+  document.removeEventListener('auxclick',trackLink)
 })
 </script>
 

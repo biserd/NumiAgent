@@ -1,4 +1,7 @@
 import type { SitePage } from './sitePages'
+import { banknoteAppPath, photoIdPath, toolsGuidePath } from './collectorPages'
+import { iosLandingPath } from './launch'
+import { toolsGuide } from './toolsGuide'
 
 const published = '2026-11-14'
 const updated = '2026-11-15'
@@ -14,12 +17,13 @@ export const blogDate = (date:string) => new Intl.DateTimeFormat('en-US',{
 
 type Post = SitePage & {path:string;guideLabel:string;article:NonNullable<SitePage['article']>}
 export const blogPosts:Post[] = [
+  toolsGuide,
   {
     path:photography,
     guideLabel:'Coin and banknote photography',
     seoTitle:'How to Photograph Coins and Banknotes | NumiAgent',
     label:'Photography',title:'How to photograph coins and banknotes for your catalog',
-    article:{topic:'Photography',published,updated,related:[catalog,romanCoins]},
+    article:{topic:'Photography',published,updated,related:[catalog,romanCoins,toolsGuidePath]},
     description:'Capture both sides, keep inscriptions readable, and process a batch without losing track of which images belong together.',
     sections:[
       {title:'Set up once for the whole batch',paragraphs:[
@@ -44,7 +48,7 @@ export const blogPosts:Post[] = [
         'For a batch of 25 coins, assign IDs such as TRAY1-001 through TRAY1-025 and use matching file names such as TRAY1-001-obv.jpg and TRAY1-001-rev.jpg. Start a new number even when two pieces look identical. Keep the same ID if you retake a photo.',
         'Give the import batch a name you’ll recognize later. Check each suggested crop against the full photograph for clipped borders or missing legends. Pair the two sides and mark an uncertain attribution in your notes. If two similar pieces are in the same tray, compare their edges and surface marks before linking the reverse.',
         {before:'After you ',link:{href:catalog,label:'set up your digital catalog'},after:', reopen a few saved records and check that both views belong to the same piece before the tray goes back into storage.'}
-      ],links:[{href:'/app#imports',label:'Open photo imports'}]}
+      ],links:[{href:photoIdPath,label:'Identify a coin from a photo'},{href:'/app#imports',label:'Open photo imports'}]}
     ]
   },
   {
@@ -52,7 +56,7 @@ export const blogPosts:Post[] = [
     guideLabel:'Digital coin catalog',
     seoTitle:'How to Catalog a Coin Collection | NumiAgent',
     label:'Cataloging',title:'How to start a digital coin and banknote catalog',
-    article:{topic:'Cataloging',published,updated,related:[photography,banknotes]},
+    article:{topic:'Cataloging',published,updated,related:[photography,banknotes,toolsGuidePath]},
     description:'Build a digital coin collection inventory with fields for photos, references, provenance, condition, and purchase records you can search and export.',
     sections:[
       {title:'Start with a small representative batch',paragraphs:[
@@ -80,7 +84,7 @@ export const blogPosts:Post[] = [
       {title:'Keep the catalog easy to search and take with you',paragraphs:[
         'Use the same spelling for fields you filter on, such as mint or ruler. Use folders for groups you work with regularly and themes for checklists that cut across those groups. For instance, an emperor checklist might span two albums and a tray of duplicates.',
         'If you’re transferring old records, compare a sample against the photographs and receipts before accepting the whole batch. Export a CSV after a major update and check a few records in the file, including any notes or purchase details that would be hard to reconstruct.'
-      ],links:[{href:'/app#collection',label:'Open the collection'},{href:checklist,label:'Build a Roman emperor checklist'}]}
+      ],links:[{href:'/app#collection',label:'Open the collection'},{href:iosLandingPath,label:'See the coin collection app for iPhone'},{href:checklist,label:'Build a Roman emperor checklist'}]}
     ]
   },
   {
@@ -155,7 +159,7 @@ export const blogPosts:Post[] = [
     guideLabel:'Roman coin identification',
     seoTitle:'How to Identify a Roman Coin | NumiAgent',
     label:'Identification',title:'How to identify a Roman coin from its legend and mint mark',
-    article:{topic:'Identification',published:updated,related:[photography,checklist]},
+    article:{topic:'Identification',published:updated,related:[photography,checklist,toolsGuidePath]},
     description:'Identify a Roman coin step by step using both sides, visible inscriptions, the reverse design, mint marks, measurements, and catalog references.',
     sections:[
       {title:'Start with the evidence on the coin',paragraphs:[
@@ -188,7 +192,7 @@ export const blogPosts:Post[] = [
     guideLabel:'Banknote collection inventory',
     seoTitle:'How to Catalog a Banknote Collection | NumiAgent',
     label:'Paper money',title:'How to catalog a banknote collection',
-    article:{topic:'Paper money',published:updated,related:[catalog,photography]},
+    article:{topic:'Paper money',published:updated,related:[catalog,photography,toolsGuidePath]},
     description:'Build a paper money inventory that records denominations, issuers, series, signatures, serial numbers, condition, and photos of each note.',
     sections:[
       {title:'Give each banknote its own inventory record',paragraphs:[
@@ -208,7 +212,7 @@ export const blogPosts:Post[] = [
         'Start with Item ID, Issuer, Denomination, Currency, Series, Language, Serial number, Signatures, Reference, Condition, Acquisition date, Source, Cost, and Photo IDs. Note tears, folds, pinholes, and stains you can see. If a dealer or grading service supplied a grade, preserve their wording and record who supplied it.',
         {before:'If you already keep a ',link:{href:catalog,label:'digital coin collection inventory'},after:', reuse its acquisition, provenance, and photo fields. Keep note-specific fields separate so that a serial number never lands in a type-reference column.'},
         'Export a small batch and open the file before you catalog the rest. Check that serial numbers retain zeros, both photo names resolve to the same item, and a search by issuer or series returns the records you expect.'
-      ],links:[{href:'/app#collection',label:'Open your collection'}]}
+      ],links:[{href:banknoteAppPath,label:'See the banknote inventory app'},{href:'/app#collection',label:'Open your collection'}]}
     ]
   }
 ]

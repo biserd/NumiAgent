@@ -1,5 +1,6 @@
 import { developerKeyLifespanDays, developerRequestLimit } from '../shared/developerAccess'
 import { blogPosts } from './blogPosts'
+import { banknoteAppPath, collectorPages, photoIdPath } from './collectorPages'
 
 export const brand = 'NumiAgent'
 export const canonicalOrigin = 'https://numiagent.com'
@@ -18,6 +19,8 @@ export type SitePage = {
   description:string
   sections:Section[]
   effective?:string
+  launchActions?:boolean
+  image?:{path:string;alt:string}
   article?:{topic:string;published:string;updated?:string;related:string[]}
 }
 
@@ -38,6 +41,7 @@ export const developerLinks = [
 ]
 
 export const sitePages:Record<string,SitePage> = {
+  ...collectorPages,
   '/blog':{
     label:'Blog',title:'Coin and banknote collecting guides',
     seoTitle:'Coin & Banknote Collecting Guides | NumiAgent',
@@ -77,11 +81,11 @@ export const sitePages:Record<string,SitePage> = {
       ],links:[{href:'/app#imports',label:'Open photo imports'},{href:'/blog/photograph-coins-and-banknotes',label:'Photograph coins and banknotes for a batch'}]},
       {id:'identification',title:'Get unstuck on a mystery coin or banknote',paragraphs:[
         'Review likely matches, possible matches, or a request to review the piece yourself. Local recognition runs automatically when you add a photo. For a second opinion, select the individual photos you want to send for online identification.'
-      ],links:[help,{href:'/blog/identify-roman-coins',label:'Identify a Roman coin from its features'}]},
+      ],links:[{href:photoIdPath,label:'Identify a coin from a photo'},help,{href:'/blog/identify-roman-coins',label:'Identify a Roman coin from its features'}]},
       {id:'catalog',title:'Build and search a private catalog',paragraphs:[
         'Save coins and banknotes in named collection folders. Record issuer, denomination, date, grade, references, notes, measurements, inscriptions, and type-specific details. Find pieces with text search and filters, inspect potential duplicates that share a reference, and see collection and import counts on the overview.',
         'Edit selected fields across up to 50 specimens at once. Look up a Roman coin type in OCRE and attach its source link. Export a standard or insurance inventory CSV, download account data as JSON, or transfer a supported NumisGraph portfolio export.'
-      ],links:[{href:'/app#collection',label:'Open the collection'},{href:'/blog/start-a-digital-coin-catalog',label:'Set up a digital coin inventory'},{href:'/blog/catalog-banknote-collection',label:'Catalog a banknote collection'}]},
+      ],links:[{href:'/app#collection',label:'Open the collection'},{href:banknoteAppPath,label:'Organize your banknote collection'},{href:'/blog/start-a-digital-coin-catalog',label:'Set up a digital coin inventory'},{href:'/blog/catalog-banknote-collection',label:'Catalog a banknote collection'}]},
       {id:'valuation',title:'Find out what comparable pieces sold for',paragraphs:[
         'Give every estimate a trail you can follow. Enter comparables or import verified sale records with original lot links. Look up a dated ECB reference rate when sales use different currencies. When enough comparable records support a range, you’ll see it in the specimen’s valuation history. When evidence is thin, the catalog says so.'
       ],links:[{href:'/blog/compare-coin-auction-prices',label:'See how to compare realized auction prices'}]},
@@ -144,7 +148,10 @@ export const sitePages:Record<string,SitePage> = {
         'The contact form stores your reply email, topic, and message so the operator can review and respond. Contact messages are scheduled for deletion from the active inbox after 90 days. Omit payment details, sign-in links, and other sensitive information.'
       ]},
       {title:'Optional website analytics',paragraphs:[
-        'If you allow analytics, Google Analytics uses cookies to count visits to public pages and help us understand how people find the site. Page addresses are sent without query strings or fragments. Analytics runs on the public site and excludes the signed-in workspace. You can change your choice using Analytics preferences in the footer.'
+        'If you allow analytics, Google Analytics uses cookies to count visits to public pages and record actions such as requesting a launch email or opening the web catalog or App Store. These events contain the page path and action, without your email, collection details, or URL query strings and fragments. Analytics runs on public pages and excludes the signed-in workspace and launch-email management. You can change your choice in the footer.'
+      ]},
+      {id:'launch-email',title:'App Store launch email',paragraphs:[
+        'If you request a launch email, we use the address you provide to send a confirmation and one launch announcement. The list is separate from NumiAgent accounts. You can remove your address using the link in the confirmation email. Unconfirmed requests expire after 24 hours. Confirmed entries are kept for up to one year.'
       ]},
       {title:'Access, export, and deletion',paragraphs:[
         'The app excludes its guest collection folder from automatic device backups. You can export a separate encrypted backup and choose where to save it, including iCloud Drive if you use it. Keep the recovery key separately. A spreadsheet export includes private fields only when you choose that option.',

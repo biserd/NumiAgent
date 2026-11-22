@@ -2,7 +2,7 @@
 
 A private, Cloudflare-native catalog for coins and banknotes. It ships a Vue web app, a Hono API, and a stateless remote MCP server in one Worker project.
 
-The production app is available at [numiagent.com](https://numiagent.com). Its public developer guides cover [REST API and MCP access](https://numiagent.com/developers/access).
+Open the [web catalog](https://numiagent.com/app) or [download NumiAgent for iPhone and iPad on the App Store](https://apps.apple.com/app/id6835208218). The native app can keep a private collection offline and sign in to an existing web account. [REST API and MCP access](https://numiagent.com/developers/access).
 
 This app runs alongside NumisGraph's original collector and research app. The [integration guide](../docs/cloudflare-integration.md) covers legacy coin transfer, private photo linking and the bundled Nomisma references.
 

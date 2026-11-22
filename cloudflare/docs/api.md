@@ -14,6 +14,8 @@ Configure a Streamable HTTP client with the exact public Worker origin and `/mcp
 
 | Tool | Input | Result |
 | --- | --- | --- |
+| search_catalog | q, optional kind, limit and page | Matching public coin and banknote references |
+| get_catalog_entry | id | A reference entry with its source and license |
 | search_my_collection | query, optional type and page | Matching physical specimens |
 | get_collection_item | itemId | Owned specimen, photo IDs, same-reference duplicates |
 | get_collection_statistics | none | Specimen, photo and storage counts |
@@ -27,6 +29,6 @@ Configure a Streamable HTTP client with the exact public Worker origin and `/mcp
 
 MCP reads private records including notes and attribution data. Marketplace calls send their query terms to configured external providers. Listing status may remain unknown when the provider is a search index. To authorize a client from a different browser than the email link opens, complete sign-in and reopen the client's authorization URL in that signed-in browser.
 
-## Future iPhone app
+## Native iPhone and iPad client
 
-Reuse the same import IDs, byte upload, status, review, catalog, and evidence endpoints. Implement a first-party OAuth audience for the versioned REST API, with scoped access and refresh, ASWebAuthenticationSession and PKCE. Use a universal-link or registered first-party callback, Keychain storage and token revocation. Replace the browser cookie requirement for OAuth-authenticated API requests only after authorization and replay tests pass. Use PhotosUI and AVFoundation for selection and capture, ImageIO for HEIF/EXIF-aware resizing, background URLSession for durable transfer, and local batch IDs and per-file digests for retries.
+The released SwiftUI app supports local scanning and collection search without an account. Guests can choose to send photos for an online search. Email-link sign-in opens a separate account collection that uses the Cloudflare API for imports, review, catalog records and auction evidence. The native client keeps its account session in the Keychain. [Download on the App Store](https://apps.apple.com/app/id6835208218) · [Native client source and setup](../../ios/README.md).

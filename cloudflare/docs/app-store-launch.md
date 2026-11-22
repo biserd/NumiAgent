@@ -1,6 +1,6 @@
 # App Store launch
 
-The public site shows the launch email signup until the App Store listing is available. The separate web catalog is available in either state.
+The public site links to the live [NumiAgent App Store listing](https://apps.apple.com/app/id6835208218) and the separate [web catalog](https://numiagent.com/app). Existing launch email confirmation and unsubscribe links still work.
 
 ## Switch the call to action
 

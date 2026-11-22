@@ -2,13 +2,14 @@
 import { siteLinks } from './sitePages'
 import { blogPosts } from './blogPosts'
 import AnalyticsPreference from './AnalyticsPreference.vue'
-import { iosLandingPath } from './launch'
-defineProps<{footer?:boolean;landing?:boolean;path?:string}>()
+import { appStoreUrl, iosLandingPath } from './launch'
+defineProps<{footer?:boolean;landing?:boolean;path?:string;appStoreAvailable?:boolean}>()
 </script>
 <template>
   <footer v-if="footer" class="site-footer wrap">
     <a class="brand" href="/"><img src="/mark.svg" alt="" width="32" height="32">Numi<span>Agent</span></a>
     <nav aria-label="Site information">
+      <a v-if="appStoreAvailable" :href="appStoreUrl" data-marketing-event="app_store_click">Download for iPhone and iPad</a>
       <a v-for="page in siteLinks" :key="page.href" :href="page.href" :aria-current="path===page.href?'page':undefined">{{page.label}}</a>
     </nav>
     <nav class="footer-guides" aria-label="Collector guides">

@@ -4,7 +4,9 @@
 
 Keep both sides of each piece, the attribution you settled on, and the auction records that support your valuation in one private catalog. See what you own and what you still need before you bid on the next piece.
 
-**[Start your catalog](https://numiagent.com/app)** · [Explore the features](https://numiagent.com/features) · [Read the collector guides](https://numiagent.com/blog)
+**[Download for iPhone and iPad](https://apps.apple.com/app/id6835208218)** · [Open the web catalog](https://numiagent.com/app) · [Explore the features](https://numiagent.com/features) · [Read the collector guides](https://numiagent.com/blog)
+
+Start scanning on iPhone or iPad without an account. Keep both photos with one record and search your collection offline. Use the separate web catalog for browser access, auction evidence, and checklists.
 
 ![NumiAgent’s catalog showing six Roman coins in a searchable collection grid](docs/screenshots/catalog.jpg)
 

@@ -72,6 +72,6 @@ const breadcrumbs=computed(()=>pageBreadcrumbs(props.path,props.page))
         <ContactForm v-if="path==='/contact'"/>
       </div>
     </main>
-    <SiteNav footer :path="path"/>
+    <SiteNav footer :path="path" :app-store-available="appStoreAvailable"/>
   </div>
 </template>

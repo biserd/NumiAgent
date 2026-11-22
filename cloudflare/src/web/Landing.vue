@@ -25,7 +25,8 @@ const step = computed(()=>steps[selected.value])
     <main>
       <section class="hero wrap">
         <div class="hero-copy"><h1>Your collection.<br><em>Yours to keep.</em></h1>
-          <p class="hero-description">Scan both sides of your coins and banknotes. Review matches and build a searchable collection on your iPhone or iPad, even offline and without an email.</p>
+          <p v-if="appStoreAvailable" class="hero-description">NumiAgent is available for iPhone and iPad. Scan both sides of a coin or banknote, review matches, and build a private collection you can search offline. Start without an account.</p>
+          <p v-else class="hero-description">Scan both sides of your coins and banknotes. Review matches and build a searchable collection on your iPhone or iPad, even offline and without an email.</p>
           <LaunchActions :available="appStoreAvailable" home/>
         </div>
         <figure class="hero-art native-hero"><img src="/launch-media/iphone-ipad.jpg" alt="NumiAgent on iPhone and iPad showing a coin photo and the searchable collection" width="1100" height="880" fetchpriority="high">
@@ -58,6 +59,6 @@ const step = computed(()=>steps[selected.value])
         </div>
       </section>
     </main>
-    <SiteNav footer path="/"/>
+    <SiteNav footer path="/" :app-store-available="appStoreAvailable"/>
   </div>
 </template>

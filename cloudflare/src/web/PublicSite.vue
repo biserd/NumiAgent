@@ -10,6 +10,6 @@ defineProps<{path:string;appStoreAvailable:boolean}>()
 
 <template>
   <Landing v-if="path==='/'" :app-store-available="appStoreAvailable"/>
-  <LaunchEmail v-else-if="path===launchEmailPath"/>
+  <LaunchEmail v-else-if="path===launchEmailPath" :app-store-available="appStoreAvailable"/>
   <PublicPage v-else :path="path" :page="sitePages[path]" :app-store-available="appStoreAvailable"/>
 </template>

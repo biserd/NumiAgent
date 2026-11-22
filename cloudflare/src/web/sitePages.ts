@@ -83,6 +83,7 @@ export const sitePages:Record<string,SitePage> = {
     label:'Features',title:'NumiAgent features',
     seoTitle:'Coin Catalog, Photo ID & Valuation Tools | NumiAgent',
     description:'Clear your photo backlog, identify unfamiliar coins and banknotes, compare actual auction sales, and track the pieces you still need.',
+    launchActions:true,
     sections:[
       {id:'photo-imports',title:'Turn the photo backlog into a catalog',paragraphs:[
         'On iPhone and iPad, start without an email, capture or import photos, and pair both sides. Accepted photos and unfinished pieces are saved on your device so you can resume later.',

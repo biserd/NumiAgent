@@ -1,21 +1,25 @@
 <script setup lang="ts">
-import { developerLinks, sitePages, type SitePage } from './sitePages'
+import { computed } from 'vue'
+import { developerLinks, pageBreadcrumbs, type SitePage } from './sitePages'
 import { blogDate, blogPosts } from './blogPosts'
 import SiteNav from './SiteNav.vue'
 import ContactForm from './ContactForm.vue'
 import LaunchActions from './LaunchActions.vue'
 import { iosLandingPath } from './launch'
-defineProps<{page:SitePage;path:string;appStoreAvailable:boolean}>()
+const props=defineProps<{page:SitePage;path:string;appStoreAvailable:boolean}>()
+const breadcrumbs=computed(()=>pageBreadcrumbs(props.path,props.page))
 </script>
 <template>
   <div class="public-page">
     <SiteNav/>
     <main class="information">
       <div class="information-header wrap">
-        <nav v-if="page.article" class="article-breadcrumbs" aria-label="Breadcrumb">
-          <a href="/">NumiAgent</a>
-          <span aria-hidden="true">/</span>
-          <a href="/blog">{{sitePages['/blog'].title}}</a>
+        <nav v-if="breadcrumbs.length" class="article-breadcrumbs" aria-label="Breadcrumb">
+          <template v-for="(entry,index) in breadcrumbs" :key="entry.href">
+            <span v-if="index" aria-hidden="true">/</span>
+            <span v-if="index===breadcrumbs.length-1" aria-current="page">{{entry.label}}</span>
+            <a v-else :href="entry.href">{{entry.label}}</a>
+          </template>
         </nav>
         <nav v-if="path==='/developers' || path.startsWith('/developers/')" class="developer-nav" aria-label="Developer documentation">
           <a v-for="link in developerLinks" :key="link.href" :href="link.href" :aria-current="path===link.href?'page':undefined">{{link.label}}</a>

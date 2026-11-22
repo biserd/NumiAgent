@@ -1,5 +1,5 @@
 import { render } from '../../dist-server/render.js'
-import { brand, canonicalOrigin, landingSeo, sitePages } from '../web/sitePages'
+import { brand, canonicalOrigin, landingSeo, pageBreadcrumbs, sitePages } from '../web/sitePages'
 import { launchEmailPath } from '../web/launch'
 import type { Env } from './core'
 
@@ -25,22 +25,21 @@ export async function publicPage(request:Request,url:URL,env:Env) {
   const collectionImage=path==='/' || path==='/features' || path==='/about' || path==='/privacy'
   const image=path==='/' ? canonicalOrigin+'/launch-media/iphone-ipad.jpg' :
     page?.image ? canonicalOrigin+page.image.path : collectionImage ? url.origin+'/collection-hero.jpg' : canonicalOrigin+'/roman-bronze.jpg'
-  const schema=article ? [{
+  const schema:Record<string,unknown>[]=article ? [{
     '@type':'BlogPosting',headline:page.title,description,url:canonical,mainEntityOfPage:canonical,
     datePublished:article.published,dateModified:article.updated ?? article.published,
     image:[image],inLanguage:'en',articleSection:article.topic,
     author:{'@type':'Organization',name:brand,url:canonicalOrigin+'/about'},
     publisher:{'@type':'Organization',name:brand,url:canonicalOrigin+'/'}
-  },{
-    '@type':'BreadcrumbList',itemListElement:[
-      {'@type':'ListItem',position:1,name:brand,item:canonicalOrigin+'/'},
-      {'@type':'ListItem',position:2,name:sitePages['/blog'].title,item:canonicalOrigin+'/blog'},
-      {'@type':'ListItem',position:3,name:page.title,item:canonical}
-    ]
   }] : [{
     '@type':path==='/' ? 'WebSite' : path==='/blog' ? 'CollectionPage' : 'WebPage',
     name:page?.title ?? brand,description,url:canonical,inLanguage:'en'
   }]
+  const crumbs=pageBreadcrumbs(path,page)
+  if (crumbs.length) schema.push({
+    '@type':'BreadcrumbList',
+    itemListElement:crumbs.map(({href,label},index)=>({'@type':'ListItem',position:index+1,name:label,item:canonicalOrigin+href}))
+  })
   const structured=JSON.stringify({'@context':'https://schema.org','@graph':schema}).replace(/</g,'\\u003c')
   const [shell,markup]=await Promise.all([env.ASSETS.fetch(new URL('/',env.APP_ORIGIN)),render(path,appStoreAvailable)])
   if (!shell.ok) throw new Error('Public HTML shell is unavailable')

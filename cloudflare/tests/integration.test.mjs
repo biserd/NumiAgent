@@ -88,6 +88,13 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
       assert.ok(sitemap.includes('<loc>https://numiagent.com'+path+'</loc>'))
     }
     assert.ok(!sitemap.includes('<loc>https://numiagent.com/app'))
+    for (const path of ['/coin-collection-app-iphone','/identify-coin-from-photo','/banknote-inventory-app']) {
+      const markup=await (await fetch(base+path)).text()
+      assert.ok(sitemap.includes('<loc>https://numiagent.com'+path+'</loc><lastmod>2026-11-22</lastmod>'))
+      assert.match(markup,/<nav[^>]*aria-label="Breadcrumb"[^>]*>.*?href="\/features"/s)
+      assert.match(markup,/"@type":"BreadcrumbList"/)
+      assert.ok(markup.includes('rel="canonical" href="https://numiagent.com'+path+'"'))
+    }
     const blog=(await fetch(base+'/blog'))
     assert.equal(blog.status,200)
     const posts=Array.from((await blog.text()).matchAll(/href="(\/blog\/[^"]+)"/g),match=>match[1])

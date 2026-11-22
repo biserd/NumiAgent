@@ -8,12 +8,15 @@ export const toolsGuidePath = '/blog/best-numismatic-tools-and-iphone-apps'
 const ios = {href:iosLandingPath,label:'See the iPhone and iPad app'}
 const photoGuide = {href:'/blog/photograph-coins-and-banknotes',label:'How to photograph coins and banknotes'}
 const tools = {href:toolsGuidePath,label:'Compare numismatic tools and iPhone apps'}
+const breadcrumbParent = {href:'/features',label:'Features'}
+const lastModified = '2026-11-22'
 
 export const collectorPages:Record<string,SitePage> = {
   [iosLandingPath]:{
     label:'iPhone & iPad',title:'Coin collection app for iPhone and iPad',
-    seoTitle:'Coin Collection App for iPhone | NumiAgent',
-    description:'Scan coins and banknotes, keep both photos with one record, and search your collection on iPhone or iPad, even offline.',
+    seoTitle:'Coin Collection App for iPhone & iPad | NumiAgent',
+    description:'Scan both sides of a coin or banknote and save one searchable record. Start a private collection on iPhone or iPad, even offline and without an account.',
+    breadcrumbParent,lastModified,
     launchActions:true,
     image:{path:'/launch-media/iphone-collection.jpg',alt:'The NumiAgent iPhone collection list with two coins and a banknote'},
     sections:[
@@ -32,7 +35,8 @@ export const collectorPages:Record<string,SitePage> = {
   [photoIdPath]:{
     label:'Coin photo identification',title:'Identify a coin from a photo',
     seoTitle:'Identify a Coin From a Photo | NumiAgent',
-    description:'Use both sides of an unfamiliar coin to review possible matches, check the visible details, and save what you find.',
+    description:'Identify an unfamiliar coin from two photos. Review possible matches, check the date and mint mark, and save both sides in your private coin catalog.',
+    breadcrumbParent,lastModified,
     launchActions:true,
     image:{path:'/launch-media/iphone-identification.jpg',alt:'The NumiAgent iPhone photo identification screen'},
     sections:[
@@ -50,8 +54,9 @@ export const collectorPages:Record<string,SitePage> = {
   },
   [banknoteAppPath]:{
     label:'Banknote inventory',title:'Banknote inventory app for iPhone and iPad',
-    seoTitle:'Banknote Inventory App for iPhone | NumiAgent',
-    description:'Photograph your paper money collection, keep the front and back together, and export an inventory you control.',
+    seoTitle:'Banknote Inventory App for iPhone & iPad | NumiAgent',
+    description:'Catalog your paper money on iPhone and iPad. Keep both photos with each note, search by issuer or denomination, and export your inventory as a CSV.',
+    breadcrumbParent,lastModified,
     launchActions:true,
     image:{path:'/launch-media/ipad-collection.jpg',alt:'The NumiAgent iPad collection and specimen shown side by side'},
     sections:[

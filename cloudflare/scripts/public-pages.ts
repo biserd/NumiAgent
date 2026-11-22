@@ -30,8 +30,9 @@ export function publicPages():Plugin {
       this.emitFile({type:'asset',fileName:'404.html',source:privateHtml(template,'Page unavailable · '+brand,
         'Find your way back to NumiAgent.','<main><h1>Page unavailable</h1><p><a href="/">Return to NumiAgent</a></p></main>')})
       const urls=['/',...Object.keys(sitePages)].map(path=>{
-        const article=sitePages[path]?.article
-        const lastmod=article ? '<lastmod>'+escapeXml(article.updated ?? article.published)+'</lastmod>' : ''
+        const page=sitePages[path]
+        const date=page?.lastModified ?? page?.article?.updated ?? page?.article?.published
+        const lastmod=date ? '<lastmod>'+escapeXml(date)+'</lastmod>' : ''
         return '<url><loc>'+escapeXml(canonicalOrigin+path)+'</loc>'+lastmod+'</url>'
       }).join('')
       this.emitFile({type:'asset',fileName:'sitemap.xml',source:'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+urls+'</urlset>'})

@@ -1,6 +1,7 @@
 import { developerKeyLifespanDays, developerRequestLimit } from '../shared/developerAccess'
 import { blogPosts } from './blogPosts'
 import { banknoteAppPath, collectorPages, photoIdPath } from './collectorPages'
+import { iosLandingPath } from './launch'
 
 export const brand = 'NumiAgent'
 export const canonicalOrigin = 'https://numiagent.com'
@@ -21,7 +22,15 @@ export type SitePage = {
   effective?:string
   launchActions?:boolean
   image?:{path:string;alt:string}
+  lastModified?:string
+  breadcrumbParent?:Link
   article?:{topic:string;published:string;updated?:string;related:string[]}
+}
+
+export function pageBreadcrumbs(path:string,page?:SitePage):Link[] {
+  if (!page) return []
+  const parent = page.article ? {href:'/blog',label:'Coin and banknote collecting guides'} : page.breadcrumbParent
+  return parent ? [{href:'/',label:brand},parent,{href:path,label:page.title}] : []
 }
 
 const contact = {href:'/contact',label:'Contact NumiAgent'}
@@ -78,7 +87,7 @@ export const sitePages:Record<string,SitePage> = {
       {id:'photo-imports',title:'Turn the photo backlog into a catalog',paragraphs:[
         'On iPhone and iPad, start without an email, capture or import photos, and pair both sides. Accepted photos and unfinished pieces are saved on your device so you can resume later.',
         'In the separate web account, import a photo batch from your phone or computer, name it so you can find it later, and see which images are ready for review.'
-      ],links:[{href:'/app#imports',label:'Open photo imports'},{href:'/blog/photograph-coins-and-banknotes',label:'Photograph coins and banknotes for a batch'}]},
+      ],links:[{href:iosLandingPath,label:'See the coin collection app for iPhone and iPad'},{href:'/app#imports',label:'Open photo imports'},{href:'/blog/photograph-coins-and-banknotes',label:'Photograph coins and banknotes for a batch'}]},
       {id:'identification',title:'Get unstuck on a mystery coin or banknote',paragraphs:[
         'Review likely matches, possible matches, or a request to review the piece yourself. Local recognition runs automatically when you add a photo. For a second opinion, select the individual photos you want to send for online identification.'
       ],links:[{href:photoIdPath,label:'Identify a coin from a photo'},help,{href:'/blog/identify-roman-coins',label:'Identify a Roman coin from its features'}]},

@@ -495,6 +495,8 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await api('/themes/'+theme.id,a,'PUT',{name:preview.name,slots:rules})).status,204)
     assert.equal((await watchState()).state,'watching')
     const match=await json(await api('/items',a,'POST',{type:'coin',title:'Gap watch fixture',ruler:gap.ruler}),201)
+    assert.equal((await watchState()).state,'watching')
+    assert.equal((await api('/items/'+match.id,a,'PUT',{type:'coin',title:'Gap watch fixture',ruler:gap.ruler,details:{metal:gap.metal}})).status,204)
     assert.equal((await watchState()).state,'filled')
     assert.equal((await saveWatch(a)).status,409)
     assert.equal((await api('/items/'+match.id,a,'DELETE')).status,204)

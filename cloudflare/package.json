@@ -11,7 +11,7 @@
     "dev": "wrangler dev --ip 127.0.0.1",
     "refs:build": "node scripts/build-nomisma.mjs",
     "refs:check": "node scripts/build-nomisma.mjs --check",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/unit.test.mjs",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test tests/unit.test.mjs tests/watchRefresh.test.mjs",
     "test:integration": "node --test tests/integration.test.mjs",
     "test:e2e": "playwright test"
   },

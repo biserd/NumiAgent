@@ -15,6 +15,7 @@ import { exchangeRates, ocre } from './officialData'
 import { verifyPhotoRelease } from './photoRelease'
 import { guestScans } from './guestScans'
 import { waitlist, waitlistRetentionDays } from './launchWaitlist'
+import { generateCardFrame } from './cardFrame'
 import { catalogEntryId, catalogQuery, getCatalogEntry, getCatalogRelease, searchCatalog } from './referenceCatalog'
 export { PhotoWorkflow } from './ingest'
 
@@ -42,6 +43,7 @@ profile.route('/grants',grants)
 profile.route('/developer-keys',developerKeys)
 api.route('/me',profile)
 api.route('/items',items)
+api.post('/card-frame',generateCardFrame)
 api.route('/collections',collections)
 api.route('/imports',imports)
 api.route('/photos',photos)

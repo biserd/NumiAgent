@@ -175,6 +175,7 @@ private struct OpinionCardFace: View {
     @ViewBuilder private var photoViews: some View {
         ForEach(photos.indices, id: \.self) { index in
             Image(uiImage: photos[index]).resizable().scaledToFit()
+                .overlay { Rectangle().strokeBorder(style.accent.opacity(0.85), lineWidth: 0.65) }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -224,6 +225,9 @@ struct OpinionCardSheet: View {
                                 artwork = image
                                 render()
                             }
+                        }
+                        if artwork != nil {
+                            Button("Use original frame") { artwork = nil; render() }
                         }
                         Text("Share this image with a friend or coin club. Check the photos for visible serial numbers or personal details.")
                             .font(.footnote).foregroundStyle(.secondary)

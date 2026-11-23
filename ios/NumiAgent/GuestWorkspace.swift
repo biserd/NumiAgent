@@ -418,7 +418,7 @@ private struct GuestPieceScreen: View {
                     #endif
                 }
                 if !piece.photos.isEmpty {
-                    Button("Ask for a second opinion", systemImage: "rectangle.portrait.and.arrow.right") {
+                    Button("Ask for a second opinion", systemImage: "square.and.arrow.up") {
                         cardPresented = true
                     }.buttonStyle(.bordered)
                     Menu {

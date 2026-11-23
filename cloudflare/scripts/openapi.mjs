@@ -56,6 +56,11 @@ endpoint('post','/auth/verify','Consume the one-time link and issue a session co
 endpoint('post','/contact','Submit a private support message',{publicRoute:true,status:201,
   input:z.toJSONSchema(contactInput,{target:'openapi-3.0',io:'input'}),output:object({reference:uuid})})
 endpoint('get','/me','Get the collector account')
+endpoint('post','/card-frame','Generate decorative card artwork from a style and sampled colors',{
+  input:{...object({style:{enum:['Antiquity','Mint cabinet','Engraving']},
+    colors:{type:'array',minItems:1,maxItems:2,items:{type:'string',pattern:'^#[0-9a-fA-F]{6}$'}}}),additionalProperties:false},
+  responseMedia:'image/jpeg',output:{type:'string',format:'binary'}})
+paths['/card-frame'].post.responses['503']={description:'Custom frame unavailable. The bundled designs are still available.'}
 endpoint('get','/me/usage','Read daily account usage and quotas')
 endpoint('delete','/me','Schedule account deletion',{status:202,input:object({confirm:{const:'DELETE'}})})
 endpoint('get','/me/sessions','List active sessions',{output:array(type('object'))})

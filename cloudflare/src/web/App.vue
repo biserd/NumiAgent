@@ -145,7 +145,7 @@ onUnmounted(()=>{
     <main class="workspace-main">
       <Overview v-if="page==='Overview'" @imports="go('Imports')" @collection="go('Collection',$event)" @themes="go('Themes')"/>
       <Catalog v-else-if="page==='Collection'" :start-with-new="startWithNew" :opened-specimen="openedSpecimen"/>
-      <GoalsMarket v-else-if="page==='Themes' || page==='Marketplace'" :mode="page" :initial-query="marketQuery" @search="search"/>
+      <GoalsMarket v-else-if="page==='Themes' || page==='Marketplace'" :key="page" :mode="page" :initial-query="marketQuery" @search="search"/>
       <Developer v-else-if="page==='Developer'"/>
       <Settings v-else-if="page==='Settings'" :email="user.email"/>
       <KeepAlive><ImportView v-if="page==='Imports'" @specimen="viewSpecimen"/></KeepAlive>

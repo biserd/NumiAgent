@@ -79,6 +79,7 @@ struct GuestPiece: Codable, Identifiable {
     var serial = ""
     var purchasePrice = ""
     var purchaseCurrency = ""
+    var inscription: String?
     var status = GuestStatus.unidentified
     var reference: URL?
     var photos: [GuestSide: UUID] = [:]
@@ -315,6 +316,7 @@ final class GuestStore: ObservableObject {
                   let other = collection.drafts.first(where: { $0.id == source }),
                   other.photos.count == 1, other.title.isEmpty, other.notes.isEmpty,
                   other.serial.isEmpty, other.purchasePrice.isEmpty, other.purchaseCurrency.isEmpty,
+                  (other.inscription ?? "").isEmpty,
                   other.issuer.isEmpty, other.denomination.isEmpty, other.year.isEmpty,
                   let photo = other.photos[.front],
                   let index = collection.drafts.firstIndex(where: { $0.id == target }),
@@ -546,7 +548,7 @@ enum GuestArchive {
 }
 
 enum GuestCSV {
-    static let standard = ["Type", "Title", "Issuer", "Denomination", "Year", "Identification status"]
+    static let standard = ["Type", "Title", "Issuer", "Denomination", "Year", "Identification status", "Inscription"]
     static let optional = ["Notes", "Serial number", "Purchase price", "Purchase currency"]
 
     static func make(_ pieces: [GuestPiece], privateFields: Set<String>) -> Data {
@@ -554,7 +556,7 @@ enum GuestCSV {
         let header = standard + indices.map { optional[$0] }
         let rows = pieces.map { piece in
             let fields = [piece.notes, piece.serial, piece.purchasePrice, piece.purchaseCurrency]
-            return [piece.type, piece.displayTitle, piece.issuer, piece.denomination, piece.year, piece.status.title] +
+            return [piece.type, piece.displayTitle, piece.issuer, piece.denomination, piece.year, piece.status.title, piece.inscription ?? ""] +
                 indices.map { fields[$0] }
         }
         let text = ([header] + rows).map { $0.map(field).joined(separator: ",") }.joined(separator: "\r\n") + "\r\n"

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
 import { localServer } from './server.mjs'
 let server:Awaited<ReturnType<typeof localServer>>
 test.beforeAll(async()=>{server=await localServer(8792)})
@@ -34,6 +35,11 @@ test('Mobile landing, email sign-in, photo review and collection search',async({
   await page.getByRole('button',{name:'Catalog manually'}).click()
   await page.getByLabel('Title',{exact:true}).fill('Browser specimen')
   await page.getByLabel('Ruler',{exact:true}).fill('Trajan')
+  await page.getByText('Identification and acquisition details',{exact:true}).click()
+  await page.getByLabel('Obverse legend',{exact:true}).fill('IMP TRAIANO AVG')
+  await page.getByLabel('Reverse legend',{exact:true}).fill('SPQR')
+  await page.getByLabel('Purchase price',{exact:true}).fill('72.50')
+  await page.getByLabel('Purchase currency',{exact:true}).fill('USD')
   await page.getByRole('button',{name:'Save specimen'}).click()
   await expect(page.getByText('Specimen added to your collection.')).toBeVisible()
   await page.getByRole('button',{name:'Collection',exact:true}).click()
@@ -46,6 +52,42 @@ test('Mobile landing, email sign-in, photo review and collection search',async({
   await expect(page.getByText('Updated 1 specimen.',{exact:true})).toBeVisible()
   await page.getByRole('button',{name:/Browser specimen/}).click()
   await expect(page.getByText('Insufficient market evidence')).toBeVisible()
+  await page.getByText('Ask for a second opinion',{exact:true}).click()
+  const composer=page.getByRole('region',{name:'Second opinion card'})
+  await composer.getByLabel('Card style').selectOption('Engraving')
+  await composer.getByLabel('Ask the collector').selectOption('Which catalog reference would you use?')
+  await expect(composer.getByRole('img')).toHaveAttribute('alt',/Which catalog reference/)
+  await expect(composer.getByRole('img')).toHaveAttribute('alt',/OBVERSE IMP TRAIANO AVG.*REVERSE SPQR/)
+  await expect(composer.getByRole('img')).not.toHaveAttribute('alt',/72\.5/)
+  await composer.getByLabel('Include my purchase price').check()
+  await expect(composer.getByRole('img')).toHaveAttribute('alt',/Purchase price USD 72\.5/)
+  await composer.getByLabel('Include my purchase price').uncheck()
+  await expect(composer.getByRole('img')).not.toHaveAttribute('alt',/72\.5/)
+  const requestFrame=composer.getByRole('button',{name:'Generate custom frame'})
+  let sent:unknown
+  await page.route('**/api/v1/card-frame',async route=>{
+    sent=route.request().postDataJSON()
+    await route.fulfill({status:503,body:'Frame unavailable'})
+  })
+  await requestFrame.click()
+  await expect(composer.getByRole('alert')).toContainText('selected design is ready to share')
+  expect(sent).toEqual({style:'Engraving',colors:[expect.stringMatching(/^#[0-9a-f]{6}$/)]})
+  await page.unroute('**/api/v1/card-frame')
+  await page.route('**/api/v1/card-frame',route=>route.fulfill({
+    contentType:'image/jpeg',path:'../ios/NumiAgent/Assets.xcassets/CardMint.imageset/frame.jpg'
+  }))
+  const original=await composer.getByRole('img').getAttribute('src')
+  await requestFrame.click()
+  await expect(composer.getByRole('button',{name:'Use original frame'})).toBeVisible()
+  await expect(composer.getByRole('img')).not.toHaveAttribute('src',original!)
+  const saving=page.waitForEvent('download')
+  await composer.getByRole('link',{name:'Download card as PNG'}).click()
+  const download=await saving
+  expect(download.suggestedFilename()).toBe('NumiAgent-second-opinion.png')
+  const png=await readFile((await download.path())!)
+  expect(png.subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a')
+  expect(png.readUInt32BE(16)).toBe(1440)
+  expect(png.readUInt32BE(20)).toBeGreaterThan(1800)
   await page.getByRole('button',{name:'Marketplace',exact:true}).click()
   await page.getByLabel('Auction search').fill('Trajan')
   await page.getByRole('button',{name:'Search auctions',exact:true}).click()

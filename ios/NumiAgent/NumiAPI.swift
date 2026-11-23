@@ -63,12 +63,15 @@ struct Valuation: Decodable {
         let currency: String
         let basis: String
         let premium: Double?
+        var match: String? = nil
+        var grade: String? = nil
     }
 
     let currency: String
     let range: Range?
     let evidence: [Sale]
     let used: [String]
+    var asOf: String? = nil
 }
 
 struct ThemeSummary: Decodable, Identifiable {

@@ -339,6 +339,7 @@ struct SpecimenScreen: View {
     @State private var deleting = false
     @State private var merging = false
     @State private var identifying = false
+    @State private var cardPresented = false
     @State private var saleEditor = false
     @State private var detailError: String?
     @State private var loaded = false
@@ -372,6 +373,11 @@ struct SpecimenScreen: View {
                     }
                     .padding(.vertical, 6)
                     photosSection
+                    if (demo && DemoCollection.photo(for: item) != nil) ||
+                        (loaded && (item.photo != nil || item.photos?.isEmpty == false)) {
+                        Button("Ask for a second opinion", systemImage: "square.and.arrow.up") { cardPresented = true }
+                            .buttonStyle(.bordered)
+                    }
                     if !demo && loaded && (item.photos?.count ?? 0) < 12 {
                         PhotosPicker(selection: $additionalView, matching: .images) {
                             Label(addingView ? "Adding photo…" : item.photos?.count == 1 ? "Add the other side" : "Add a photo",
@@ -496,6 +502,22 @@ struct SpecimenScreen: View {
                     await loadDetail()
                     await loadValuation()
                 }
+            }
+        }
+        .sheet(isPresented: $cardPresented) {
+            OpinionCardSheet(record: OpinionCardRecord(item, valuation: valuation, demo: demo)) {
+                if demo, let name = DemoCollection.photo(for: item), let image = UIImage(named: name) {
+                    return [image]
+                }
+                let links = CardPhotos.sides(of: item)
+                if links.isEmpty, let id = item.photo {
+                    return [try CardPhotos.image(data: await api.photo(id))]
+                }
+                var images: [UIImage] = []
+                for link in links {
+                    images.append(try CardPhotos.image(data: await api.photo(link.photoId), crop: link.crop))
+                }
+                return images
             }
         }
         .confirmationDialog("Delete this specimen?", isPresented: $deleting, titleVisibility: .visible) {

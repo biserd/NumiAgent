@@ -147,6 +147,7 @@ export const sitePages:Record<string,SitePage> = {
       ]},
       {title:'Photographs and collection records',paragraphs:[
         'Your uploaded photographs and catalog are private to your account. When you consent to AI analysis for a batch, Cloudflare Workers AI processes the photographs for identification suggestions. You can also catalog them manually.',
+        'A second-opinion card includes the photos you preview, the tentative identification, recorded inscriptions, specimen details, available auction evidence and your chosen question. Your purchase price appears only when you select “Include my purchase price” for that card. You choose where to share the image. When you generate a custom frame in the web catalog, Cloudflare Workers AI receives the frame style and one sampled color per photo. Your browser combines the frame with your photos.',
         'The iPhone and iPad app can store a guest collection on the device without an account. Signing in or choosing to open the browser gives you access to a separate online collection. Guest photos and records stay on your device when you open the browser or sign in.',
         'If you request an online search for a local piece, only the photos you select are sent to NumiAgent for processing by Cloudflare Workers AI. The request excludes catalog notes, prices and email. The photos are processed for that search without being added to an online collection. Access to the online result expires after twenty minutes. Expired results are removed on the next scheduled cleanup.'
       ]},

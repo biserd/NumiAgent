@@ -161,6 +161,11 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await api('/items')).status,401)
     const a=await login('collector@example.test')
     const b=await login('another@example.test','/auth/native/request')
+    const palette={style:'Engraving',colors:['#198240']}
+    assert.equal((await api('/card-frame',null,'POST',palette)).status,401)
+    assert.equal((await api('/card-frame',a,'POST',{...palette,notes:'private'})).status,400)
+    assert.equal((await api('/card-frame',a,'POST',{...palette,colors:['invalid']})).status,400)
+    assert.equal((await api('/card-frame',a,'POST',palette)).status,503) // Local tests run without an AI binding.
     const invalidNativeOrigin=await fetch(base+'/api/v1/auth/native/request',{method:'POST',
       headers:{Origin:'https://unrelated.example','Content-Type':'application/json'},body:JSON.stringify({email:'nobody@example.test'})})
     assert.equal(invalidNativeOrigin.status,403)

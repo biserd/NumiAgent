@@ -2,6 +2,27 @@ import XCTest
 
 final class TabletWorkspaceTests: XCTestCase {
     @MainActor
+    func testPreviewSecondOpinionFromCollection() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--preview-collection"]
+        app.launch()
+        let open = app.buttons["Ask for a second opinion"].firstMatch
+        XCTAssertTrue(open.waitForExistence(timeout: 15))
+        open.tap()
+        let card = app.images["opinion-card-preview"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        XCTAssertTrue(card.label.contains("Octavian denarius"))
+        XCTAssertTrue(card.label.contains("METAL Silver"))
+        XCTAssertTrue(card.label.contains("CATALOG REF. The Met 08.170.89"))
+        XCTAssertTrue(card.label.contains("DEMO MARKET ESTIMATE"))
+        let attachment = XCTAttachment(screenshot: card.screenshot())
+        attachment.name = "second-opinion-card"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTAssertTrue(app.buttons["Share card"].firstMatch.isHittable)
+    }
+
+    @MainActor
     func testRotationAndRecordSelection() async throws {
         continueAfterFailure = false
         let device = XCUIDevice.shared
@@ -127,6 +148,30 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
+    func testSecondOpinionCardUsesBothPhotosWithoutSigningIn() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"]
+        app.launch()
+        let resume = app.buttons["Resume batch"].firstMatch
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        resume.tap()
+        let open = app.buttons["Ask for a second opinion"].firstMatch
+        XCTAssertTrue(open.waitForExistence(timeout: 10))
+        open.tap()
+        let card = app.images["opinion-card-preview"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        XCTAssertTrue(card.label.contains("2 specimen photos"))
+        app.buttons["Engraving"].firstMatch.tap()
+        XCTAssertTrue(card.exists)
+        let share = app.buttons["Share card"].firstMatch
+        XCTAssertTrue(share.isHittable)
+        share.tap()
+        XCTAssertTrue(app.otherElements["ActivityListView"].firstMatch.waitForExistence(timeout: 8)
+                      || app.buttons["Copy"].firstMatch.exists || app.buttons["Save Image"].firstMatch.exists,
+                      app.debugDescription)
+    }
+
+    @MainActor
     func testGuestSearchUsesInlineConsentAndFillsRecord() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -237,16 +282,18 @@ final class GuestV1Tests: XCTestCase {
     private func addManually(_ title: String, to app: XCUIApplication, isBanknote: Bool) {
         app.buttons["Add item"].tap()
         app.buttons["Enter details manually"].tap()
-        let field = app.textFields["guest-field-title"]
-        for _ in 0..<5 where !field.isHittable { app.swipeUp() }
-        XCTAssertTrue(field.isHittable)
-        let save = app.buttons["guest-save-record"]
+        let editor = app.scrollViews["guest-record-scroll"].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 10))
         if isBanknote {
-            let banknote = app.segmentedControls.buttons["Banknote"].firstMatch
-            if !banknote.isHittable { app.swipeDown() }
+            let banknote = editor.segmentedControls.buttons["Banknote"].firstMatch
+            for _ in 0..<5 where !banknote.isHittable { editor.swipeUp() }
             XCTAssertTrue(banknote.isHittable, app.debugDescription)
             banknote.tap()
         }
+        let field = app.textFields["guest-field-title"]
+        for _ in 0..<5 where !field.isHittable { editor.swipeUp() }
+        XCTAssertTrue(field.isHittable)
+        let save = app.buttons["guest-save-record"]
         field.tap()
         field.typeText(title)
         for _ in 0..<5 where !save.isHittable { app.swipeUp() }

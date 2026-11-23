@@ -240,6 +240,7 @@ private struct GuestPieceScreen: View {
     @State private var onlineError: String?
     @State private var pendingPair: GuestPiece?
     @State private var zoomedSide: GuestSide?
+    @State private var cardPresented = false
     @State private var showAlternatives = false
     @State private var selectedMatch = false
     @State private var onlineCompleted = false
@@ -329,6 +330,16 @@ private struct GuestPieceScreen: View {
                 catalogPicker = false
             }
         }
+        .sheet(isPresented: $cardPresented) {
+            if let piece = store.piece(id), let collection = store.activeID {
+                OpinionCardSheet(record: OpinionCardRecord(piece)) {
+                    try GuestSide.allCases.compactMap { side in
+                        guard let photo = piece.photos[side] else { return nil }
+                        return try CardPhotos.image(data: Data(contentsOf: store.photoURL(photo, in: collection)))
+                    }
+                }
+            }
+        }
         .confirmationDialog(isDraft ? "Delete this draft?" : "Delete this piece?", isPresented: $askDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { act { try store.delete(id); done() } }
         }
@@ -407,6 +418,9 @@ private struct GuestPieceScreen: View {
                     #endif
                 }
                 if !piece.photos.isEmpty {
+                    Button("Ask for a second opinion", systemImage: "rectangle.portrait.and.arrow.right") {
+                        cardPresented = true
+                    }.buttonStyle(.bordered)
                     Menu {
                         ForEach(GuestSide.allCases) { side in
                             if piece.photos[side] != nil {

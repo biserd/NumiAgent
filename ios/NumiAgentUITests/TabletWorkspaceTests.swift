@@ -2,6 +2,24 @@ import XCTest
 
 final class TabletWorkspaceTests: XCTestCase {
     @MainActor
+    func testPreviewSecondOpinionFromCollection() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--preview-collection"]
+        app.launch()
+        let open = app.buttons["Ask for a second opinion"].firstMatch
+        XCTAssertTrue(open.waitForExistence(timeout: 15))
+        open.tap()
+        let card = app.images["opinion-card-preview"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        XCTAssertTrue(card.label.contains("Octavian denarius"))
+        let attachment = XCTAttachment(screenshot: card.screenshot())
+        attachment.name = "second-opinion-card"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTAssertTrue(app.buttons["Share card"].firstMatch.isHittable)
+    }
+
+    @MainActor
     func testRotationAndRecordSelection() async throws {
         continueAfterFailure = false
         let device = XCUIDevice.shared
@@ -126,6 +144,30 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 }
 
 final class GuestV1Tests: XCTestCase {
+    @MainActor
+    func testSecondOpinionCardUsesBothPhotosWithoutSigningIn() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"]
+        app.launch()
+        let resume = app.buttons["Resume batch"].firstMatch
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        resume.tap()
+        let open = app.buttons["Ask for a second opinion"].firstMatch
+        XCTAssertTrue(open.waitForExistence(timeout: 10))
+        open.tap()
+        let card = app.images["opinion-card-preview"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        XCTAssertTrue(card.label.contains("2 specimen photos"))
+        app.buttons["Engraving"].firstMatch.tap()
+        XCTAssertTrue(card.exists)
+        let share = app.buttons["Share card"].firstMatch
+        XCTAssertTrue(share.isHittable)
+        share.tap()
+        XCTAssertTrue(app.otherElements["ActivityListView"].firstMatch.waitForExistence(timeout: 8)
+                      || app.buttons["Copy"].firstMatch.exists || app.buttons["Save Image"].firstMatch.exists,
+                      app.debugDescription)
+    }
+
     @MainActor
     func testGuestSearchUsesInlineConsentAndFillsRecord() {
         continueAfterFailure = false

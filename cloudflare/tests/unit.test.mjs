@@ -2,6 +2,52 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { encode, decode } from 'jpeg-js'
 import { cardDetails } from '../src/web/cardDetails.ts'
+import { numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
+import { newAuctionAlerts } from '../src/worker/auctionAlerts.ts'
+
+test('Numista guide scopes estimates to the selected issue, grade and currency',async()=>{
+  assert.equal(numistaType('KM 21; N# 42'),42)
+  assert.equal(numistaType('https://en.numista.com/catalogue/note42.html'),42)
+  assert.equal(numistaType('https://numista.com/42'),42)
+  assert.equal(numistaType('KM# 42'),undefined)
+  assert.equal(numistaType('https://other.test/42'),undefined)
+  const paths=[]
+  const provider=async(url,options)=>{
+    paths.push(new URL(url))
+    assert.equal(options.headers['Numista-API-Key'],'fixture')
+    return Response.json(paths.length===1?[{id:10,year:1935,mint_letter:'D'},{id:11,year:1935,mint_letter:'S'}]:
+      {currency:'USD',prices:[{grade:'vf',price:38}]})
+  }
+  const lookup=(issue,fetcher=provider)=>numistaGuide('fixture',42,issue,'USD',fetcher)
+  const choices=await lookup()
+  assert.equal(choices.status,'choose_issue')
+  assert.match(choices.issues[1].label,/1935 · S/)
+  const result=await lookup(11)
+  assert.equal(result.source,'https://en.numista.com/42')
+  assert.deepEqual(result.prices,[{grade:'vf',price:38}])
+  assert.equal(paths[1].pathname,'/v3/types/42/issues/11/prices')
+  assert.equal(paths[1].searchParams.get('currency'),'USD')
+  assert.equal((await lookup(10,async()=>Response.json({currency:'EUR',prices:[]}))).status,'unavailable')
+  assert.equal((await lookup(10,async()=>Response.json({currency:'USD',prices:[]}))).status,'no_prices')
+  assert.equal((await lookup(10,async()=>new Response(null,{status:429}))).status,'rate_limited')
+  assert.equal((await numistaGuide('fixture',undefined,undefined,'USD',provider)).status,'reference_required')
+  assert.equal(paths.length,2)
+})
+
+test('Gap alerts deduplicate biddr lot URLs, distinguish leads from verified auctions and exclude closed lots',()=>{
+  const lot='https://www.biddr.com/auctions/example/browse?a=123&l=42'
+  const hit=(url,state='unknown')=>({title:'fixture',url,state})
+  const hits=[hit(lot+'&currency=USD'),hit(lot+'&language=de'),hit('https://www.biddr.com/search?s=example'),
+    hit('https://other.test/auctions/example/browse?a=123&l=42'),hit(lot.replace('42','43'),'closed')]
+  assert.deepEqual(newAuctionAlerts(hits,[],false),[])
+  const leads=newAuctionAlerts(hits,[],true)
+  assert.equal(leads.length,1)
+  assert.match(leads[0].label,/check auction status/)
+  assert.deepEqual(newAuctionAlerts(hits,[leads[0].key],true),[])
+  const verified=newAuctionAlerts([hit(lot,'active')],[leads[0].key],true)
+  assert.match(verified[0].label,/Verified active/)
+  assert.deepEqual(newAuctionAlerts(hits,[verified[0].key],true),[])
+})
 
 test('A share card distinguishes a realized lot, a market range and a private purchase',()=>{
   const item={type:'banknote',grade:'VF',details:{obverseLegend:'FIVE DOLLARS',inscriptions:'five dollars',
@@ -341,6 +387,8 @@ test('Valuation selects fresh, strong same-grade results and separates the hamme
     {...record,id:'H',lot:'7',date:'2007-01-01'}, {...record,id:'I',lot:'8',match:'possible'}
   ]
   const result=valueSales(data,'USD','VF',new Date('2026-11-14'))
+  assert.deepEqual(valueSales(data,'USD','Very Fine',new Date('2026-11-14')).used,result.used)
+  for (const grade of ['', 'Ungraded','VF+', 'VF-30']) assert.equal(valueSales(data,'USD',grade,new Date('2026-11-14')).range,null)
   assert.deepEqual(result.used,['A','B','C'])
   assert.deepEqual(result.range,{low:180,median:240,high:280})
   assert.equal(valueSales(data,'EUR','VF',new Date('2026-11-14')).status,'insufficient_market_evidence')

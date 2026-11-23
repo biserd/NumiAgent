@@ -111,6 +111,8 @@ endpoint('put','/themes/{id}','Replace checklist rules',{...empty,input:checklis
 endpoint('delete','/themes/{id}','Delete a theme',empty)
 endpoint('get','/valuations/{id}','Read sale-backed valuation',{queries:['currency'],output:ref('Valuation')})
 endpoint('get','/valuations/{id}/research','Look up exact-reference sales from a configured approved provider')
+endpoint('get','/valuations/{id}/guide','Look up Numista issues or grade estimates for a chosen issue',{queries:['type','issue','currency']})
+endpoint('get','/market/capabilities','Read configured auction sources and email availability')
 endpoint('post','/valuations/{id}/sales','Record collector-attested realized sale facts',{status:201,input:array(ref('Sale')),output:ref('Valuation')})
 endpoint('get','/valuations/{id}/history','Read valuation snapshots',{output:array(type('object'))})
 endpoint('get','/market/search','Search configured marketplace providers',{queries:['q'],output:ref('Market')})
@@ -128,6 +130,7 @@ endpoint('get','/exchange-rates','Find a dated ECB reference conversion for a cu
 endpoint('get','/watchlists','List saved marketplace searches',{output:array(type('object'))})
 endpoint('post','/watchlists','Upsert a watch with optional email opt-in',{status:201,input:object({query:string,alert:yes},['query'])})
 endpoint('delete','/watchlists/{id}','Remove a watch',empty)
+endpoint('post','/watchlists/gap','Watch a missing checklist slot or update its email preference',{status:201,input:object({themeId:string,slotKey:string,alert:yes},['themeId','slotKey'])})
 
 const spec={openapi:'3.1.0',info:{title:'NumiAgent REST API',version:'1.0.0',
   description:'Create a read-only developer key at /app#developer. Use it with Bearer authentication on operations marked developerKey. Browser mutations require the configured same Origin. MCP uses OAuth and Streamable HTTP at /mcp.'},

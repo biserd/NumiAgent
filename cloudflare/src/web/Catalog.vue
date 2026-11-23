@@ -5,6 +5,7 @@ import type { Candidate, Folder, Link, Photo, RecordForm, ScanReview, Specimen }
 import ItemFields from './ItemFields.vue'
 import PrivatePhoto from './PrivatePhoto.vue'
 import OpinionCard from './OpinionCard.vue'
+import PriceGuide from './PriceGuide.vue'
 const props = defineProps<{startWithNew?:boolean;openedSpecimen?:string}>()
 const rows=ref<Specimen[]>([])
 const folders=ref<Folder[]>([])
@@ -363,11 +364,15 @@ async function importNumisGraph(event:Event) {
       <h2>Auction valuation</h2>
       <form class="inline" @submit.prevent="action(refreshValue)"><label>Currency<input v-model.trim="valCurrency" maxlength="3" pattern="[A-Z]{3}" required></label><button>Refresh valuation</button></form>
       <p v-if="estimate?.range" class="value">{{price(estimate.range.low,estimate.currency)}} – {{price(estimate.range.high,estimate.currency)}}</p>
+      <p v-if="estimate?.range">Median {{price(estimate.range.median,estimate.currency)}} across {{estimate.used.length}} comparable lots.</p>
       <p v-else-if="estimate" class="status">Insufficient market evidence</p>
+      <p v-if="detail && !detail.grade.trim() && estimate?.evidence.length">Save the specimen’s grade to compare sales in the same condition.</p>
       <p v-if="estimate">As of {{estimate.asOf}}. A range requires three strong, recent matches on a comparable grade and premium basis. Conversions use recorded rates.</p>
+      <PriceGuide v-if="detail" :key="detail.id" :id="detail.id" :currency="estimate?.currency ?? 'USD'"/>
       <details><summary>Research comparable sales</summary>
         <p>Search an approved realized-sale feed for the saved catalog reference. Check the original lot and condition before adding evidence.</p>
         <button type="button" @click="action(findSales)">Look for sale records</button>
+        <a v-if="detail" :href="'https://www.ebay.com/sch/i.html?LH_Sold=1&amp;LH_Complete=1&amp;_nkw='+encodeURIComponent([detail.title,detail.year,detail.grade].filter(Boolean).join(' '))" target="_blank" rel="noreferrer">Compare sold listings on eBay ↗</a>
         <p v-if="saleResearch?.status==='provider_not_configured'">NumiAgent doesn’t have a completed-sales feed connected.</p>
         <p v-else-if="saleResearch?.status==='unavailable'">The realized-sale provider is unavailable.</p>
         <p v-else-if="saleResearch?.status==='reference_required'">Save a catalog reference to search for the same type.</p>

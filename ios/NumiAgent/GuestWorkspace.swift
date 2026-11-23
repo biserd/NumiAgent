@@ -278,6 +278,9 @@ private struct GuestPieceScreen: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu("Piece actions", systemImage: "ellipsis.circle") {
                             Button("Search offline catalog", systemImage: "books.vertical") { catalogPicker = true }
+                            if let sold = soldListingsURL([piece.issuer, piece.denomination, piece.year].filter { !$0.isBlank }.joined(separator: " ")) {
+                                Link("Compare sold listings on eBay", destination: sold)
+                            }
                             if !piece.title.isBlank && !canConfirm(piece) {
                                 Button("Confirm and save", systemImage: "checkmark") { save(.confirmed) }
                             }

@@ -68,17 +68,25 @@ export const sale = z.object({
 })
 export type Sale = Omit<z.infer<typeof sale>, 'sourceChecked'> & { id: string; verification: string }
 
+// Keep numerical grades, plus/minus and problem designations distinct.
+function comparableGrade(value:string) {
+  const grade=value.trim().toLowerCase().replace(/very fine/g,'vf').replace(/(?:extra|extremely) fine|\bef\b/g,'xf')
+    .replace(/about uncirculated/g,'au').replace(/mint state/g,'ms').replace(/\s+/g,' ')
+    .replace(/\b(vf|xf|au|ms)[ -]+(?=\d)/g,'$1')
+  return /^(?:unknown|ungraded|unspecified|n\/a|\?)$/.test(grade) ? '' : grade
+}
 export function valueSales(sales: Sale[], currency: string, grade: string, today = new Date()) {
   const cutoff = new Date(today)
   cutoff.setUTCMonth(cutoff.getUTCMonth() - 24)
   const day = today.toISOString().slice(0, 10)
   const deduped = new Map<string, Sale>()
+  const targetGrade = comparableGrade(grade)
   for (const entry of sales) {
     const convertible = entry.fx?.currency===currency && entry.fx.date <= entry.date &&
       Date.parse(entry.date)-Date.parse(entry.fx.date)<=7*86400000
     if ((entry.currency !== currency && !convertible) || entry.match !== 'strong' || entry.date > day ||
         entry.date < cutoff.toISOString().slice(0,10) ||
-        (grade && normalize(entry.grade) !== normalize(grade)) ||
+        (!targetGrade || comparableGrade(entry.grade) !== targetGrade) ||
         (entry.basis === 'hammer' && entry.premium == null)) continue
     const key = [entry.house, entry.auction, entry.lot].map(normalize).join('|')
     if (!deduped.has(key)) deduped.set(key, entry)

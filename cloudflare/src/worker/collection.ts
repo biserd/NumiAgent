@@ -1,8 +1,9 @@
 import { z } from 'zod'
-import { bulkItemPatch, csv, id, item, matchesSlot, photoLink, sale, slot, valueSales } from '../shared/domain'
+import { bulkItemPatch, csv, id, item, matchesSlot, normalize, photoLink, sale, slot, valueSales } from '../shared/domain'
 import type { Item, Sale, Slot } from '../shared/domain'
 import { convertLegacyCoin, legacyBatch } from '../shared/legacy'
-import { all, body, fail, now, one, router, run, uid } from './core'
+import { all, body, digest, fail, limit, now, one, router, run, uid } from './core'
+import { numistaGuide, numistaType } from './numistaGuide'
 import type { Env } from './core'
 import { previewTheme } from './themePlanning'
 import { researchSales } from './saleResearch'
@@ -303,6 +304,19 @@ export async function valuation(env:Env,user:string,key:string,currency='USD') {
   return valueSales(sales.map(saleFromRow),currency,specimen.grade)
 }
 export const valuations = router()
+valuations.get('/:id/guide',async c=>{
+  const user = c.get('user').id
+  const specimen = await findItem(c.env,user,c.req.param('id'))
+  const number = z.coerce.number().int().positive().max(2147483647).optional()
+  const params = z.object({type:number,issue:number,currency:z.string().regex(/^[A-Z]{3}$/).default('USD')}).safeParse(c.req.query())
+  if (!params.success) return fail(400,'Use a numeric Numista ID and a three-letter currency')
+  const typeID = params.data.type ?? numistaType(specimen.reference) ?? numistaType(specimen.details?.referenceUrl ?? '')
+  if (c.env.NUMISTA_API_KEY && typeID) {
+    await limit(c.env,'numista_guide',user,40)
+    await limit(c.env,'numista_guide','global',400)
+  }
+  return c.json(await numistaGuide(c.env.NUMISTA_API_KEY,typeID,params.data.issue,params.data.currency))
+})
 valuations.get('/:id/research',async c=>{
   const user=c.get('user').id
   const specimen=await findItem(c.env,user,c.req.param('id'))
@@ -335,9 +349,30 @@ export const listThemes = (env:Env,user:string) => all<Omit<Theme,'slots'>>(env,
 export async function themeProgress(env:Env,user:string,key:string) {
   const theme = await one<Theme>(env,'SELECT id,name,slots FROM themes WHERE user_id=? AND id=?',user,key)
   if (!theme) return fail(404,'Theme unavailable')
-  const specimens = (await all<Row>(env,'SELECT * FROM items WHERE user_id=?',user)).map(decode)
-  const slots = (JSON.parse(theme.slots) as Slot[]).map(rule=>({...rule,owned:specimens.filter(i=>matchesSlot(rule,i))
-    .map(i=>({id:i.id,title:i.title,hasReference:!!i.reference.trim()}))}))
+  return progressFor(theme,await checklistItems(env,user))
+}
+const checklistItems = async(env:Env,user:string)=>(await all<Row>(env,'SELECT * FROM items WHERE user_id=?',user)).map(decode)
+export async function watchedThemes(env:Env,user:string) {
+  const themes=await all<Theme>(env,`SELECT id,name,slots FROM themes WHERE user_id=? AND id IN
+    (SELECT theme_id FROM gap_watches WHERE user_id=?)`,user,user)
+  const specimens=await checklistItems(env,user)
+  return Promise.all(themes.map(theme=>progressFor(theme,specimens)))
+}
+async function progressFor(theme:Theme,specimens:Awaited<ReturnType<typeof checklistItems>>) {
+  const slots = await Promise.all((JSON.parse(theme.slots) as Slot[]).map(async rule=>{
+    const identity = [rule.type,rule.ruler,rule.issuer,rule.denomination,rule.reference,rule.metal,rule.year,rule.series]
+      .map(value=>normalize(value ?? ''))
+    const key = await digest(JSON.stringify([identity,rule.dateFrom,rule.dateTo,
+      rule.aliases.map(normalize).sort(),(rule.denominationAliases ?? []).map(normalize).sort()]))
+    const dates = [rule.dateFrom,rule.dateTo].filter(year=>year!=null)
+      .map(year=>year < 0 ? Math.abs(year)+' BCE' : String(year))
+    const terms = [rule.ruler,rule.issuer,rule.denomination,rule.reference,rule.metal,rule.year,rule.series,
+      ...new Set(dates)].filter(Boolean)
+    const keywords = [...new Set(terms.length ? terms : [rule.label,rule.type])].join(' ').trim()
+    const query = (keywords.length>=2 ? keywords : keywords+' '+(rule.type ?? 'numismatics')).slice(0,180)
+    return {...rule,slotKey:key,query,owned:specimens.filter(i=>matchesSlot(rule,i))
+      .map(i=>({id:i.id,title:i.title,hasReference:!!i.reference.trim()}))}
+  }))
   const owned = slots.filter(s=>s.owned.length > 0).length
   const missing=slots.filter(s=>!s.owned.length)
   const missingReferences=new Set(slots.flatMap(rule=>rule.owned.filter(item=>!item.hasReference).map(item=>item.id))).size

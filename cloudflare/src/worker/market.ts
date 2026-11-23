@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { https, normalize, text } from '../shared/domain'
-import { all, body, limit, now, router, run, uid } from './core'
+import { all, body, fail, limit, now, one, router, run, uid } from './core'
+import { themeProgress, watchedThemes } from './collection'
+import { canonicalLot, newAuctionAlerts } from './auctionAlerts'
 import type { Env } from './core'
 import { ebayEnabled, searchEbay } from './ebay'
 
@@ -17,19 +19,12 @@ export type Hit = z.infer<typeof hit>
 const firecrawlResponse = z.object({success:z.literal(true),
   data:z.object({web:z.array(z.object({url:z.string(),title:z.string().optional(),description:z.string().optional()})).optional()})})
 const domains = (env:Env) => (env.MARKET_DOMAINS ?? '').split(',').map(v=>v.trim().toLowerCase()).filter(v=>/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(v))
-const canonical = (value:string) => {
-  const url = new URL(value)
-  url.hash=''
-  for (const key of [...url.searchParams.keys()]) if (/^utm_|^(fbclid|gclid)$/i.test(key)) url.searchParams.delete(key)
-  url.searchParams.sort()
-  return url.href
-}
 function unique(results: Hit[], allowed:string[]) {
   const keys = new Set<string>()
   return results.filter(entry=>{
     const host = new URL(entry.url).hostname
     if (!allowed.some(domain=>host===domain || host.endsWith('.'+domain))) return false
-    const url = canonical(entry.url)
+    const url = canonicalLot(entry.url).url
     const syndication = entry.auctionHouse && entry.auction && entry.lot
       ? [entry.auctionHouse,entry.auction,entry.lot].map(normalize).join('|') : null
     if (keys.has(url) || (syndication && keys.has(syndication))) return false
@@ -91,21 +86,54 @@ export async function marketSearch(env:Env,user:string,query:string) {
       entry.status='queried'
     } catch { console.warn('Approved eBay Browse provider unavailable') }
   }
-  const deduped = unique(results,ebay?[...allowed,'ebay.com']:allowed)
+  const deduped = unique(results.sort((a,b)=>Number(b.state==='active')-Number(a.state==='active')),ebay?[...allowed,'ebay.com']:allowed)
   const active = deduped.some(r=>r.state==='active')
   const status = active ? 'active_results' : coverage.some(c=>c.status==='queried') ? 'insufficient_verified_coverage':'unavailable'
   return {status,query,retrievedAt,coverage,results:deduped}
 }
 
 export const market = router()
+function capabilities(env:Env) {
+  const allowed = domains(env)
+  const activeFeed = !!env.MARKET_FEED_URL && allowed.length>0
+  const ebay = ebayEnabled(env)
+  const biddrDiscovery = !!env.FIRECRAWL_API_KEY && allowed.some(d=>d==='biddr.com' || d.endsWith('.biddr.com'))
+  return {activeFeed,ebay,biddrDiscovery,emailAlerts:!!(env.EMAIL && env.EMAIL_FROM && (activeFeed || ebay || biddrDiscovery))}
+}
+market.get('/capabilities',c=>c.json(capabilities(c.env)))
 market.get('/search',async c=>{
   const query = querySchema.safeParse(c.req.query('q'))
   if (!query.success) return c.json({error:'Enter an auction search query'},400)
   return c.json(await marketSearch(c.env,c.get('user').id,query.data))
 })
-type Watch = {id:string;user_id:string;email:string;query:string;seen:string;checked:number|null}
+type Gap = {id:string;themeId:string;slotKey:string;query:string;alert:number;checked:number|null}
+type Watch = {id:string;user_id:string;email:string;query:string;seen:string;themeId:string|null;slotKey:string|null}
 export const watchlists = router()
-watchlists.get('/',async c=>c.json(await all(c.env,'SELECT id,query,alert,checked FROM watchlists WHERE user_id=? ORDER BY query',c.get('user').id)))
+watchlists.get('/',async c=>{
+  const user = c.get('user').id
+  const saved = await all(c.env,'SELECT id,query,alert,checked FROM watchlists WHERE user_id=? ORDER BY query',user)
+  const gaps = await all<Gap>(c.env,'SELECT id,theme_id AS themeId,slot_key AS slotKey,query,alert,checked FROM gap_watches WHERE user_id=? ORDER BY query',user)
+  const lists = new Map((gaps.length ? await watchedThemes(c.env,user) : []).map(list=>[list.id,list]))
+  return c.json([...saved,...gaps.map(g=>{
+    const list=lists.get(g.themeId)
+    const slot=list?.slots.find(s=>s.slotKey===g.slotKey)
+    return {...g,theme:list?.name,state:!slot?'rule_changed':slot.owned.length?'filled':'watching'}
+  })])
+})
+watchlists.post('/gap',async c=>{
+  const input = await body(c,z.object({themeId:z.uuid(),slotKey:z.string().regex(/^[a-f0-9]{64}$/),alert:z.boolean().optional()}))
+  const user = c.get('user').id
+  await limit(c.env,'gap_watch',user,100)
+  const list = await themeProgress(c.env,user,input.themeId)
+  const slot = list.slots.find(s=>s.slotKey===input.slotKey)
+  if (!slot || slot.owned.length) return fail(409,'This checklist gap is no longer missing')
+  if (input.alert && !capabilities(c.env).emailAlerts) return fail(409,'Automatic email alerts are unavailable. Save this watch with email off.')
+  const result = await one<{id:string}>(c.env,`INSERT INTO gap_watches(id,user_id,theme_id,slot_key,query,alert)
+    VALUES(?,?,?,?,?,COALESCE(?,0)) ON CONFLICT(user_id,theme_id,slot_key)
+    DO UPDATE SET query=excluded.query,alert=COALESCE(?,gap_watches.alert) RETURNING id`,
+    uid(),user,input.themeId,slot.slotKey,slot.query,input.alert==null?null:Number(input.alert),input.alert==null?null:Number(input.alert))
+  return c.json(result,201)
+})
 watchlists.post('/',async c=>{
   const input = await body(c,z.object({query:querySchema,alert:z.boolean().default(false)}))
   const user = c.get('user').id
@@ -115,27 +143,41 @@ watchlists.post('/',async c=>{
   return c.json(input,201)
 })
 watchlists.delete('/:id',async c=>{
-  await run(c.env,'DELETE FROM watchlists WHERE id=? AND user_id=?',c.req.param('id'),c.get('user').id)
+  const args=[c.req.param('id'),c.get('user').id]
+  await c.env.DB.batch(['watchlists','gap_watches'].map(table=>c.env.DB.prepare('DELETE FROM '+table+' WHERE id=? AND user_id=?').bind(...args)))
   return c.body(null,204)
 })
 export async function refreshWatchlists(env:Env) {
-  if ((!env.MARKET_FEED_URL && !ebayEnabled(env)) || !env.EMAIL || !env.EMAIL_FROM) return
-  const watches = await all<Watch>(env,`SELECT w.*,u.email FROM watchlists w JOIN users u ON u.id=w.user_id
-    WHERE w.alert=1 AND u.deleting=0 AND COALESCE(w.checked,0)<? ORDER BY COALESCE(w.checked,0) LIMIT 12`,now()-86400)
+  const caps = capabilities(env)
+  if (!caps.emailAlerts || !env.EMAIL || !env.EMAIL_FROM) return
+  const watches = await all<Watch>(env,`SELECT w.*,u.email FROM (
+    SELECT id,user_id,query,seen,checked,NULL AS themeId,NULL AS slotKey FROM watchlists WHERE alert=1 AND ?=1
+    UNION ALL SELECT id,user_id,query,seen,checked,theme_id,slot_key FROM gap_watches WHERE alert=1
+    ) w JOIN users u ON u.id=w.user_id WHERE u.deleting=0 AND COALESCE(w.checked,0)<? ORDER BY COALESCE(w.checked,0),w.id LIMIT 12`,
+    Number(caps.activeFeed || caps.ebay),now()-86400)
   for (const watch of watches) {
+    const table = watch.themeId ? 'gap_watches' : 'watchlists'
+    const missing = async()=>!watch.themeId || (await themeProgress(env,watch.user_id,watch.themeId)).missing.some(s=>s.slotKey===watch.slotKey)
     try {
-      const market = await marketSearch({...env,FIRECRAWL_API_KEY:undefined},watch.user_id,watch.query)
+      // Move the attempt behind the remaining due watches, even if a provider is down.
+      const claimed=await run(env,'UPDATE '+table+' SET checked=? WHERE id=? AND user_id=? AND alert=1 AND COALESCE(checked,0)<?',
+        now(),watch.id,watch.user_id,now()-86400)
+      if (!claimed.meta.changes) continue
+      if (!await missing()) continue
+      const discovery = watch.themeId && caps.biddrDiscovery
+      const market = await marketSearch({...env,FIRECRAWL_API_KEY:discovery?env.FIRECRAWL_API_KEY:undefined},watch.user_id,watch.query)
       if (!market.coverage.some(c=>c.status==='queried')) continue
-      const active = market.results.filter(r=>r.state==='active')
       const previouslySeen = JSON.parse(watch.seen) as string[]
-      const news = active.filter(r=>!previouslySeen.includes(canonical(r.url)))
-      const enabled = await all(env,'SELECT 1 FROM watchlists w JOIN users u ON u.id=w.user_id WHERE w.id=? AND w.alert=1 AND u.deleting=0',watch.id)
-      if (enabled.length && news.length) await env.EMAIL.send({
+      const news = newAuctionAlerts(market.results,previouslySeen,!!discovery)
+      if (!news.length || !await missing()) continue
+      const enabled = await one(env,'SELECT 1 FROM '+table+' w JOIN users u ON u.id=w.user_id WHERE w.id=? AND w.user_id=? AND w.alert=1 AND u.deleting=0',watch.id,watch.user_id)
+      if (!enabled) continue
+      await env.EMAIL.send({
         to:watch.email,from:env.EMAIL_FROM,subject:'New auction matches',
-        text:news.slice(0,20).map(r=>r.title+'\n'+r.url).join('\n\n')+'\n\nManage alerts at '+env.APP_ORIGIN+'/app'
+        text:watch.query+'\n\n'+news.map(({hit,label})=>label+'\n'+hit.title+'\n'+hit.url).join('\n\n')+'\n\nManage alerts at '+env.APP_ORIGIN+'/app'
       })
-      const seen = [...new Set([...active.map(r=>canonical(r.url)),...previouslySeen])].slice(0,100)
-      await run(env,'UPDATE watchlists SET checked=?,seen=? WHERE id=? AND user_id=?',now(),JSON.stringify(seen),watch.id,watch.user_id)
+      const seen = [...new Set([...news.map(row=>row.key),...previouslySeen])].slice(0,100)
+      await run(env,'UPDATE '+table+' SET seen=? WHERE id=? AND user_id=?',JSON.stringify(seen),watch.id,watch.user_id)
     } catch {console.warn('Watch refresh failed')}
   }
 }

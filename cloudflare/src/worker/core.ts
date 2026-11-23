@@ -22,6 +22,7 @@ export interface Env {
   TURNSTILE_SECRET?: string
   FIRECRAWL_API_KEY?: string
   GOOGLE_VISION_API_KEY?: string
+  NUMISTA_API_KEY?: string
   EBAY_MARKET_ENABLED?: string
   EBAY_CLIENT_ID?: string
   EBAY_CLIENT_SECRET?: string

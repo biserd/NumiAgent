@@ -1,5 +1,243 @@
 import SwiftUI
 
+private struct GuideResult: Decodable {
+    struct Issue: Decodable, Identifiable { let id: Int; let label: String }
+    struct Price: Decodable { let grade: String; let price: Double }
+    let status: String
+    let typeID, issueID: Int?
+    let source: URL?
+    let currency: String
+    let issues: [Issue]?
+    let prices: [Price]?
+
+    var message: String? {
+        switch status {
+        case "reference_required": return "Enter the N# from the Numista catalog."
+        case "provider_not_configured": return "The Numista price guide is currently unavailable."
+        case "not_found": return "Numista could not find that type or issue."
+        case "no_issues": return "Numista has no issues listed for this type."
+        case "no_prices": return "Numista has no grade estimates for this issue."
+        case "rate_limited": return "The guide reached its request limit. Try again later."
+        case "unavailable": return "Numista could not return a price guide. Try again later."
+        default: return nil
+        }
+    }
+}
+
+struct PriceGuideScreen: View {
+    let api: NumiAPI
+    let item: Specimen
+    @State private var number = ""
+    @State private var issues: [GuideResult.Issue] = []
+    @State private var typeID: Int?
+    @State private var guide: GuideResult?
+    @State private var busy = false
+    @State private var error: String?
+
+    var body: some View {
+        List {
+            Section {
+                Text(item.title).font(.headline)
+                if !item.reference.isEmpty { Text(item.reference) }
+                TextField("Numista N# (use saved reference)", text: $number).keyboardType(.numberPad)
+                Button("Find issues") { Task { await lookup() } }
+            } footer: { Text("Choose the issue that matches the year, mint and variety on your piece.") }
+            if !issues.isEmpty {
+                Section("Choose an issue") {
+                    ForEach(issues) { issue in
+                        Button(issue.label) { Task { await lookup(issue.id) } }
+                    }
+                }
+            }
+            if busy { ProgressView("Looking up the guide") }
+            if let error { Text(error).foregroundStyle(.red) }
+            if let guide {
+                if let message = guide.message { Text(message) }
+                if let prices = guide.prices, !prices.isEmpty, let issue = guide.issueID {
+                    Section("Guide estimates · Issue \(issue)") {
+                        ForEach(prices, id: \.grade) { row in
+                            LabeledContent(row.grade.uppercased()) { Text(row.price, format: .currency(code: guide.currency)) }
+                        }
+                    }
+                }
+                if let source = guide.source, let id = guide.typeID {
+                    Link("Numista N# \(id)", destination: source)
+                }
+            }
+        }
+        .disabled(busy)
+        .navigationTitle("Price guide")
+    }
+
+    private func lookup(_ issue: Int? = nil) async {
+        guard !busy else { return }
+        busy = true
+        defer { busy = false }
+        guide = nil
+        error = nil
+        var query = [URLQueryItem(name: "currency", value: "USD")]
+        if let issue, let typeID {
+            query += [.init(name: "type", value: String(typeID)), .init(name: "issue", value: String(issue))]
+        } else {
+            issues = []
+            if !number.isEmpty { query.append(.init(name: "type", value: number)) }
+        }
+        do {
+            let found: GuideResult = try await api.get("/valuations/" + item.id + "/guide", query: query)
+            guide = found
+            if let choices = found.issues { issues = choices; typeID = found.typeID }
+        } catch { self.error = error.localizedDescription }
+    }
+}
+
+private struct AuctionWatch: Decodable, Identifiable {
+    let id, query: String
+    let slotKey, themeId, state: String?
+    let alert: Int
+    var subtitle: String {
+        if state == "filled" { return "Paused · slot filled" }
+        if state == "rule_changed" { return "Paused · checklist rule changed" }
+        return alert == 1 ? "Watching · email alerts on" : "Watching · email alerts off"
+    }
+}
+
+struct ChecklistWatchesScreen: View {
+    let api: NumiAPI
+    let themeID: String
+    @State private var watches: [AuctionWatch]?
+    @State private var error: String?
+    var body: some View {
+        List {
+            if let watches {
+                if watches.isEmpty { Text("Open a missing checklist slot to watch it for auctions.") }
+                ForEach(watches) { watch in
+                    VStack(alignment: .leading) {
+                        Text(watch.query).font(.headline)
+                        Text(watch.subtitle).foregroundStyle(.secondary)
+                        Button("Stop watching") {
+                            Task {
+                                do { try await api.write("/watchlists/" + watch.id, method: "DELETE"); await load() }
+                                catch { self.error = error.localizedDescription }
+                            }
+                        }.buttonStyle(.borderless)
+                    }
+                }
+            } else if error == nil { ProgressView() }
+            if let error { Text(error).foregroundStyle(.red) }
+        }
+        .navigationTitle("Auction watches")
+        .task { await load() }
+        .refreshable { await load() }
+    }
+    private func load() async {
+        do {
+            let all: [AuctionWatch] = try await api.get("/watchlists")
+            watches = all.filter { $0.themeId == themeID }
+            error = nil
+        } catch { self.error = error.localizedDescription }
+    }
+}
+
+struct GapAuctionScreen: View {
+    let api: NumiAPI
+    let themeID: String
+    let slot: ThemeDetails.Slot
+    private struct Capabilities: Decodable { let emailAlerts: Bool }
+    private struct Search: Decodable {
+        struct Lot: Decodable { let title, state: String; let url: URL }
+        let status: String
+        let results: [Lot]
+    }
+    private struct Subscription: Encodable { let themeId, slotKey: String; let alert: Bool? }
+    @State private var watch: AuctionWatch?
+    @State private var ready = false
+    @State private var busy = false
+    @State private var emailAvailable = false
+    @State private var search: Search?
+    @State private var error: String?
+    private var query: String { slot.query ?? slot.label }
+
+    var body: some View {
+        List {
+            Section {
+                Text(slot.label).font(.headline)
+                if let watch {
+                    Text(watch.subtitle)
+                    if emailAvailable || watch.alert == 1 {
+                        Button(watch.alert == 1 ? "Turn off email alerts" : "Email me new lots") {
+                            Task { await update(email: watch.alert == 0) }
+                        }
+                    }
+                    Button("Stop watching") { Task { await update(remove: true) } }
+                } else if ready, slot.slotKey != nil {
+                    Button("Watch this gap") { Task { await update() } }
+                }
+            } footer: { Text("Alerts pause when you fill this slot. Check auction status on biddr for discovery leads.") }
+            Section("Auctions") {
+                Button("Find auction lots") {
+                    Task {
+                        guard !busy else { return }
+                        busy = true
+                        defer { busy = false }
+                        error = nil
+                        do { search = try await api.get("/market/search", query: [.init(name: "q", value: query)]) }
+                        catch { self.error = error.localizedDescription }
+                    }
+                }
+                if let search {
+                    if search.status == "unavailable" { Text("Automatic auction search is unavailable. Search the marketplaces below.") }
+                    else if search.results.isEmpty { Text("No matching lots were found.") }
+                    ForEach(search.results, id: \.url) { lot in
+                        Link(destination: lot.url) {
+                            VStack(alignment: .leading) {
+                                Text(lot.title)
+                                Text(lot.state == "unknown" ? "Status unverified" : lot.state.capitalized).font(.caption)
+                            }
+                        }
+                    }
+                }
+                if let ebay = marketplace("https://www.ebay.com/sch/i.html", [.init(name: "_nkw", value: query), .init(name: "LH_Auction", value: "1")]) {
+                    Link("Search eBay auctions", destination: ebay)
+                }
+                if let biddr = marketplace("https://www.biddr.com/search", [.init(name: "s", value: query)]) {
+                    Link("Search biddr", destination: biddr)
+                }
+            }
+            if busy { ProgressView() }
+            if let error { Text(error).foregroundStyle(.red) }
+        }
+        .disabled(busy)
+        .navigationTitle("Auctions for this gap")
+        .task { await load() }
+        .refreshable { await load() }
+    }
+    private func marketplace(_ base: String, _ items: [URLQueryItem]) -> URL? {
+        var url = URLComponents(string: base)
+        url?.queryItems = items
+        return url?.url
+    }
+    private func load() async {
+        do {
+            let all: [AuctionWatch] = try await api.get("/watchlists")
+            watch = all.first { $0.themeId == themeID && $0.slotKey == slot.slotKey }
+            ready = true
+            let sources: Capabilities = try await api.get("/market/capabilities")
+            emailAvailable = sources.emailAlerts
+            error = nil
+        } catch { self.error = error.localizedDescription }
+    }
+    private func update(email: Bool? = nil, remove: Bool = false) async {
+        guard let key = slot.slotKey, !busy else { return }
+        busy = true
+        defer { busy = false }
+        do {
+            if remove, let watch { try await api.write("/watchlists/" + watch.id, method: "DELETE") }
+            else { try await api.write("/watchlists/gap", method: "POST", payload: Subscription(themeId: themeID, slotKey: key, alert: email)) }
+            await load()
+        } catch { self.error = error.localizedDescription }
+    }
+}
+
 private struct SaleDraft: Codable, Identifiable {
     let url: String
     var date: String
@@ -139,14 +377,17 @@ struct SaleResearchScreen: View {
     }
 
     private var soldSearch: URL? {
-        var components = URLComponents(string: "https://www.ebay.com/sch/i.html")
-        components?.queryItems = [
-            .init(name: "_nkw", value: keywords.trimmingCharacters(in: .whitespacesAndNewlines)),
-            .init(name: "LH_Sold", value: "1"), .init(name: "LH_Complete", value: "1"),
-            .init(name: "_sop", value: "13")
-        ]
-        return components?.url
+        soldListingsURL(keywords)
     }
+}
+
+func soldListingsURL(_ keywords: String) -> URL? {
+    let query = keywords.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !query.isEmpty else { return nil }
+    var url = URLComponents(string: "https://www.ebay.com/sch/i.html")
+    url?.queryItems = [.init(name: "_nkw", value: query), .init(name: "LH_Sold", value: "1"),
+                       .init(name: "LH_Complete", value: "1"), .init(name: "_sop", value: "13")]
+    return url?.url
 }
 
 struct SaleEditor: View {

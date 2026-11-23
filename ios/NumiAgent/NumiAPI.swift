@@ -90,6 +90,8 @@ struct ThemeDetails: Decodable {
         let label: String
         let owned: [Match]
         var rule: ChecklistRule?
+        var slotKey: String?
+        var query: String?
 
         init(label: String, owned: [Match]) {
             self.label = label
@@ -99,10 +101,13 @@ struct ThemeDetails: Decodable {
         init(from decoder: Decoder) throws {
             rule = try ChecklistRule(from: decoder)
             label = rule?.label ?? ""
-            owned = try decoder.container(keyedBy: CodingKeys.self).decode([Match].self, forKey: .owned)
+            let data = try decoder.container(keyedBy: CodingKeys.self)
+            owned = try data.decode([Match].self, forKey: .owned)
+            slotKey = try data.decodeIfPresent(String.self, forKey: .slotKey)
+            query = try data.decodeIfPresent(String.self, forKey: .query)
         }
 
-        private enum CodingKeys: String, CodingKey { case owned }
+        private enum CodingKeys: String, CodingKey { case owned, slotKey, query }
     }
 
     let name: String

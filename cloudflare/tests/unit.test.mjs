@@ -1,6 +1,27 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { encode, decode } from 'jpeg-js'
+import { cardDetails } from '../src/web/cardDetails.ts'
+
+test('A share card distinguishes a realized lot, a market range and a private purchase',()=>{
+  const item={type:'banknote',grade:'VF',details:{obverseLegend:'FIVE DOLLARS',inscriptions:'five dollars',
+    purchasePrice:19,currency:'USD',serial:'ABC12345',signatures:'Lyons · Roberts',purchaseSource:'Private seller'}}
+  const lot={id:'1',date:'2026-03-02',amount:85,currency:'EUR',house:'Example',auction:'Spring',lot:'42',match:'strong',grade:'VF',basis:'hammer'}
+  const valuation={currency:'USD',asOf:'2026-03-30',used:[],range:null,evidence:[lot,
+    {...lot,id:'2',amount:9999,grade:'MS'}, {...lot,id:'3',amount:500,match:'possible'},
+    {...lot,id:'4',date:'2027-03-02'}]}
+  const card=cardDetails(item,valuation)
+  assert.deepEqual(card.inscriptions,[{label:'FACE',value:'FIVE DOLLARS'}])
+  assert.equal(card.price.amount,'EUR 85 hammer')
+  assert.match(card.price.source,/Lot 42.*2026-03-02.*VF/)
+  assert.equal(card.paid,'USD 19')
+  assert.doesNotMatch(JSON.stringify(card),/ABC12345|Private seller/)
+  const range=cardDetails(item,{...valuation,used:['1','5','6'],range:{low:100,high:125}}).price
+  assert.match(range.label,/ESTIMATED/)
+  assert.match(range.source,/3 comparable sales.*2026-03-30/)
+  assert.equal(cardDetails(item,{...valuation,evidence:[]}).price,undefined)
+  assert.equal(cardDetails({...item,details:{purchasePrice:19}},null).paid,'')
+})
 import { csv, item, matchesSlot, romanTheme, slot, valueSales } from '../src/shared/domain.ts'
 import { convertLegacyCoin, legacyCoin } from '../src/shared/legacy.ts'
 import { matchReference } from '../src/shared/references.ts'

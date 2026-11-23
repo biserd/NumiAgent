@@ -119,7 +119,10 @@ async function remove(){
   active.value=null;await load()
 }
 async function refreshValue(){
-  if(active.value && active.value!=='new') estimate.value=await request('/valuations/'+active.value+'?currency='+encodeURIComponent(valCurrency.value))
+  const id=active.value, currency=valCurrency.value
+  if(!id || id==='new') return
+  const result=await request<Valuation>('/valuations/'+id+'?currency='+encodeURIComponent(currency))
+  if(active.value===id && valCurrency.value===currency) estimate.value=result
 }
 async function recordSale(){
   if(useRate.value && ecbContext.value && ecbContext.value!==rateQuery().toString()){
@@ -304,7 +307,7 @@ async function importNumisGraph(event:Event) {
   <section v-if="active" class="panel">
     <div class="section-heading"><h2>{{active==='new'?'New specimen':detail?.title}}</h2><button @click="active=null">Close specimen</button></div>
     <div v-if="form.photos?.length" class="photo-grid specimen-images"><figure v-for="(link,index) in form.photos" :key="index"><PrivatePhoto :id="link.photoId" :description="link.side" :crop="link.crop"/><figcaption>{{link.side}}</figcaption></figure></div>
-    <OpinionCard v-if="detail && (detail.photos?.length || detail.photo)" :key="detail.id" :piece="detail"/>
+    <OpinionCard v-if="detail && (detail.photos?.length || detail.photo)" :key="detail.id" :piece="detail" :valuation="estimate"/>
     <label v-if="detail && (detail.photos?.length ?? 0)<12">
       {{addingPhoto ? 'Adding photo…' : detail.photos?.length===1 ? 'Add the other side' : 'Add a photo'}}
       <input type="file" accept="image/*,.heic,.heif" :disabled="addingPhoto || photosChanged" @change="addPhoto">

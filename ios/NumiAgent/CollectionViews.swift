@@ -505,7 +505,7 @@ struct SpecimenScreen: View {
             }
         }
         .sheet(isPresented: $cardPresented) {
-            OpinionCardSheet(record: OpinionCardRecord(item)) {
+            OpinionCardSheet(record: OpinionCardRecord(item, valuation: valuation, demo: demo)) {
                 if demo, let name = DemoCollection.photo(for: item), let image = UIImage(named: name) {
                     return [image]
                 }

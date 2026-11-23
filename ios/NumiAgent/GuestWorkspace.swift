@@ -433,7 +433,7 @@ private struct GuestPieceScreen: View {
                             let candidates = store.active?.drafts.filter { other in
                                 other.id != id && other.photos.count == 1 && other.photos[.front] != nil &&
                                 [other.title, other.notes, other.serial, other.purchasePrice, other.purchaseCurrency,
-                                 other.issuer, other.year, other.denomination].allSatisfy(\.isEmpty)
+                                 other.issuer, other.year, other.denomination, other.inscription ?? ""].allSatisfy(\.isEmpty)
                             } ?? []
                             if !candidates.isEmpty {
                                 Menu("Pair a photo from another draft") {
@@ -530,6 +530,10 @@ private struct GuestPieceScreen: View {
             detailRow("Issuer or country", field: .issuer)
             detailRow("Denomination", field: .denomination)
             detailRow("Year", field: .year)
+            TextField("Inscription on the piece", text: Binding(
+                get: { store.piece(id)?.inscription ?? "" },
+                set: { input in act { try store.changePiece(id) { $0.inscription = String(input.prefix(180)) } } }
+            ), axis: .vertical).textFieldStyle(.roundedBorder)
             Picker("Type", selection: field(.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
                 .pickerStyle(.segmented)
             TextField("Notes", text: text(\.notes), axis: .vertical).padding(8)

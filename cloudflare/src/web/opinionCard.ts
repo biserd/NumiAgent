@@ -2,6 +2,7 @@ import antiquity from '../../../ios/NumiAgent/Assets.xcassets/CardAntiquity.imag
 import mint from '../../../ios/NumiAgent/Assets.xcassets/CardMint.imageset/frame.jpg?url'
 import engraving from '../../../ios/NumiAgent/Assets.xcassets/CardEngraving.imageset/frame.jpg?url'
 import { photoURL, type Link, type Specimen } from './api'
+import type { cardDetails } from './cardDetails'
 
 export const cardStyles = {
   Antiquity: {image:antiquity, ink:'#ebca8b'},
@@ -56,24 +57,51 @@ export async function customCardFrame(photos:CardPhotos,style:CardStyle,signal:A
   try{return await readImage(url)}finally{URL.revokeObjectURL(url)}
 }
 
-export async function drawOpinionCard(piece:CardRecord, photos:CardPhotos, style:CardStyle, question:string, artwork?:HTMLImageElement) {
+export async function drawOpinionCard(piece:CardRecord, photos:CardPhotos, style:CardStyle, question:string,
+  stats:ReturnType<typeof cardDetails>, includePaid:boolean, artwork?:HTMLImageElement) {
   const canvas = document.createElement('canvas')
   canvas.width = 1440
-  canvas.height = 1800
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Image export is unavailable in this browser.')
+  function wrap(value:string,width:number,font:string) {
+    const painter=ctx!
+    painter.font=font
+    const rows:string[]=[]
+    let line=''
+    for(const word of value.trim().split(/\s+/)){
+      const next=line?line+' '+word:word
+      if(painter.measureText(next).width<=width){line=next;continue}
+      if(line) rows.push(line)
+      line=''
+      for(const char of word){
+        if(line && painter.measureText(line+char).width>width){ rows.push(line);line='' }
+        line+=char
+      }
+    }
+    if(line) rows.push(line)
+    return rows
+  }
+  const quoteFont='19px Georgia, serif'
+  const legends=stats.inscriptions.map(f=>({...f,rows:wrap(f.value,382,quoteFont)}))
+  const legendHeight=legends.reduce((sum,legend)=>sum+29+legend.rows.length*23,0)
+  const factRows=Math.ceil(stats.facts.length/3)
+  const priceLines=stats.price?wrap(stats.price.source,382,'13px sans-serif'):[]
+  const priceHeight=stats.price?73+priceLines.length*16:0
+  const paidHeight=includePaid && stats.paid?33:0
+  const height=600+legendHeight+Math.max(0,factRows-1)*50+priceHeight+paidHeight
+  canvas.height = height*3
   ctx.scale(3,3)
-  ctx.drawImage(artwork ?? await readImage(cardStyles[style].image),0,0,480,600)
-  const shade = ctx.createLinearGradient(0,0,0,600)
+  ctx.drawImage(artwork ?? await readImage(cardStyles[style].image),0,0,480,height)
+  const shade = ctx.createLinearGradient(0,0,0,height)
   shade.addColorStop(0,'#0008')
   shade.addColorStop(.5,'#0002')
   shade.addColorStop(1,'#000b')
   ctx.fillStyle=shade
-  ctx.fillRect(0,0,480,600)
+  ctx.fillRect(0,0,480,height)
   const ink=cardStyles[style].ink
   ctx.strokeStyle=ink
   ctx.lineWidth=.6
-  ctx.strokeRect(15,15,450,570)
+  ctx.strokeRect(15,15,450,height-30)
   ctx.fillStyle=ink
   ctx.font='bold 12px sans-serif'
   ctx.fillText('NUMIAGENT',36,49)
@@ -118,19 +146,49 @@ export async function drawOpinionCard(piece:CardRecord, photos:CardPhotos, style
     ctx.lineWidth=.65
     ctx.strokeRect(left,upper,sw*scale,sh*scale)
   })
-  const facts=[['ISSUER',piece.issuer],['DENOMINATION',piece.denomination],['DATE',piece.year]].filter(([,value])=>value.trim())
-  facts.forEach(([name,value],i)=>{
-    const width=408/facts.length, x=36+i*width
+  let cursor=462
+  if(legends.length){
+    ctx.fillStyle='rgba(0,0,0,.58)'
+    ctx.fillRect(36,cursor,408,legendHeight-3)
+    ctx.fillStyle=ink
+    ctx.fillRect(36,cursor,2,legendHeight-3)
+    for(const legend of legends){
+      ctx.fillStyle=ink;ctx.font='bold 9px sans-serif'
+      ctx.fillText(legend.label,48,cursor+14)
+      ctx.fillStyle='#fff';ctx.font=quoteFont
+      legend.rows.forEach((line,i)=>ctx.fillText(line,48,cursor+37+i*23))
+      cursor+=29+legend.rows.length*23
+    }
+  }
+  stats.facts.forEach(({label,value},i)=>{
+    const width=408/Math.min(3,stats.facts.length), x=36+i%3*width, y=cursor+Math.floor(i/3)*50
     ctx.fillStyle=ink
     ctx.font='bold 9px sans-serif'
-    ctx.fillText(name,x,478)
+    ctx.fillText(label,x,y+16)
     ctx.fillStyle='#fff'
-    lines(value,x,498,width-8,'15px sans-serif',16,2)
+    lines(value,x,y+36,width-8,'15px sans-serif',16,2)
   })
+  cursor+=Math.max(1,factRows)*50+9
+  if(stats.price){
+    ctx.fillStyle='rgba(0,0,0,.65)'
+    ctx.fillRect(36,cursor,408,priceHeight-8)
+    ctx.strokeStyle=ink;ctx.strokeRect(36,cursor,408,priceHeight-8)
+    ctx.fillStyle=ink;ctx.font='bold 10px sans-serif'
+    ctx.fillText(stats.price.label,48,cursor+17)
+    ctx.font='27px Georgia, serif';ctx.fillText(stats.price.amount,48,cursor+47,382)
+    ctx.fillStyle='#fff';ctx.font='13px sans-serif'
+    priceLines.forEach((line,i)=>ctx.fillText(line,48,cursor+66+i*16))
+    cursor+=priceHeight
+  }
+  if(paidHeight){
+    ctx.fillStyle='#fff';ctx.font='bold 15px sans-serif'
+    ctx.fillText('Purchase price · '+stats.paid,36,cursor+21)
+    cursor+=paidHeight
+  }
   ctx.fillStyle=ink
-  ctx.fillRect(36,529,408,.7)
+  ctx.fillRect(36,cursor+8,408,.7)
   ctx.fillStyle='#fff'
-  lines(question,36,554,408,'23px Georgia, serif',25,2)
+  lines(question,36,cursor+33,408,'23px Georgia, serif',25,2)
   const png=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/png'))
   if(!png) throw new Error('The card could not be exported.')
   return new File([png],'NumiAgent-second-opinion.png',{type:'image/png'})

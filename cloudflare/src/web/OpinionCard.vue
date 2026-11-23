@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import type { Specimen } from './api'
+import { cardDetails, type CardValuation } from './cardDetails'
 import { cardQuestions, cardStyles, customCardFrame, drawOpinionCard, loadCardPhotos, suggestedStyle, type CardStyle } from './opinionCard'
 
-const props=defineProps<{piece:Specimen}>()
+const props=defineProps<{piece:Specimen;valuation:CardValuation|null}>()
+const stats=computed(()=>cardDetails(props.piece,props.valuation))
+const includePaid=ref(false)
+const description=computed(()=>{
+  const {facts,inscriptions,price,paid}=stats.value
+  return ['Tentative identification: '+props.piece.title,...[...inscriptions,...facts].map(f=>f.label+' '+f.value),
+    price && [price.label,price.amount,price.source].join(' '),includePaid.value && paid && 'Purchase price '+paid,question.value].filter(Boolean).join('. ')
+})
 const open=ref(false)
 const style=ref<CardStyle>(suggestedStyle(props.piece))
 const questions=computed(()=>cardQuestions(props.piece.type))
@@ -43,12 +51,12 @@ async function generate(){
   }catch(e){ if(!controller.signal.aborted) error.value=e instanceof Error?e.message:'A custom frame could not be created.' }
   finally{ if(generation===controller){generating.value=false;generation=undefined} }
 }
-watch([open,style,question,retry,artwork,()=>props.piece],async(_,__,onCleanup)=>{
+watch([open,style,question,retry,artwork,stats,includePaid,()=>props.piece],async(_,__,onCleanup)=>{
   let current=true
   onCleanup(()=>{current=false})
   clear()
   error.value=''
-  if(!open.value){ loaded=undefined; return }
+  if(!open.value){ loaded=undefined;includePaid.value=false;return }
   const piece=props.piece
   const links=piece.photos?.length ? piece.photos : piece.photo ? [{photoId:piece.photo,side:'overview' as const}] : []
   const key=JSON.stringify(links)
@@ -59,7 +67,7 @@ watch([open,style,question,retry,artwork,()=>props.piece],async(_,__,onCleanup)=
   try {
     const photos=await loaded
     if(!current) return
-    const rendered=await drawOpinionCard(piece,photos,style.value,question.value,artwork.value)
+    const rendered=await drawOpinionCard(piece,photos,style.value,question.value,stats.value,includePaid.value,artwork.value)
     if(!current) return
     file.value=rendered
     url.value=URL.createObjectURL(rendered)
@@ -78,10 +86,11 @@ async function share(){
   <details @toggle="open=($event.currentTarget as HTMLDetailsElement).open">
     <summary>Ask for a second opinion</summary>
     <section v-if="open" class="opinion-composer" aria-label="Second opinion card">
-      <img v-if="url" :src="url" :alt="'Tentative identification: '+piece.title+'. '+question" class="opinion-preview">
+      <img v-if="url" :src="url" :alt="description" class="opinion-preview">
       <p v-else-if="!error" role="status">Preparing your card…</p>
       <label>Card style<select v-model="style"><option v-for="(_,name) in cardStyles" :key="name">{{name}}</option></select></label>
       <label>Ask the collector<select v-model="question"><option v-for="q in questions" :key="q">{{q}}</option></select></label>
+      <label v-if="stats.paid"><input type="checkbox" v-model="includePaid"> Include my purchase price</label>
       <div v-if="url" class="actions">
         <button type="button" :disabled="generating" @click="generate">{{generating?'Generating frame…':'Generate custom frame'}}</button>
         <button v-if="artwork" type="button" @click="resetArtwork">Use original frame</button>

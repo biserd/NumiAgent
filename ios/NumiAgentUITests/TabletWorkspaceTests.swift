@@ -12,6 +12,9 @@ final class TabletWorkspaceTests: XCTestCase {
         let card = app.images["opinion-card-preview"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 15))
         XCTAssertTrue(card.label.contains("Octavian denarius"))
+        XCTAssertTrue(card.label.contains("METAL Silver"))
+        XCTAssertTrue(card.label.contains("CATALOG REF. The Met 08.170.89"))
+        XCTAssertTrue(card.label.contains("DEMO MARKET ESTIMATE"))
         let attachment = XCTAttachment(screenshot: card.screenshot())
         attachment.name = "second-opinion-card"
         attachment.lifetime = .keepAlways

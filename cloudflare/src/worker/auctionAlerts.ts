@@ -3,8 +3,13 @@ import type { Hit } from './market'
 export function canonicalLot(value:string) {
   const url = new URL(value)
   url.hash = ''
-  const biddrLot = /(^|\.)biddr\.com$/.test(url.hostname) && /^\/auctions\/[^/]+\/browse\/?$/.test(url.pathname)
+  const current = /^\/([^/]+)\/auction\/?$/.exec(url.pathname)
+  const legacy = /^\/auctions\/([^/]+)\/browse\/?$/.exec(url.pathname)
+  const house = current?.[1] ?? legacy?.[1]
+  const biddrLot = !!house && /(^|\.)biddr\.com$/.test(url.hostname)
     && ['a','l'].every(key=>/^[1-9]\d*$/.test(url.searchParams.get(key) ?? ''))
+  // Keep the existing identity for previously delivered lots. Emails link to the original result.
+  if (biddrLot && current) url.pathname = '/auctions/'+house+'/browse'
   for (const key of [...url.searchParams.keys()]) {
     if (/^utm_|^(fbclid|gclid)$/i.test(key) || (biddrLot && !['a','l'].includes(key))) url.searchParams.delete(key)
   }

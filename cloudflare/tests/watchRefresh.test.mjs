@@ -32,7 +32,7 @@ test('Scheduled gap email uses current holdings, opt-in and distinct lots',async
     assert.equal(String(url),'https://api.firecrawl.dev/v2/search')
     calls++
     if(optOutWhileSearching) db.exec("UPDATE gap_watches SET alert=0")
-    return Response.json({success:true,data:{web:[{url:'https://www.biddr.com/auctions/example/browse?a=10&l='+lot,title:'Hadrian silver denarius'}]}})
+    return Response.json({success:true,data:{web:[{url:'https://www.biddr.com/example/auction?a=10&l='+lot,title:'Hadrian silver denarius'}]}})
   })
   const due=()=>db.exec('UPDATE gap_watches SET checked=NULL')
   await refreshWatchlists(env)

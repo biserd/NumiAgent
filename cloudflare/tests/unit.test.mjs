@@ -36,12 +36,16 @@ test('Numista guide scopes estimates to the selected issue, grade and currency',
 
 test('Gap alerts deduplicate biddr lot URLs, distinguish leads from verified auctions and exclude closed lots',()=>{
   const lot='https://www.biddr.com/auctions/example/browse?a=123&l=42'
+  const current='https://www.biddr.com/example/auction?l=42&a=123'
   const hit=(url,state='unknown')=>({title:'fixture',url,state})
-  const hits=[hit(lot+'&currency=USD'),hit(lot+'&language=de'),hit('https://www.biddr.com/search?s=example'),
+  const hits=[hit(current+'&currency=USD'),hit(lot+'&language=de'),hit('https://www.biddr.com/search?s=example'),
+    hit('https://www.biddr.com/example/auction?a=123'),hit('https://www.biddr.com/example/auction?a=123&l=bad'),
     hit('https://other.test/auctions/example/browse?a=123&l=42'),hit(lot.replace('42','43'),'closed')]
   assert.deepEqual(newAuctionAlerts(hits,[],false),[])
   const leads=newAuctionAlerts(hits,[],true)
   assert.equal(leads.length,1)
+  assert.equal(leads[0].hit.url,current+'&currency=USD')
+  assert.equal(leads[0].key,'lead:'+lot)
   assert.match(leads[0].label,/check auction status/)
   assert.deepEqual(newAuctionAlerts(hits,[leads[0].key],true),[])
   const verified=newAuctionAlerts([hit(lot,'active')],[leads[0].key],true)

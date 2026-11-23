@@ -117,7 +117,7 @@ function makeServer(env:Env,user:string) {
       const theme = await themeProgress(env,user,args.themeId)
       const slot = theme.missing.find(s=>s.label===args.label)
       if (!slot) return {status:'missing_slot_unavailable'}
-      return marketSearch(env,user,[slot.ruler || slot.issuer || slot.label,slot.reference,slot.denomination,slot.metal,slot.year,slot.series].filter(Boolean).join(' ').slice(0,180))
+      return marketSearch(env,user,slot.query)
     }))
   return server
 }

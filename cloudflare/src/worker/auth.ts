@@ -171,7 +171,7 @@ profile.delete('/',async c => {
   return c.json({deletion:'scheduled'},202)
 })
 profile.get('/export',async c => {
-  const tables = ['collections','items','item_photos','imports','photos','sales','valuation_history','themes','watchlists','audit','oauth_consents']
+  const tables = ['collections','items','item_photos','imports','photos','sales','valuation_history','themes','watchlists','gap_watches','audit','oauth_consents']
   const data = await c.env.DB.batch(tables.map(table => c.env.DB.prepare('SELECT * FROM ' + table + ' WHERE user_id=?').bind(c.get('user').id)))
   return c.json({account:{email:c.get('user').email}, ...Object.fromEntries(tables.map((table,i)=>[table,data[i].results]))},
     200, {'Content-Disposition':'attachment; filename="numiagent.json"'})

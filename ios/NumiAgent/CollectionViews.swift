@@ -418,11 +418,19 @@ struct SpecimenScreen: View {
                         Text(range.low, format: .currency(code: valuation.currency)) +
                         Text(" – ") +
                         Text(range.high, format: .currency(code: valuation.currency))
+                        if !demo {
+                            LabeledContent("Median of \(valuation.used.count) comparable lots") {
+                                Text(range.median, format: .currency(code: valuation.currency))
+                            }
+                        }
                         Text(demo ? "Illustrative prices" : "Range includes the buyer’s premium.").font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
                         Text(valuation.evidence.isEmpty ? "No verified sales yet" : "More comparable sales are needed for a range.")
                             .foregroundStyle(.secondary)
+                        if item.grade.isBlank && !valuation.evidence.isEmpty {
+                            Text("Add the specimen’s grade to compare sales in the same condition.").font(.footnote)
+                        }
                     }
                     ForEach(valuation.evidence) { sale in
                         let row = VStack(alignment: .leading, spacing: 4) {
@@ -441,6 +449,7 @@ struct SpecimenScreen: View {
                     ProgressView()
                 }
                 if !demo {
+                    NavigationLink("Numista price guide by grade") { PriceGuideScreen(api: api, item: item) }
                     Button("Add a completed sale", systemImage: "plus") { saleEditor = true }
                 }
             }
@@ -828,6 +837,9 @@ struct ThemeScreen: View {
                         Text("\(details.missingReferences) matching specimens need a catalog reference.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
+                    if !demo {
+                        NavigationLink("Manage auction watches") { ChecklistWatchesScreen(api: api, themeID: theme.id) }
+                    }
                 }
                 .listRowBackground(CollectorDesign.surface)
                 let missing = details.slots.filter { $0.owned.isEmpty }
@@ -902,6 +914,9 @@ struct ThemeScreen: View {
             Label(slot.label, systemImage: "circle").font(.headline)
             Text("Missing").font(.subheadline).foregroundStyle(.secondary)
             if !demo {
+                NavigationLink("Find auctions or watch this gap") {
+                    GapAuctionScreen(api: api, themeID: theme.id, slot: slot)
+                }
                 if let captureForSlot {
                     Button("Add a photo for this slot", systemImage: "camera") { captureForSlot(slot.label) }
                         .buttonStyle(.borderless)

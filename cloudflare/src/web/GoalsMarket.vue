@@ -4,7 +4,7 @@ import { message, request } from './api'
 const props=defineProps<{mode:'Themes'|'Marketplace';initialQuery:string}>()
 const emit=defineEmits<{search:[query:string]}>()
 type Rule = {label:string;ruler:string;issuer:string;type?:string;reference:string;metal:string;year:string;denomination:string;source?:string;aliases:string[];series?:string;dateFrom?:number;dateTo?:number}
-type Slot=Rule & {owned:{id:string;title:string}[]}
+type Slot=Rule & {slotKey:string;query:string;owned:{id:string;title:string}[]}
 type Theme={id:string;name:string;owned:number;slots:Slot[];missing:Slot[];percent:number;
   priorities:{label:string;reason:string}[];missingReferences:number}
 type Listing={url:string;title:string;description?:string;state:string;closesAt?:string;verifiedAt?:string;price?:{kind:string;amount:number;currency:string;premium?:number}}
@@ -16,8 +16,19 @@ const editing=ref(false)
 const rules=ref<Rule[]>([])
 const blank=()=>({label:'',ruler:'',issuer:'',reference:'',metal:'',year:'',denomination:'',aliases:[]})
 const query=ref(props.initialQuery)
-const seen=ref<{status:string;retrievedAt:string;results:Listing[];coverage:{domains:string[];status:string;provider:string}[]}|null>(null)
-const watches=ref<{id:string;query:string;alert:number;checked:number|null}[]>([])
+const seen=ref<{query:string;status:string;retrievedAt:string;results:Listing[];coverage:{domains:string[];status:string;provider:string}[]}|null>(null)
+const watches=ref<{id:string;query:string;alert:number;checked:number|null;slotKey?:string;themeId?:string;theme?:string;state?:string}[]>([])
+const emailAvailable=ref(false)
+const gapWatch=(slot:Slot)=>watches.value.find(w=>w.themeId===active.value?.id && w.slotKey===slot.slotKey)
+async function saveGap(slot:Slot,email?:boolean) {
+  await request('/watchlists/gap','POST',{themeId:active.value?.id,slotKey:slot.slotKey,alert:email})
+  await loadWatches()
+  note.value='Auction watch saved.'
+}
+async function unwatch(id:string) {
+  await request('/watchlists/'+id,'DELETE')
+  await loadWatches()
+}
 const alert=ref(false)
 const error=ref('')
 const note=ref('')
@@ -29,7 +40,7 @@ async function action(fn:()=>Promise<void>){
   finally{busy.value=false}
 }
 async function load(){shells.value=await request('/themes')}
-async function open(id:string){active.value=await request('/themes/'+id);editing.value=false}
+async function open(id:string){active.value=await request('/themes/'+id);editing.value=false;await loadWatches()}
 async function preview(){
   const value=await request<{name:string;slots:Rule[];status:string}>('/themes/preview','POST',{goal:goal.value})
   active.value=null;name.value=value.name;rules.value=value.slots.length ? value.slots:[blank()];editing.value=true
@@ -67,6 +78,7 @@ async function watch(){
 onMounted(()=>action(async()=>{
   if(props.mode==='Themes') await load()
   else {await loadWatches();if(query.value) await search()}
+  emailAvailable.value=(await request<{emailAlerts:boolean}>('/market/capabilities')).emailAlerts
 }))
 </script>
 <template>
@@ -105,7 +117,13 @@ onMounted(()=>action(async()=>{
           <span>{{slot.owned.length ? slot.owned.map(item=>item.title).join(', ') :'Missing'}}</span>
           <small v-if="slot.owned.length>1">{{slot.owned.length}} specimens match this slot</small>
           <a v-if="slot.source" :href="slot.source" target="_blank" rel="noopener noreferrer">Reference ↗</a>
-          <button v-if="!slot.owned.length" @click="emit('search',[slot.ruler || slot.issuer || slot.label,slot.reference,slot.denomination,slot.metal,slot.year,slot.series].filter(Boolean).join(' ').slice(0,180))">Search auctions</button>
+          <div v-if="!slot.owned.length" class="actions">
+            <button :disabled="busy" @click="emit('search',slot.query)">Search auctions</button>
+            <button v-if="!gapWatch(slot)" :disabled="busy" @click="action(()=>saveGap(slot))">Watch this gap</button>
+            <template v-else><button :disabled="busy" @click="action(()=>unwatch(gapWatch(slot)!.id))">Stop watching</button>
+              <button v-if="emailAvailable || gapWatch(slot)?.alert" :disabled="busy" @click="action(()=>saveGap(slot,!gapWatch(slot)?.alert))">{{gapWatch(slot)?.alert?'Turn off email alerts':'Email me new lots'}}</button></template>
+          </div>
+          <small v-if="gapWatch(slot)">{{slot.owned.length?'Watch paused · slot filled':gapWatch(slot)?.alert?'Watching · email alerts on':'Watching · email alerts off'}}</small>
         </li>
       </ul>
     </section>
@@ -120,7 +138,9 @@ onMounted(()=>action(async()=>{
     <section v-if="seen" class="panel">
       <h2>Search results</h2>
       <p v-if="seen.status==='unavailable'" role="status">Marketplace coverage is unavailable.</p>
-      <p v-else-if="seen.status==='insufficient_verified_coverage'" role="status">No active lots verified by the queried sources. Check any discovery links with the seller.</p>
+      <div class="actions"><a :href="'https://www.ebay.com/sch/i.html?LH_Auction=1&amp;_nkw='+encodeURIComponent(seen.query)" target="_blank" rel="noreferrer">Search eBay auctions ↗</a>
+        <a :href="'https://www.biddr.com/search?s='+encodeURIComponent(seen.query)" target="_blank" rel="noreferrer">Search biddr ↗</a></div>
+      <p v-if="seen.status==='insufficient_verified_coverage'" role="status">No active lots verified by the queried sources. Check any discovery links with the seller.</p>
       <p>Retrieved {{new Date(seen.retrievedAt).toLocaleString()}}</p>
       <small v-for="provider in seen.coverage" :key="provider.provider">{{provider.provider}} · {{provider.status}} · {{provider.domains.join(', ')}}<br></small>
       <ul class="record-list"><li v-for="entry in seen.results" :key="entry.url">
@@ -134,7 +154,8 @@ onMounted(()=>action(async()=>{
     <section class="panel"><h2>Saved searches</h2>
       <p v-if="!watches.length">No saved searches yet.</p>
       <ul class="record-list"><li v-for="w in watches" :key="w.id"><strong>{{w.query}}</strong>
-        <small>{{w.alert?'Email alerts enabled':'Search only'}}{{w.checked?' · Checked '+new Date(w.checked*1000).toLocaleString():''}}</small>
+        <small v-if="w.theme">{{w.theme}} · {{w.state==='filled'?'Paused · slot filled':w.state==='rule_changed'?'Paused · checklist rule changed':'Still missing'}}</small>
+        <small>{{w.alert?'Email alerts enabled':'Search only'}}{{w.checked?' · Last check '+new Date(w.checked*1000).toLocaleString():''}}</small>
         <div class="actions"><button @click="query=w.query;action(search)">Run search</button><button @click="action(async()=>{await request('/watchlists/'+w.id,'DELETE');await loadWatches()})">Remove search</button></div>
       </li></ul>
     </section>

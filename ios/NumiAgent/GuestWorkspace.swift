@@ -270,6 +270,7 @@ private struct GuestPieceScreen: View {
                     .frame(maxWidth: .infinity)
                 }
                 .background(CollectorDesign.background)
+                .accessibilityIdentifier("guest-record-scroll")
                 .scrollDismissesKeyboard(.interactively)
                 .navigationTitle(isDraft ? draftTitle : piece.displayTitle)
                 .navigationBarTitleDisplayMode(.inline)
@@ -526,16 +527,18 @@ private struct GuestPieceScreen: View {
                 Spacer()
                 Text("Editable").font(.caption).foregroundStyle(.secondary)
             }
+            Picker("Type", selection: field(.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
+                .pickerStyle(.segmented)
             detailRow("Name", field: .title)
             detailRow("Issuer or country", field: .issuer)
             detailRow("Denomination", field: .denomination)
             detailRow("Year", field: .year)
-            TextField("Inscription on the piece", text: Binding(
-                get: { store.piece(id)?.inscription ?? "" },
-                set: { input in act { try store.changePiece(id) { $0.inscription = String(input.prefix(180)) } } }
-            ), axis: .vertical).textFieldStyle(.roundedBorder)
-            Picker("Type", selection: field(.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
-                .pickerStyle(.segmented)
+            DisclosureGroup("Inscription") {
+                TextField("Inscription on the piece", text: Binding(
+                    get: { store.piece(id)?.inscription ?? "" },
+                    set: { input in act { try store.changePiece(id) { $0.inscription = String(input.prefix(180)) } } }
+                ), axis: .vertical).textFieldStyle(.roundedBorder)
+            }
             TextField("Notes", text: text(\.notes), axis: .vertical).padding(8)
             DisclosureGroup("Private details") {
                 TextField("Serial number", text: text(\.serial))

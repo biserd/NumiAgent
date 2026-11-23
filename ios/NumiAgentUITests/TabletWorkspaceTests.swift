@@ -282,16 +282,18 @@ final class GuestV1Tests: XCTestCase {
     private func addManually(_ title: String, to app: XCUIApplication, isBanknote: Bool) {
         app.buttons["Add item"].tap()
         app.buttons["Enter details manually"].tap()
-        let field = app.textFields["guest-field-title"]
-        for _ in 0..<5 where !field.isHittable { app.swipeUp() }
-        XCTAssertTrue(field.isHittable)
-        let save = app.buttons["guest-save-record"]
+        let editor = app.scrollViews["guest-record-scroll"].firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 10))
         if isBanknote {
-            let banknote = app.segmentedControls.buttons["Banknote"].firstMatch
-            if !banknote.isHittable { app.swipeDown() }
+            let banknote = editor.segmentedControls.buttons["Banknote"].firstMatch
+            for _ in 0..<5 where !banknote.isHittable { editor.swipeUp() }
             XCTAssertTrue(banknote.isHittable, app.debugDescription)
             banknote.tap()
         }
+        let field = app.textFields["guest-field-title"]
+        for _ in 0..<5 where !field.isHittable { editor.swipeUp() }
+        XCTAssertTrue(field.isHittable)
+        let save = app.buttons["guest-save-record"]
         field.tap()
         field.typeText(title)
         for _ in 0..<5 where !save.isHittable { app.swipeUp() }

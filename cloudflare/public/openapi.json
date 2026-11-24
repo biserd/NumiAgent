@@ -3113,7 +3113,7 @@
         }
       },
       "post": {
-        "summary": "Remember the confirmed Numista type and issue for this specimen",
+        "summary": "Choose a Numista type, resolve its issue from this specimen when possible, and remember the match",
         "security": [
           {
             "session": []
@@ -3182,8 +3182,7 @@
                   }
                 },
                 "required": [
-                  "type",
-                  "issue"
+                  "type"
                 ]
               }
             }

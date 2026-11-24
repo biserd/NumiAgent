@@ -2,10 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { encode, decode } from 'jpeg-js'
 import { cardDetails } from '../src/web/cardDetails.ts'
-import { matchingIssue, numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
+import { guideIssueChoices, numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
 import { newAuctionAlerts } from '../src/worker/auctionAlerts.ts'
 
 test('Automatic guide selection requires a unique compatible issue',()=>{
+  const matchingIssue=(...args)=>guideIssueChoices(...args).match
   const rows=[{id:1,year:1935,mint_letter:'D'},{id:2,year:1935,mint_letter:'S'},{id:3,year:1936}]
   assert.equal(matchingIssue(rows,'1935'),undefined)
   assert.equal(matchingIssue(rows,'1935','s'),2)

@@ -42,19 +42,20 @@ export async function discoverGuideType(key:string,item:CatalogHints,fetcher=fet
   } catch { return {status:'unavailable'} }
 }
 
-export function matchingIssue(rows: z.infer<typeof issue>[], year: string, mintMark = '', variant = '') {
+export function guideIssueChoices<T extends z.infer<typeof issue>>(rows: T[], year: string, mintMark = '', variant = '') {
   const clean = (value: unknown) => String(value ?? '').trim().normalize('NFKC').toLowerCase()
   const date = year.trim()
-  if (date && !/^-?\d{1,4}$/.test(date)) return
-  const candidates = rows.filter(row => (!mintMark.trim() || clean(row.mint_letter) === clean(mintMark)) &&
-    (!variant.trim() || clean(row.comment) === clean(variant)))
-  if (date && candidates.some(row => row.year == null && row.gregorian_year == null &&
-      (row.min_year == null || row.max_year == null))) return
-  const matches = candidates.filter(row => !date || [row.year,row.gregorian_year].some(y=>y!=null && Number(y)===Number(date)) ||
-    (row.min_year != null && row.max_year != null && Number(date)>=row.min_year && Number(date)<=row.max_year))
-  return matches.length === 1 ? matches[0].id : undefined
+  if (date && !/^-?\d{1,4}$/.test(date)) return { issues: rows }
+  const undated = (row: T) => row.year == null && row.gregorian_year == null &&
+    (row.min_year == null || row.max_year == null)
+  const compatible = rows.filter(row =>
+    (!mintMark.trim() || clean(row.mint_letter) === clean(mintMark)) &&
+    (!variant.trim() || clean(row.comment) === clean(variant)) &&
+    (!date || undated(row) || [row.year,row.gregorian_year].some(y => y != null && Number(y) === Number(date)) ||
+      (row.min_year != null && row.max_year != null && Number(date) >= row.min_year && Number(date) <= row.max_year)))
+  const single = compatible.length === 1 ? compatible[0] : undefined
+  return { issues: compatible.length ? compatible : rows, match: single && (!date || !undated(single)) ? single.id : undefined }
 }
-
 export async function numistaGuide(key: string | undefined, typeID: number | undefined, issueID: number | undefined,
   currency: string, fetcher: typeof fetch = fetch) {
   const source = typeID ? 'https://en.numista.com/' + typeID : undefined

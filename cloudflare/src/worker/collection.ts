@@ -3,7 +3,7 @@ import { bulkItemPatch, csv, id, item, matchesSlot, normalize, photoLink, sale, 
 import type { Item, Sale, Slot } from '../shared/domain'
 import { convertLegacyCoin, legacyBatch } from '../shared/legacy'
 import { all, body, digest, fail, limit, now, one, router, run, uid } from './core'
-import { canSearchType, discoverGuideType, matchingIssue, numistaGuide, numistaType } from './numistaGuide'
+import { canSearchType, discoverGuideType, guideIssueChoices, numistaGuide, numistaType } from './numistaGuide'
 import type { Env } from './core'
 import { previewTheme } from './themePlanning'
 import { researchSales } from './saleResearch'
@@ -314,6 +314,17 @@ async function guideQuota(env:Env,user:string) {
   await limit(env,'numista_guide',user,40)
   await limit(env,'numista_guide','global',400)
 }
+async function specimenGuide(env: Env, user: string, specimen: Awaited<ReturnType<typeof findItem>>, typeID: number | undefined,
+  issueID: number | undefined, currency: string, automatic: boolean) {
+  const lookup = async (id?: number) => {
+    if (env.NUMISTA_API_KEY && typeID) await guideQuota(env,user)
+    return numistaGuide(env.NUMISTA_API_KEY,typeID,id,currency)
+  }
+  const result = await lookup(issueID)
+  if (!automatic || !('issues' in result) || !result.issues.length) return result
+  const {issues,match} = guideIssueChoices(result.issues,specimen.year,specimen.details?.mintMark,specimen.details?.variant)
+  return match ? await lookup(match) : {...result,issues}
+}
 export const valuations = router()
 valuations.get('/:id/guide',async c=>{
   const user = c.get('user').id
@@ -331,27 +342,17 @@ valuations.get('/:id/guide',async c=>{
     if(!found.typeID) return c.json({...found,currency})
     typeID=found.typeID
   }
-  const lookup = async (id?:number) => {
-    if (key && typeID) await guideQuota(c.env,user)
-    return numistaGuide(key,typeID,id,currency)
-  }
-  const result = await lookup(issue ?? saved?.issue_id)
-  if (auto && 'issues' in result && result.issues.length) {
-    const match = matchingIssue(result.issues,specimen.year,specimen.details?.mintMark,specimen.details?.variant)
-    if (match) return c.json({...await lookup(match),issues:result.issues})
-  }
-  return c.json(result)
+  return c.json(await specimenGuide(c.env,user,specimen,typeID,issue ?? saved?.issue_id,currency,!!auto))
 })
 valuations.post('/:id/guide',async c=>{
   const user=c.get('user').id
   const item=await findItem(c.env,user,c.req.param('id'))
-  const input=await body(c,z.object({type:guideNumber,issue:guideNumber,currency:guideCurrency}))
-  if(c.env.NUMISTA_API_KEY) await guideQuota(c.env,user)
-  const result=await numistaGuide(c.env.NUMISTA_API_KEY,input.type,input.issue,input.currency)
-  if(result.status==='prices' || result.status==='no_prices') {
+  const input=await body(c,z.object({type:guideNumber,issue:guideNumber.optional(),currency:guideCurrency}))
+  const result=await specimenGuide(c.env,user,item,input.type,input.issue,input.currency,true)
+  if('issueID' in result && (result.status==='prices' || result.status==='no_prices')) {
     await run(c.env,`INSERT INTO specimen_guide_links(item_id,identity,type_id,issue_id) VALUES(?,?,?,?)
       ON CONFLICT(item_id) DO UPDATE SET identity=excluded.identity,type_id=excluded.type_id,issue_id=excluded.issue_id`,
-      item.id,await guideIdentity(item),input.type,input.issue)
+      item.id,await guideIdentity(item),input.type,result.issueID)
   }
   return c.json(result)
 })

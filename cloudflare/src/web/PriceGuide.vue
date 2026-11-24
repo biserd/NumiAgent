@@ -21,18 +21,22 @@ const status: Record<string,string> = {
 }
 let sequence=0
 watch(()=>[props.specimen,props.currency],()=>{type.value='';guide.value=undefined;void lookup()}, {immediate:true})
-async function lookup(selectIssue=false,automatic=false) {
+async function lookup(mode: 'auto'|'types'|'chooseType'|'chooseIssue' = 'auto', chosenType?:number) {
   const generation=++sequence
   working.value=true;error.value=''
-  if(!selectIssue){issues.value=[];issue.value=''}
+  if(mode!=='chooseIssue'){issues.value=[];issue.value=''}
   const endpoint='/valuations/'+props.specimen.id+'/guide'
   const params=new URLSearchParams({currency:props.currency})
   if(type.value) params.set('type',type.value)
-  if(automatic || !type.value) params.set('auto','1')
+  if(mode==='auto') params.set('auto','1')
   try {
-    const result=selectIssue
-      ? await request<Guide>(endpoint,'POST',{type:resolvedType.value,issue:Number(issue.value),currency:props.currency})
-      : await request<Guide>(endpoint+'?'+params)
+    let result:Guide
+    if(mode==='chooseType' || mode==='chooseIssue') {
+      result=await request<Guide>(endpoint,'POST',{type:chosenType ?? resolvedType.value,
+        issue:mode==='chooseIssue' ? Number(issue.value) : undefined,currency:props.currency})
+    } else {
+      result=await request<Guide>(endpoint+'?'+params)
+    }
     if(generation!==sequence)return
     guide.value=result
     resolvedType.value=result.typeID
@@ -51,14 +55,14 @@ async function lookup(selectIssue=false,automatic=false) {
       <a v-if="guide.source" :href="guide.source" target="_blank" rel="noopener noreferrer">Numista N# {{guide.typeID}} ↗</a>
     </template>
     <label v-if="issues.length && (!guide?.issueID || guide?.status==='choose_issue')">Choose the issue for this specimen
-      <select v-model="issue" :disabled="working" @change="lookup(true)"><option value="" disabled>Year, mint or variety</option><option v-for="row in issues" :key="row.id" :value="String(row.id)">{{row.label}}</option></select>
+      <select v-model="issue" :disabled="working" @change="lookup('chooseIssue')"><option value="" disabled>Year, mint or variety</option><option v-for="row in issues" :key="row.id" :value="String(row.id)">{{row.label}}</option></select>
     </label>
     <div v-if="guide?.candidates?.length"><p>Which catalog type matches your specimen?</p>
-      <button v-for="row in guide.candidates" :key="row.id" :disabled="working" @click="type=String(row.id);lookup()">{{row.label}} · N# {{row.id}}</button>
+      <button v-for="row in guide.candidates" :key="row.id" :disabled="working" @click="lookup('chooseType',row.id)">{{row.label}} · N# {{row.id}}</button>
     </div>
     <details><summary>Set or change the catalog match</summary>
-      <form class="inline" @submit.prevent="lookup()"><label>Numista N#<input v-model.trim="type" placeholder="Use saved reference" inputmode="numeric" required pattern="[1-9][0-9]*"></label><button :disabled="working">Find issues</button></form>
+      <form class="inline" @submit.prevent="lookup('types')"><label>Numista N#<input v-model.trim="type" placeholder="Use saved reference" inputmode="numeric" required pattern="[1-9][0-9]*"></label><button :disabled="working">Find issues</button></form>
     </details>
-    <button v-if="error || guide?.status==='unavailable' || guide?.status==='rate_limited'" :disabled="working" @click="lookup(false,true)">Retry price guide</button>
+    <button v-if="error || guide?.status==='unavailable' || guide?.status==='rate_limited'" :disabled="working" @click="lookup()">Retry price guide</button>
   </section>
 </template>

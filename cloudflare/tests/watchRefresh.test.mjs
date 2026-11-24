@@ -39,14 +39,20 @@ test('Account guide discovers a unique issue, remembers ambiguity resolution and
   const read=async()=> (await app.fetch(new Request(endpoint+'?auto=1'),env)).json()
   assert.equal((await read()).issueID,10)
   issues.push({id:12,year:1935,mint_letter:'S'})
-  assert.equal((await read()).status,'choose_issue')
+  const ambiguous=await read()
+  assert.equal(ambiguous.status,'choose_issue')
+  assert.deepEqual(ambiguous.issues.map(i=>i.id),[10,12])
   const remember=await app.fetch(new Request(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:42,issue:12})}),env)
   assert.equal((await remember.json()).issueID,12)
   paths.length=0
   assert.equal((await read()).issueID,12)
   assert.deepEqual(paths,['/v3/types/42/issues/12/prices'])
   db.exec("UPDATE items SET year='1936' WHERE id='i'")
+  const chooseType=await app.fetch(new Request(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:42})}),env)
+  assert.equal((await chooseType.json()).issueID,11)
+  paths.length=0
   assert.equal((await read()).issueID,11)
+  assert.deepEqual(paths,['/v3/types/42/issues/11/prices'])
 })
 
 test('Scheduled gap email uses current holdings, opt-in and distinct lots',async t=>{

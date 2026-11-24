@@ -39,8 +39,8 @@ extension Specimen {
     var error: String?
     private var requestID = UUID()
 
-    func lookup(api: NumiAPI, item: Specimen, manual: Bool = false, issue: Int? = nil) async {
-        if !manual && issue == nil { number = ""; guide = nil }
+    func lookup(api: NumiAPI, item: Specimen, manual: Bool = false, issue: Int? = nil, selectedType: Int? = nil) async {
+        if !manual && issue == nil && selectedType == nil { number = ""; guide = nil }
         let current = UUID()
         requestID = current
         busy = true
@@ -49,7 +49,9 @@ extension Specimen {
         let path = "/valuations/" + item.id + "/guide"
         do {
             let result: GuideResult
-            if let issue, let type = guide?.typeID {
+            if let selectedType {
+                result = try await api.post(path, payload: ["type": selectedType])
+            } else if let issue, let type = guide?.typeID {
                 result = try await api.post(path, payload: ["type": type, "issue": issue])
             } else {
                 let query = manual ? URLQueryItem(name: "type", value: number) : URLQueryItem(name: "auto", value: "1")
@@ -84,7 +86,7 @@ struct SpecimenPriceGuide: View {
                         ForEach(candidates) { row in
                             Button(row.label + " · N# " + String(row.id)) {
                                 model.number = String(row.id)
-                                Task { await model.lookup(api: api, item: item, manual: true) }
+                                Task { await model.lookup(api: api, item: item, selectedType: row.id) }
                             }
                         }
                     }

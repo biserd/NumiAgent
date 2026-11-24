@@ -2,9 +2,20 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { encode, decode } from 'jpeg-js'
 import { cardDetails } from '../src/web/cardDetails.ts'
-import { numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
+import { matchingIssue, numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
 import { newAuctionAlerts } from '../src/worker/auctionAlerts.ts'
 
+test('Automatic guide selection requires a unique compatible issue',()=>{
+  const rows=[{id:1,year:1935,mint_letter:'D'},{id:2,year:1935,mint_letter:'S'},{id:3,year:1936}]
+  assert.equal(matchingIssue(rows,'1935'),undefined)
+  assert.equal(matchingIssue(rows,'1935','s'),2)
+  assert.equal(matchingIssue(rows,'1936'),3)
+  assert.equal(matchingIssue(rows,'1936','D'),undefined)
+  assert.equal(matchingIssue(rows,'1935–1936'),undefined)
+  assert.equal(matchingIssue(rows,'1940'),undefined)
+  assert.equal(matchingIssue([...rows,{id:4}],'1936'),undefined)
+  assert.equal(matchingIssue(rows,'1935','D','proof'),undefined)
+})
 test('Numista guide scopes estimates to the selected issue, grade and currency',async()=>{
   assert.equal(numistaType('KM 21; N# 42'),42)
   assert.equal(numistaType('https://en.numista.com/catalogue/note42.html'),42)

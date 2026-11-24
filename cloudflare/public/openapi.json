@@ -3032,7 +3032,7 @@
     },
     "/valuations/{id}/guide": {
       "get": {
-        "summary": "Look up Numista issues or grade estimates for a chosen issue",
+        "summary": "Look up Numista guide estimates. auto=1 matches the saved specimen.",
         "security": [
           {
             "session": []
@@ -3064,6 +3064,13 @@
           },
           {
             "name": "currency",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "auto",
             "in": "query",
             "schema": {
               "type": "string"
@@ -3102,6 +3109,84 @@
           },
           "429": {
             "description": "Usage quota reached"
+          }
+        }
+      },
+      "post": {
+        "summary": "Remember the confirmed Numista type and issue for this specimen",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "number"
+                  },
+                  "issue": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "issue"
+                ]
+              }
+            }
           }
         }
       }
@@ -3897,7 +3982,7 @@
     },
     "/watchlists/{id}": {
       "delete": {
-        "summary": "Remove a watch",
+        "summary": "Remove a saved search or pause an automatic gap watch",
         "security": [
           {
             "session": []
@@ -3939,6 +4024,72 @@
           },
           "429": {
             "description": "Usage quota reached"
+          }
+        }
+      }
+    },
+    "/watchlists/themes/{id}/email": {
+      "put": {
+        "summary": "Set the email preference for current and future watches on a checklist",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed"
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required"
+          },
+          "403": {
+            "description": "Authorization or origin check failed"
+          },
+          "404": {
+            "description": "Resource not found"
+          },
+          "429": {
+            "description": "Usage quota reached"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              }
+            }
           }
         }
       }

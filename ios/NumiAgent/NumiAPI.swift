@@ -80,6 +80,16 @@ struct ThemeSummary: Decodable, Identifiable {
 }
 
 struct ThemeDetails: Decodable {
+    struct AuctionCheck: Decodable {
+        struct Lot: Decodable { let title, label: String; let url: URL }
+        let paused: Bool
+        let checkedAt, status: String?
+        let lots: [Lot]?
+    }
+    var emailNewLots: Bool? = nil
+    var auctionEmailAvailable: Bool? = nil
+    var auctionChecksAvailable: Bool? = nil
+    var auctionChecks: [String: AuctionCheck]? = nil
     struct Slot: Decodable {
         struct Match: Decodable, Identifiable {
             let id: String

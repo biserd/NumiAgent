@@ -111,7 +111,8 @@ endpoint('put','/themes/{id}','Replace checklist rules',{...empty,input:checklis
 endpoint('delete','/themes/{id}','Delete a theme',empty)
 endpoint('get','/valuations/{id}','Read sale-backed valuation',{queries:['currency'],output:ref('Valuation')})
 endpoint('get','/valuations/{id}/research','Look up exact-reference sales from a configured approved provider')
-endpoint('get','/valuations/{id}/guide','Look up Numista issues or grade estimates for a chosen issue',{queries:['type','issue','currency']})
+endpoint('get','/valuations/{id}/guide','Look up Numista guide estimates. auto=1 matches the saved specimen.',{queries:['type','issue','currency','auto']})
+endpoint('post','/valuations/{id}/guide','Remember the confirmed Numista type and issue for this specimen',{input:object({type:number,issue:number,currency:string},['type','issue'])})
 endpoint('get','/market/capabilities','Read configured auction sources and email availability')
 endpoint('post','/valuations/{id}/sales','Record collector-attested realized sale facts',{status:201,input:array(ref('Sale')),output:ref('Valuation')})
 endpoint('get','/valuations/{id}/history','Read valuation snapshots',{output:array(type('object'))})
@@ -129,7 +130,8 @@ endpoint('get','/exchange-rates','Find a dated ECB reference conversion for a cu
   output:object({currency:string,rate:number,date:string,source:string,provider:string,basis:string})})
 endpoint('get','/watchlists','List saved marketplace searches',{output:array(type('object'))})
 endpoint('post','/watchlists','Upsert a watch with optional email opt-in',{status:201,input:object({query:string,alert:yes},['query'])})
-endpoint('delete','/watchlists/{id}','Remove a watch',empty)
+endpoint('delete','/watchlists/{id}','Remove a saved search or pause an automatic gap watch',empty)
+endpoint('put','/watchlists/themes/{id}/email','Set the email preference for current and future watches on a checklist',{...empty,input:object({enabled:yes})})
 endpoint('post','/watchlists/gap','Watch a missing checklist slot or update its email preference',{status:201,input:object({themeId:string,slotKey:string,alert:yes},['themeId','slotKey'])})
 
 const spec={openapi:'3.1.0',info:{title:'NumiAgent REST API',version:'1.0.0',

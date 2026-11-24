@@ -29,7 +29,7 @@ npx wrangler d1 execute REFERENCE_CATALOG --remote --config wrangler.deploy.json
 
 ## Approved marketplace feed contract
 
-An account collector can watch an individual missing checklist slot on iPhone, iPad or the web. Applying migration `0012_gap_watches.sql` enables this workflow. Saving a watch starts with email off. Each missing slot also has direct eBay and biddr search links. The scheduler rechecks the owner’s holdings and current checklist rule before sending. Filling the slot pauses alerts. Removing the matching specimen makes the watch eligible again. Editing the matching criteria pauses the old watch until that rule returns or the collector removes it.
+Migration `0013_automatic_checks.sql` queues existing and new account checklists for automatic auction checks. The hourly scheduler reconciles up to 12 changed checklists and processes up to 12 due watches. A watch is eligible again after 24 hours, subject to provider budgets and backlog. Checks skip filled and removed slots. Pausing a gap survives subsequent checklist edits. A checklist-wide email preference applies to current and future watches. Email starts off and existing explicit per-slot subscriptions are preserved.
 
 For biddr lot discovery, enable the existing Firecrawl integration and include an authorized biddr hostname in `NUMIS_MARKET_DOMAINS`. Only opted-in gap watches can receive unverified biddr lot leads. The email labels each lead so the collector can check availability and closing time on the original lot. A later verified active listing can generate a separate alert. Direct marketplace search links work without provider credentials.
 
@@ -43,7 +43,7 @@ ECB dated reference conversions and OCRE exact-type lookups use public endpoints
 
 ## Numista issue price guide
 
-Configure the optional Worker secret `NUMISTA_API_KEY` for the intended environment. A collector opens a saved specimen and requests issues using its saved N# or an entered type number, then selects the matching year, mint or variety. Only the Numista type ID, issue ID, language and currency are sent. The app credits Numista beside its estimates, keeps prices in the current view and excludes them from the realized-sale range, exports and developer API. A missing key, unavailable issue, or lack of grade prices has its own response. A collector can also compare completed sales on eBay. The provider’s guide and N# are documented in the [Numista API](https://en.numista.com/api/doc/) and its [licensing terms](https://en.numista.com/api/license.php).
+With `NUMISTA_API_KEY` configured, opening an account specimen checks its saved Numista reference. Without a reference, the app can search by issuer, denomination, year and piece type. It displays prices for a uniquely matched issue and asks the collector to resolve ambiguity. A confirmed type and issue are retained with the specimen’s identifying fields. Editing those fields invalidates that choice. Guide estimates stay in the current view and remain separate from realized sales. [Numista API](https://en.numista.com/api/doc/)
 
 ## Google photo search
 

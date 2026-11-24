@@ -368,7 +368,7 @@ async function importNumisGraph(event:Event) {
       <p v-else-if="estimate" class="status">Insufficient market evidence</p>
       <p v-if="detail && !detail.grade.trim() && estimate?.evidence.length">Save the specimen’s grade to compare sales in the same condition.</p>
       <p v-if="estimate">As of {{estimate.asOf}}. A range requires three strong, recent matches on a comparable grade and premium basis. Conversions use recorded rates.</p>
-      <PriceGuide v-if="detail" :key="detail.id" :id="detail.id" :currency="estimate?.currency ?? 'USD'"/>
+      <PriceGuide v-if="detail" :key="detail.id" :specimen="detail" :currency="estimate?.currency ?? 'USD'"/>
       <details><summary>Research comparable sales</summary>
         <p>Search an approved realized-sale feed for the saved catalog reference. Check the original lot and condition before adding evidence.</p>
         <button type="button" @click="action(findSales)">Look for sale records</button>

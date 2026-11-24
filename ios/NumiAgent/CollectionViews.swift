@@ -344,6 +344,7 @@ struct SpecimenScreen: View {
     @State private var detailError: String?
     @State private var loaded = false
     @State private var valuation: Valuation?
+    @State private var priceGuide = SpecimenGuideModel()
     @State private var valuationError: String?
     @State private var additionalView: PhotosPickerItem?
     @State private var addingView = false
@@ -449,7 +450,7 @@ struct SpecimenScreen: View {
                     ProgressView()
                 }
                 if !demo {
-                    NavigationLink("Numista price guide by grade") { PriceGuideScreen(api: api, item: item) }
+                    SpecimenPriceGuide(api: api, item: item, model: priceGuide)
                     Button("Add a completed sale", systemImage: "plus") { saleEditor = true }
                 }
             }
@@ -458,6 +459,9 @@ struct SpecimenScreen: View {
         }
         .scrollContentBackground(.hidden)
         .background(CollectorDesign.background)
+        .task(id: loaded ? item.guideIdentity : []) {
+            if loaded && !demo { await priceGuide.lookup(api: api, item: item) }
+        }
         .navigationTitle(item.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -824,6 +828,7 @@ struct ThemeScreen: View {
     @State private var editing = false
     @State private var deleting = false
     @State private var details: ThemeDetails?
+    @State private var savingEmail = false
     @State private var error: String?
 
     var body: some View {
@@ -838,6 +843,19 @@ struct ThemeScreen: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     if !demo {
+                        if let email = details.emailNewLots {
+                            Text("Missing items are checked for auction lots automatically.").font(.subheadline)
+                            Button(email ? "Turn off checklist emails" : "Email me new lots for this checklist") {
+                                Task {
+                                    savingEmail = true
+                                    defer { savingEmail = false }
+                                    do {
+                                        try await api.write("/watchlists/themes/" + theme.id + "/email", method: "PUT", payload: ["enabled": !email])
+                                        await load()
+                                    } catch { self.error = error.localizedDescription }
+                                }
+                            }.disabled(savingEmail || (!email && details.auctionEmailAvailable == false))
+                        }
                         NavigationLink("Manage auction watches") { ChecklistWatchesScreen(api: api, themeID: theme.id) }
                     }
                 }
@@ -914,8 +932,17 @@ struct ThemeScreen: View {
             Label(slot.label, systemImage: "circle").font(.headline)
             Text("Missing").font(.subheadline).foregroundStyle(.secondary)
             if !demo {
-                NavigationLink("Find auctions or watch this gap") {
-                    GapAuctionScreen(api: api, themeID: theme.id, slot: slot)
+                let check = details?.auctionChecks?[slot.slotKey ?? ""]
+                if check?.paused == true {
+                    Text("Auction checks paused")
+                } else if details?.auctionChecksAvailable == false || check?.status == "unavailable" {
+                    Text("Auction source unavailable. We’ll check again.")
+                } else if let lots = check?.lots {
+                    if lots.isEmpty { Text("No matching lots found at the last check.") }
+                    ForEach(lots.prefix(3), id: \.url) { lot in Link(lot.title + " · " + lot.label, destination: lot.url) }
+                } else { Text("Waiting for the first automatic auction check").font(.footnote) }
+                NavigationLink("Auction results and settings") {
+                    GapAuctionScreen(api: api, themeID: theme.id, slot: slot, check: check)
                 }
                 if let captureForSlot {
                     Button("Add a photo for this slot", systemImage: "camera") { captureForSlot(slot.label) }

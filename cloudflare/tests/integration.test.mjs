@@ -477,6 +477,13 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await json(await api(guidePath+'?type=123',a))).status,'provider_not_configured')
     assert.equal((await api(guidePath,b)).status,404)
     assert.equal((await api(guidePath+'?issue=-1',a)).status,400)
+    assert.equal((await api(guidePath,b,'POST',{type:44,issue:382})).status,404)
+    assert.equal((await json(await api(guidePath+'?auto=1',a))).status,'provider_not_configured')
+    const emailPath='/watchlists/themes/'+theme.id+'/email'
+    assert.equal(progress.emailNewLots,false)
+    assert.equal((await api(emailPath,b,'PUT',{enabled:false})).status,404)
+    assert.equal((await api(emailPath,a,'PUT',{enabled:true})).status,409)
+    assert.equal((await api(emailPath,a,'PUT',{enabled:false})).status,204)
     const gap=progress.missing[0]
     const follow={themeId:theme.id,slotKey:gap.slotKey}
     const saveWatch=async(user,extra={})=>api('/watchlists/gap',user,'POST',{...follow,...extra})

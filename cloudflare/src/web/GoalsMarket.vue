@@ -5,7 +5,8 @@ const props=defineProps<{mode:'Themes'|'Marketplace';initialQuery:string}>()
 const emit=defineEmits<{search:[query:string]}>()
 type Rule = {label:string;ruler:string;issuer:string;type?:string;reference:string;metal:string;year:string;denomination:string;source?:string;aliases:string[];series?:string;dateFrom?:number;dateTo?:number}
 type Slot=Rule & {slotKey:string;query:string;owned:{id:string;title:string}[]}
-type Theme={id:string;name:string;owned:number;slots:Slot[];missing:Slot[];percent:number;
+type GapCheck={paused:boolean;checkedAt?:string;status?:string;lots?:{title:string;url:string;label:string;closesAt?:string}[]}
+type Theme={id:string;name:string;owned:number;slots:Slot[];missing:Slot[];percent:number;emailNewLots?:boolean;auctionChecksAvailable?:boolean;auctionChecks?:Record<string,GapCheck>;
   priorities:{label:string;reason:string}[];missingReferences:number}
 type Listing={url:string;title:string;description?:string;state:string;closesAt?:string;verifiedAt?:string;price?:{kind:string;amount:number;currency:string;premium?:number}}
 const shells=ref<{id:string;name:string}[]>([])
@@ -20,14 +21,21 @@ const seen=ref<{query:string;status:string;retrievedAt:string;results:Listing[];
 const watches=ref<{id:string;query:string;alert:number;checked:number|null;slotKey?:string;themeId?:string;theme?:string;state?:string}[]>([])
 const emailAvailable=ref(false)
 const gapWatch=(slot:Slot)=>watches.value.find(w=>w.themeId===active.value?.id && w.slotKey===slot.slotKey)
+const checkFor=(slot:Slot)=>active.value?.auctionChecks?.[slot.slotKey]
+async function toggleChecklistEmail() {
+  const list=active.value
+  if(!list)return
+  await request('/watchlists/themes/'+list.id+'/email','PUT',{enabled:!list.emailNewLots})
+  await open(list.id)
+}
 async function saveGap(slot:Slot,email?:boolean) {
   await request('/watchlists/gap','POST',{themeId:active.value?.id,slotKey:slot.slotKey,alert:email})
-  await loadWatches()
+  if(active.value) await open(active.value.id)
   note.value='Auction watch saved.'
 }
 async function unwatch(id:string) {
   await request('/watchlists/'+id,'DELETE')
-  await loadWatches()
+  if(active.value) await open(active.value.id);else await loadWatches()
 }
 const alert=ref(false)
 const error=ref('')
@@ -106,6 +114,8 @@ onMounted(()=>action(async()=>{
     <section v-else-if="active" class="panel">
       <div class="section-heading"><div><h2>{{active.name}}</h2><p>{{active.owned}} of {{active.slots.length}} slots filled · {{active.percent}}%</p></div><div class="actions"><button @click="edit">Edit theme</button><button @click="action(remove)">Delete theme</button></div></div>
       <progress :value="active.owned" :max="active.slots.length" aria-label="Theme progress"></progress>
+      <p>Missing items are checked for auction lots automatically. Checks pause when you fill a slot.</p>
+      <button v-if="emailAvailable || active.emailNewLots" :disabled="busy" @click="action(toggleChecklistEmail)">{{active.emailNewLots?'Turn off checklist emails':'Email me new lots for this checklist'}}</button>
       <p v-if="active.missingReferences">{{active.missingReferences}} matching specimens need a catalog reference.</p>
       <section v-if="active.priorities.length">
         <h3>Start with these gaps</h3>
@@ -119,11 +129,18 @@ onMounted(()=>action(async()=>{
           <a v-if="slot.source" :href="slot.source" target="_blank" rel="noopener noreferrer">Reference ↗</a>
           <div v-if="!slot.owned.length" class="actions">
             <button :disabled="busy" @click="emit('search',slot.query)">Search auctions</button>
-            <button v-if="!gapWatch(slot)" :disabled="busy" @click="action(()=>saveGap(slot))">Watch this gap</button>
-            <template v-else><button :disabled="busy" @click="action(()=>unwatch(gapWatch(slot)!.id))">Stop watching</button>
-              <button v-if="emailAvailable || gapWatch(slot)?.alert" :disabled="busy" @click="action(()=>saveGap(slot,!gapWatch(slot)?.alert))">{{gapWatch(slot)?.alert?'Turn off email alerts':'Email me new lots'}}</button></template>
+            <button v-if="checkFor(slot)?.paused" :disabled="busy" @click="action(()=>saveGap(slot,!!active?.emailNewLots))">Resume auction checks</button>
+            <button v-else-if="gapWatch(slot)" :disabled="busy" @click="action(()=>unwatch(gapWatch(slot)!.id))">Pause this watch</button>
           </div>
-          <small v-if="gapWatch(slot)">{{slot.owned.length?'Watch paused · slot filled':gapWatch(slot)?.alert?'Watching · email alerts on':'Watching · email alerts off'}}</small>
+          <template v-if="!slot.owned.length">
+            <small v-if="checkFor(slot)?.paused">Auction checks paused</small>
+            <small v-else-if="active.auctionChecksAvailable===false || checkFor(slot)?.status==='unavailable'">Auction source unavailable. We’ll check again.</small>
+            <small v-else-if="!checkFor(slot)?.checkedAt">Waiting for the first automatic check</small>
+            <template v-else><small>Checked {{new Date(checkFor(slot)!.checkedAt!).toLocaleString()}}</small>
+              <small v-if="!checkFor(slot)?.lots?.length">No matching lots found</small>
+              <a v-for="lot in checkFor(slot)?.lots" :key="lot.url" :href="lot.url" target="_blank" rel="noreferrer">{{lot.title}} · {{lot.label}}</a>
+            </template>
+          </template>
         </li>
       </ul>
     </section>

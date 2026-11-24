@@ -3,10 +3,11 @@ import { bulkItemPatch, csv, id, item, matchesSlot, normalize, photoLink, sale, 
 import type { Item, Sale, Slot } from '../shared/domain'
 import { convertLegacyCoin, legacyBatch } from '../shared/legacy'
 import { all, body, digest, fail, limit, now, one, router, run, uid } from './core'
-import { numistaGuide, numistaType } from './numistaGuide'
+import { canSearchType, discoverGuideType, guideIssueChoices, numistaGuide, numistaType } from './numistaGuide'
 import type { Env } from './core'
 import { previewTheme } from './themePlanning'
 import { researchSales } from './saleResearch'
+import { capabilities } from './marketCapabilities'
 import { mergeItems } from './mergeItems'
 
 const record = item.extend({ photos: z.array(photoLink).max(12).optional() })
@@ -303,19 +304,57 @@ export async function valuation(env:Env,user:string,key:string,currency='USD') {
   const sales = await all<SaleRow>(env,'SELECT * FROM sales WHERE item_id=? AND user_id=? ORDER BY date DESC',key,user)
   return valueSales(sales.map(saleFromRow),currency,specimen.grade)
 }
+const guideNumber = z.coerce.number().int().positive().max(2147483647)
+const guideCurrency = z.string().regex(/^[A-Z]{3}$/).default('USD')
+function guideIdentity(item: Awaited<ReturnType<typeof findItem>>) {
+  return digest(JSON.stringify([item.type,item.title,item.issuer,item.ruler,item.denomination,item.year,item.reference,
+    item.details?.mint,item.details?.mintMark,item.details?.variant,item.details?.referenceUrl]))
+}
+async function guideQuota(env:Env,user:string) {
+  await limit(env,'numista_guide',user,40)
+  await limit(env,'numista_guide','global',400)
+}
+async function specimenGuide(env: Env, user: string, specimen: Awaited<ReturnType<typeof findItem>>, typeID: number | undefined,
+  issueID: number | undefined, currency: string, automatic: boolean) {
+  const lookup = async (id?: number) => {
+    if (env.NUMISTA_API_KEY && typeID) await guideQuota(env,user)
+    return numistaGuide(env.NUMISTA_API_KEY,typeID,id,currency)
+  }
+  const result = await lookup(issueID)
+  if (!automatic || !('issues' in result) || !result.issues.length) return result
+  const {issues,match} = guideIssueChoices(result.issues,specimen.year,specimen.details?.mintMark,specimen.details?.variant)
+  return match ? await lookup(match) : {...result,issues}
+}
 export const valuations = router()
 valuations.get('/:id/guide',async c=>{
   const user = c.get('user').id
   const specimen = await findItem(c.env,user,c.req.param('id'))
-  const number = z.coerce.number().int().positive().max(2147483647).optional()
-  const params = z.object({type:number,issue:number,currency:z.string().regex(/^[A-Z]{3}$/).default('USD')}).safeParse(c.req.query())
+  const params = z.object({type:guideNumber.optional(),issue:guideNumber.optional(),auto:z.literal('1').optional(),currency:guideCurrency}).safeParse(c.req.query())
   if (!params.success) return fail(400,'Use a numeric Numista ID and a three-letter currency')
-  const typeID = params.data.type ?? numistaType(specimen.reference) ?? numistaType(specimen.details?.referenceUrl ?? '')
-  if (c.env.NUMISTA_API_KEY && typeID) {
-    await limit(c.env,'numista_guide',user,40)
-    await limit(c.env,'numista_guide','global',400)
+  const {auto,currency,type,issue} = params.data
+  const saved = auto && !type && !issue ? await one<{type_id:number;issue_id:number}>(c.env,
+    'SELECT type_id,issue_id FROM specimen_guide_links WHERE item_id=? AND identity=?',specimen.id,await guideIdentity(specimen)) : null
+  let typeID = type ?? saved?.type_id ?? numistaType(specimen.reference) ?? numistaType(specimen.details?.referenceUrl ?? '')
+  const key = c.env.NUMISTA_API_KEY
+  if(auto && !typeID && key && canSearchType(specimen)) {
+    await guideQuota(c.env,user)
+    const found=await discoverGuideType(key,specimen)
+    if(!found.typeID) return c.json({...found,currency})
+    typeID=found.typeID
   }
-  return c.json(await numistaGuide(c.env.NUMISTA_API_KEY,typeID,params.data.issue,params.data.currency))
+  return c.json(await specimenGuide(c.env,user,specimen,typeID,issue ?? saved?.issue_id,currency,!!auto))
+})
+valuations.post('/:id/guide',async c=>{
+  const user=c.get('user').id
+  const item=await findItem(c.env,user,c.req.param('id'))
+  const input=await body(c,z.object({type:guideNumber,issue:guideNumber.optional(),currency:guideCurrency}))
+  const result=await specimenGuide(c.env,user,item,input.type,input.issue,input.currency,true)
+  if('issueID' in result && (result.status==='prices' || result.status==='no_prices')) {
+    await run(c.env,`INSERT INTO specimen_guide_links(item_id,identity,type_id,issue_id) VALUES(?,?,?,?)
+      ON CONFLICT(item_id) DO UPDATE SET identity=excluded.identity,type_id=excluded.type_id,issue_id=excluded.issue_id`,
+      item.id,await guideIdentity(item),input.type,result.issueID)
+  }
+  return c.json(result)
 })
 valuations.get('/:id/research',async c=>{
   const user=c.get('user').id
@@ -381,6 +420,28 @@ async function progressFor(theme:Theme,specimens:Awaited<ReturnType<typeof check
   return {id:theme.id,name:theme.name,slots,owned,missing,priorities,missingReferences,percent:slots.length?Math.round(100*owned/slots.length):0}
 }
 
+// Backfill existing checklists and reconcile edits without requiring the app to be open.
+export async function syncChecklistWatches(env:Env) {
+  const dirty=await all<Theme & {user_id:string;revision:number}>(env,`SELECT t.*,s.revision FROM themes t
+    JOIN checklist_auction_settings s ON s.theme_id=t.id JOIN users u ON u.id=t.user_id
+    WHERE s.synced<>s.revision AND u.deleting=0 ORDER BY t.created,t.id LIMIT 12`)
+  for (const theme of dirty) {
+    const {slots}=await progressFor(theme,[])
+    const rows=slots.map(slot=>({id:uid(),key:slot.slotKey,query:slot.query}))
+    const version='SELECT 1 FROM checklist_auction_settings WHERE theme_id=? AND revision=?'
+    await env.DB.batch([
+      env.DB.prepare('UPDATE gap_watches SET in_rules=0 WHERE theme_id=? AND EXISTS ('+version+')')
+        .bind(theme.id,theme.id,theme.revision),
+      env.DB.prepare(`INSERT INTO gap_watches(id,user_id,theme_id,slot_key,query,alert)
+        SELECT j.value->>'id',?,s.theme_id,j.value->>'key',j.value->>'query',s.email
+        FROM json_each(?) j, checklist_auction_settings s WHERE s.theme_id=? AND s.revision=?
+        ON CONFLICT(user_id,theme_id,slot_key) DO UPDATE SET in_rules=1,query=excluded.query`)
+        .bind(theme.user_id,JSON.stringify(rows),theme.id,theme.revision),
+      env.DB.prepare('UPDATE checklist_auction_settings SET synced=revision WHERE theme_id=? AND revision=?')
+        .bind(theme.id,theme.revision)
+    ])
+  }
+}
 const themeInput = name.extend({slots:z.array(slot).min(1).max(100)})
 export const themes = router()
 themes.get('/',async c=>c.json(await listThemes(c.env,c.get('user').id)))
@@ -394,7 +455,24 @@ themes.post('/',async c=>{
   await run(c.env,'INSERT INTO themes VALUES(?,?,?,?,?)',key,c.get('user').id,input.name,JSON.stringify(input.slots),now())
   return c.json({id:key},201)
 })
-themes.get('/:id',async c=>c.json(await themeProgress(c.env,c.get('user').id,c.req.param('id'))))
+themes.get('/:id',async c=>{
+  const user=c.get('user').id, id=c.req.param('id')
+  const list=await themeProgress(c.env,user,id)
+  const settings=await one<{email:number}>(c.env,'SELECT email FROM checklist_auction_settings WHERE theme_id=?',id)
+  const watches=await all<{slot_key:string;paused:number;last_result:string|null}>(c.env,
+    'SELECT slot_key,paused,last_result FROM gap_watches WHERE theme_id=? AND user_id=? AND in_rules=1',id,user)
+  const auctionChecks=Object.fromEntries(watches.map(w=>{
+    const result=w.last_result ? JSON.parse(w.last_result) as {
+      checkedAt:string;status:string;lots:{title:string;url:string;label:string;closesAt?:string}[]
+    } : undefined
+    if (!result || w.paused) return [w.slot_key,{paused:!!w.paused}]
+    const lots=result.lots.filter(lot=>!lot.closesAt || Date.parse(lot.closesAt)>Date.now())
+    return [w.slot_key,{...result,lots,paused:false}]
+  }))
+  const sources=capabilities(c.env)
+  return c.json({...list,emailNewLots:!!settings?.email,auctionEmailAvailable:sources.emailAlerts,
+    auctionChecksAvailable:sources.activeFeed || sources.ebay || sources.biddrDiscovery,auctionChecks})
+})
 themes.put('/:id',async c=>{
   const input = await body(c,themeInput)
   const result = await run(c.env,'UPDATE themes SET name=?,slots=? WHERE user_id=? AND id=?',input.name,JSON.stringify(input.slots),c.get('user').id,c.req.param('id'))

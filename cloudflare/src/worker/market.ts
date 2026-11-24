@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import { https, normalize, text } from '../shared/domain'
 import { all, body, fail, limit, now, one, router, run, uid } from './core'
-import { themeProgress, watchedThemes } from './collection'
+import { syncChecklistWatches, themeProgress, watchedThemes } from './collection'
 import { canonicalLot, newAuctionAlerts } from './auctionAlerts'
 import type { Env } from './core'
 import { ebayEnabled, searchEbay } from './ebay'
+import { capabilities, domains } from './marketCapabilities'
 
 const querySchema = z.string().trim().min(2).max(180)
 const hit = z.object({
@@ -18,7 +19,7 @@ const hit = z.object({
 export type Hit = z.infer<typeof hit>
 const firecrawlResponse = z.object({success:z.literal(true),
   data:z.object({web:z.array(z.object({url:z.string(),title:z.string().optional(),description:z.string().optional()})).optional()})})
-const domains = (env:Env) => (env.MARKET_DOMAINS ?? '').split(',').map(v=>v.trim().toLowerCase()).filter(v=>/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(v))
+
 function unique(results: Hit[], allowed:string[]) {
   const keys = new Set<string>()
   return results.filter(entry=>{
@@ -93,13 +94,7 @@ export async function marketSearch(env:Env,user:string,query:string) {
 }
 
 export const market = router()
-function capabilities(env:Env) {
-  const allowed = domains(env)
-  const activeFeed = !!env.MARKET_FEED_URL && allowed.length>0
-  const ebay = ebayEnabled(env)
-  const biddrDiscovery = !!env.FIRECRAWL_API_KEY && allowed.some(d=>d==='biddr.com' || d.endsWith('.biddr.com'))
-  return {activeFeed,ebay,biddrDiscovery,emailAlerts:!!(env.EMAIL && env.EMAIL_FROM && (activeFeed || ebay || biddrDiscovery))}
-}
+
 market.get('/capabilities',c=>c.json(capabilities(c.env)))
 market.get('/search',async c=>{
   const query = querySchema.safeParse(c.req.query('q'))
@@ -112,13 +107,24 @@ export const watchlists = router()
 watchlists.get('/',async c=>{
   const user = c.get('user').id
   const saved = await all(c.env,'SELECT id,query,alert,checked FROM watchlists WHERE user_id=? ORDER BY query',user)
-  const gaps = await all<Gap>(c.env,'SELECT id,theme_id AS themeId,slot_key AS slotKey,query,alert,checked FROM gap_watches WHERE user_id=? ORDER BY query',user)
+  const gaps = await all<Gap>(c.env,'SELECT id,theme_id AS themeId,slot_key AS slotKey,query,alert,checked FROM gap_watches WHERE user_id=? AND paused=0 ORDER BY query',user)
   const lists = new Map((gaps.length ? await watchedThemes(c.env,user) : []).map(list=>[list.id,list]))
   return c.json([...saved,...gaps.map(g=>{
     const list=lists.get(g.themeId)
     const slot=list?.slots.find(s=>s.slotKey===g.slotKey)
     return {...g,theme:list?.name,state:!slot?'rule_changed':slot.owned.length?'filled':'watching'}
   })])
+})
+watchlists.put('/themes/:id/email',async c=>{
+  const {enabled}=await body(c,z.object({enabled:z.boolean()}))
+  const user=c.get('user').id, id=c.req.param('id')
+  if (!await one(c.env,'SELECT id FROM themes WHERE id=? AND user_id=?',id,user)) return fail(404,'Theme unavailable')
+  if (enabled && !capabilities(c.env).emailAlerts) return fail(409,'Auction email is unavailable.')
+  await c.env.DB.batch([
+    c.env.DB.prepare('UPDATE checklist_auction_settings SET email=? WHERE theme_id=?').bind(Number(enabled),id),
+    c.env.DB.prepare('UPDATE gap_watches SET alert=? WHERE theme_id=? AND user_id=? AND paused=0').bind(Number(enabled),id,user)
+  ])
+  return c.body(null,204)
 })
 watchlists.post('/gap',async c=>{
   const input = await body(c,z.object({themeId:z.uuid(),slotKey:z.string().regex(/^[a-f0-9]{64}$/),alert:z.boolean().optional()}))
@@ -129,9 +135,9 @@ watchlists.post('/gap',async c=>{
   if (!slot || slot.owned.length) return fail(409,'This checklist gap is no longer missing')
   if (input.alert && !capabilities(c.env).emailAlerts) return fail(409,'Automatic email alerts are unavailable. Save this watch with email off.')
   const result = await one<{id:string}>(c.env,`INSERT INTO gap_watches(id,user_id,theme_id,slot_key,query,alert)
-    VALUES(?,?,?,?,?,COALESCE(?,0)) ON CONFLICT(user_id,theme_id,slot_key)
-    DO UPDATE SET query=excluded.query,alert=COALESCE(?,gap_watches.alert) RETURNING id`,
-    uid(),user,input.themeId,slot.slotKey,slot.query,input.alert==null?null:Number(input.alert),input.alert==null?null:Number(input.alert))
+    VALUES(?,?,?,?,?,COALESCE(?,(SELECT email FROM checklist_auction_settings WHERE theme_id=?),0)) ON CONFLICT(user_id,theme_id,slot_key)
+    DO UPDATE SET query=excluded.query,paused=0,alert=COALESCE(?,gap_watches.alert) RETURNING id`,
+    uid(),user,input.themeId,slot.slotKey,slot.query,input.alert==null?null:Number(input.alert),input.themeId,input.alert==null?null:Number(input.alert))
   return c.json(result,201)
 })
 watchlists.post('/',async c=>{
@@ -144,29 +150,40 @@ watchlists.post('/',async c=>{
 })
 watchlists.delete('/:id',async c=>{
   const args=[c.req.param('id'),c.get('user').id]
-  await c.env.DB.batch(['watchlists','gap_watches'].map(table=>c.env.DB.prepare('DELETE FROM '+table+' WHERE id=? AND user_id=?').bind(...args)))
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM watchlists WHERE id=? AND user_id=?').bind(...args),
+    c.env.DB.prepare('UPDATE gap_watches SET paused=1,alert=0,last_result=NULL WHERE id=? AND user_id=?').bind(...args)
+  ])
   return c.body(null,204)
 })
 export async function refreshWatchlists(env:Env) {
   const caps = capabilities(env)
-  if (!caps.emailAlerts || !env.EMAIL || !env.EMAIL_FROM) return
+  if (!caps.activeFeed && !caps.ebay && !caps.biddrDiscovery) return
+  await syncChecklistWatches(env)
   const watches = await all<Watch>(env,`SELECT w.*,u.email FROM (
     SELECT id,user_id,query,seen,checked,NULL AS themeId,NULL AS slotKey FROM watchlists WHERE alert=1 AND ?=1
-    UNION ALL SELECT id,user_id,query,seen,checked,theme_id,slot_key FROM gap_watches WHERE alert=1
+    UNION ALL SELECT id,user_id,query,seen,checked,theme_id,slot_key FROM gap_watches WHERE paused=0 AND in_rules=1
     ) w JOIN users u ON u.id=w.user_id WHERE u.deleting=0 AND COALESCE(w.checked,0)<? ORDER BY COALESCE(w.checked,0),w.id LIMIT 12`,
-    Number(caps.activeFeed || caps.ebay),now()-86400)
+    Number(caps.emailAlerts && (caps.activeFeed || caps.ebay)),now()-86400)
   for (const watch of watches) {
     const table = watch.themeId ? 'gap_watches' : 'watchlists'
     const missing = async()=>!watch.themeId || (await themeProgress(env,watch.user_id,watch.themeId)).missing.some(s=>s.slotKey===watch.slotKey)
     try {
       // Move the attempt behind the remaining due watches, even if a provider is down.
-      const claimed=await run(env,'UPDATE '+table+' SET checked=? WHERE id=? AND user_id=? AND alert=1 AND COALESCE(checked,0)<?',
+      const eligible=watch.themeId?'paused=0 AND in_rules=1':'alert=1'
+      const claimed=await run(env,'UPDATE '+table+' SET checked=? WHERE id=? AND user_id=? AND '+eligible+' AND COALESCE(checked,0)<?',
         now(),watch.id,watch.user_id,now()-86400)
       if (!claimed.meta.changes) continue
       if (!await missing()) continue
       const discovery = watch.themeId && caps.biddrDiscovery
       const market = await marketSearch({...env,FIRECRAWL_API_KEY:discovery?env.FIRECRAWL_API_KEY:undefined},watch.user_id,watch.query)
-      if (!market.coverage.some(c=>c.status==='queried')) continue
+      const available=market.coverage.some(c=>c.status==='queried')
+      if (watch.themeId) {
+        const lots=newAuctionAlerts(market.results,[],!!discovery).map(({hit,label})=>({title:hit.title,url:hit.url,label,closesAt:hit.closesAt}))
+        await run(env,'UPDATE gap_watches SET last_result=? WHERE id=? AND user_id=? AND paused=0 AND in_rules=1',
+          JSON.stringify({checkedAt:market.retrievedAt,status:available?'checked':'unavailable',lots}),watch.id,watch.user_id)
+      }
+      if (!available || !caps.emailAlerts || !env.EMAIL || !env.EMAIL_FROM) continue
       const previouslySeen = JSON.parse(watch.seen) as string[]
       const news = newAuctionAlerts(market.results,previouslySeen,!!discovery)
       if (!news.length || !await missing()) continue

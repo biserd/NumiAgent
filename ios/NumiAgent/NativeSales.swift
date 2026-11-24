@@ -8,6 +8,7 @@ private struct GuideResult: Decodable {
     let source: URL?
     let currency: String
     let issues: [Issue]?
+    let candidates: [Issue]?
     let prices: [Price]?
 
     var message: String? {
@@ -24,72 +25,91 @@ private struct GuideResult: Decodable {
     }
 }
 
-struct PriceGuideScreen: View {
-    let api: NumiAPI
-    let item: Specimen
-    @State private var number = ""
-    @State private var issues: [GuideResult.Issue] = []
-    @State private var typeID: Int?
-    @State private var guide: GuideResult?
-    @State private var busy = false
-    @State private var error: String?
-
-    var body: some View {
-        List {
-            Section {
-                Text(item.title).font(.headline)
-                if !item.reference.isEmpty { Text(item.reference) }
-                TextField("Numista N# (use saved reference)", text: $number).keyboardType(.numberPad)
-                Button("Find issues") { Task { await lookup() } }
-            } footer: { Text("Choose the issue that matches the year, mint and variety on your piece.") }
-            if !issues.isEmpty {
-                Section("Choose an issue") {
-                    ForEach(issues) { issue in
-                        Button(issue.label) { Task { await lookup(issue.id) } }
-                    }
-                }
-            }
-            if busy { ProgressView("Looking up the guide") }
-            if let error { Text(error).foregroundStyle(.red) }
-            if let guide {
-                if let message = guide.message { Text(message) }
-                if let prices = guide.prices, !prices.isEmpty, let issue = guide.issueID {
-                    Section("Guide estimates · Issue \(issue)") {
-                        ForEach(prices, id: \.grade) { row in
-                            LabeledContent(row.grade.uppercased()) { Text(row.price, format: .currency(code: guide.currency)) }
-                        }
-                    }
-                }
-                if let source = guide.source, let id = guide.typeID {
-                    Link("Numista N# \(id)", destination: source)
-                }
-            }
-        }
-        .disabled(busy)
-        .navigationTitle("Price guide")
-    }
-
-    private func lookup(_ issue: Int? = nil) async {
-        guard !busy else { return }
-        busy = true
-        defer { busy = false }
-        guide = nil
-        error = nil
-        var query = [URLQueryItem(name: "currency", value: "USD")]
-        if let issue, let typeID {
-            query += [.init(name: "type", value: String(typeID)), .init(name: "issue", value: String(issue))]
-        } else {
-            issues = []
-            if !number.isEmpty { query.append(.init(name: "type", value: number)) }
-        }
-        do {
-            let found: GuideResult = try await api.get("/valuations/" + item.id + "/guide", query: query)
-            guide = found
-            if let choices = found.issues { issues = choices; typeID = found.typeID }
-        } catch { self.error = error.localizedDescription }
+extension Specimen {
+    var guideIdentity: [String] {
+        [id, reference, title, type, issuer, denomination, ruler, year,
+         details?.referenceUrl ?? "", details?.mintMark ?? "", details?.mint ?? "", details?.variant ?? ""]
     }
 }
 
+@MainActor @Observable final class SpecimenGuideModel {
+    var number = ""
+    fileprivate var guide: GuideResult?
+    var busy = false
+    var error: String?
+    private var requestID = UUID()
+
+    func lookup(api: NumiAPI, item: Specimen, manual: Bool = false, issue: Int? = nil, selectedType: Int? = nil) async {
+        if !manual && issue == nil && selectedType == nil { number = ""; guide = nil }
+        let current = UUID()
+        requestID = current
+        busy = true
+        error = nil
+        defer { if requestID == current { busy = false } }
+        let path = "/valuations/" + item.id + "/guide"
+        do {
+            let result: GuideResult
+            if let selectedType {
+                result = try await api.post(path, payload: ["type": selectedType])
+            } else if let issue, let type = guide?.typeID {
+                result = try await api.post(path, payload: ["type": type, "issue": issue])
+            } else {
+                let query = manual ? URLQueryItem(name: "type", value: number) : URLQueryItem(name: "auto", value: "1")
+                result = try await api.get(path, query: [query])
+            }
+            if current == requestID && !Task.isCancelled { guide = result }
+        } catch {
+            if current == requestID && !Task.isCancelled { self.error = error.localizedDescription }
+        }
+    }
+}
+
+struct SpecimenPriceGuide: View {
+    let api: NumiAPI
+    let item: Specimen
+    @Bindable var model: SpecimenGuideModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Numista price guide by grade").font(.headline)
+            if model.busy { ProgressView("Checking Numista") }
+            if let error = model.error { Text(error).foregroundStyle(.secondary) }
+            if let message = model.guide?.message { Text(message).font(.subheadline) }
+            if let guide = model.guide {
+                if let prices = guide.prices, !prices.isEmpty {
+                    ForEach(prices, id: \.grade) { row in
+                        LabeledContent(row.grade.uppercased()) { Text(row.price, format: .currency(code: guide.currency)) }
+                    }
+                }
+                if let source = guide.source, let id = guide.typeID { Link("Numista N# \(id)", destination: source) }
+                if let candidates = guide.candidates, !candidates.isEmpty {
+                    Menu("Choose the catalog type") {
+                        ForEach(candidates) { row in
+                            Button(row.label + " · N# " + String(row.id)) {
+                                model.number = String(row.id)
+                                Task { await model.lookup(api: api, item: item, selectedType: row.id) }
+                            }
+                        }
+                    }
+                }
+                if guide.status == "choose_issue", let choices = guide.issues {
+                    Menu("Choose year, mint or variety") {
+                        ForEach(choices) { issue in
+                            Button(issue.label) { Task { await model.lookup(api: api, item: item, issue: issue.id) } }
+                        }
+                    }
+                }
+            }
+            DisclosureGroup("Set or change the catalog match") {
+                TextField("Numista N#", text: $model.number).keyboardType(.numberPad)
+                Button("Find issues") { Task { await model.lookup(api: api, item: item, manual: true) } }.disabled(Int(model.number) == nil || model.busy)
+            }
+            if model.error != nil || model.guide?.status == "unavailable" || model.guide?.status == "rate_limited" {
+                Button("Retry price guide") { Task { await model.lookup(api: api, item: item) } }
+            }
+        }
+        .buttonStyle(.borderless)
+    }
+}
 private struct AuctionWatch: Decodable, Identifiable {
     let id, query: String
     let slotKey, themeId, state: String?
@@ -109,7 +129,7 @@ struct ChecklistWatchesScreen: View {
     var body: some View {
         List {
             if let watches {
-                if watches.isEmpty { Text("Open a missing checklist slot to watch it for auctions.") }
+                if watches.isEmpty { Text("Automatic watches appear after the first scheduled check.") }
                 ForEach(watches) { watch in
                     VStack(alignment: .leading) {
                         Text(watch.query).font(.headline)
@@ -142,6 +162,7 @@ struct GapAuctionScreen: View {
     let api: NumiAPI
     let themeID: String
     let slot: ThemeDetails.Slot
+    let check: ThemeDetails.AuctionCheck?
     private struct Capabilities: Decodable { let emailAlerts: Bool }
     private struct Search: Decodable {
         struct Lot: Decodable { let title, state: String; let url: URL }
@@ -150,6 +171,7 @@ struct GapAuctionScreen: View {
     }
     private struct Subscription: Encodable { let themeId, slotKey: String; let alert: Bool? }
     @State private var watch: AuctionWatch?
+    @State private var stoppedHere = false
     @State private var ready = false
     @State private var busy = false
     @State private var emailAvailable = false
@@ -170,11 +192,16 @@ struct GapAuctionScreen: View {
                     }
                     Button("Stop watching") { Task { await update(remove: true) } }
                 } else if ready, slot.slotKey != nil {
-                    Button("Watch this gap") { Task { await update() } }
+                    if check?.paused == true || stoppedHere {
+                        Button("Resume auction checks") { Task { await update() } }
+                    } else { Text("Automatic watch scheduled") }
                 }
             } footer: { Text("Alerts pause when you fill this slot. Check auction status on biddr for discovery leads.") }
             Section("Auctions") {
-                Button("Find auction lots") {
+                if search == nil, let lots = check?.lots, !stoppedHere {
+                    ForEach(lots, id: \.url) { lot in Link(lot.title + " · " + lot.label, destination: lot.url) }
+                }
+                Button("Refresh auction results") {
                     Task {
                         guard !busy else { return }
                         busy = true
@@ -233,6 +260,7 @@ struct GapAuctionScreen: View {
         do {
             if remove, let watch { try await api.write("/watchlists/" + watch.id, method: "DELETE") }
             else { try await api.write("/watchlists/gap", method: "POST", payload: Subscription(themeId: themeID, slotKey: key, alert: email)) }
+            stoppedHere = remove
             await load()
         } catch { self.error = error.localizedDescription }
     }

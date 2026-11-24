@@ -2,9 +2,21 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { encode, decode } from 'jpeg-js'
 import { cardDetails } from '../src/web/cardDetails.ts'
-import { numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
+import { guideIssueChoices, numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
 import { newAuctionAlerts } from '../src/worker/auctionAlerts.ts'
 
+test('Automatic guide selection requires a unique compatible issue',()=>{
+  const matchingIssue=(...args)=>guideIssueChoices(...args).match
+  const rows=[{id:1,year:1935,mint_letter:'D'},{id:2,year:1935,mint_letter:'S'},{id:3,year:1936}]
+  assert.equal(matchingIssue(rows,'1935'),undefined)
+  assert.equal(matchingIssue(rows,'1935','s'),2)
+  assert.equal(matchingIssue(rows,'1936'),3)
+  assert.equal(matchingIssue(rows,'1936','D'),undefined)
+  assert.equal(matchingIssue(rows,'1935–1936'),undefined)
+  assert.equal(matchingIssue(rows,'1940'),undefined)
+  assert.equal(matchingIssue([...rows,{id:4}],'1936'),undefined)
+  assert.equal(matchingIssue(rows,'1935','D','proof'),undefined)
+})
 test('Numista guide scopes estimates to the selected issue, grade and currency',async()=>{
   assert.equal(numistaType('KM 21; N# 42'),42)
   assert.equal(numistaType('https://en.numista.com/catalogue/note42.html'),42)
@@ -36,12 +48,16 @@ test('Numista guide scopes estimates to the selected issue, grade and currency',
 
 test('Gap alerts deduplicate biddr lot URLs, distinguish leads from verified auctions and exclude closed lots',()=>{
   const lot='https://www.biddr.com/auctions/example/browse?a=123&l=42'
+  const current='https://www.biddr.com/example/auction?l=42&a=123'
   const hit=(url,state='unknown')=>({title:'fixture',url,state})
-  const hits=[hit(lot+'&currency=USD'),hit(lot+'&language=de'),hit('https://www.biddr.com/search?s=example'),
+  const hits=[hit(current+'&currency=USD'),hit(lot+'&language=de'),hit('https://www.biddr.com/search?s=example'),
+    hit('https://www.biddr.com/example/auction?a=123'),hit('https://www.biddr.com/example/auction?a=123&l=bad'),
     hit('https://other.test/auctions/example/browse?a=123&l=42'),hit(lot.replace('42','43'),'closed')]
   assert.deepEqual(newAuctionAlerts(hits,[],false),[])
   const leads=newAuctionAlerts(hits,[],true)
   assert.equal(leads.length,1)
+  assert.equal(leads[0].hit.url,current+'&currency=USD')
+  assert.equal(leads[0].key,'lead:'+lot)
   assert.match(leads[0].label,/check auction status/)
   assert.deepEqual(newAuctionAlerts(hits,[leads[0].key],true),[])
   const verified=newAuctionAlerts([hit(lot,'active')],[leads[0].key],true)

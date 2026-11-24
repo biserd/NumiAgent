@@ -17,6 +17,45 @@ export function numistaType(reference: string): number | undefined {
   return parsed.success ? parsed.data : undefined
 }
 
+const guideTypes=z.object({count:z.number().int().nonnegative(),types:z.array(z.object({
+  id:positiveID,title:z.string(),issuer:z.object({name:z.string()}).nullish(),category:z.string().optional()
+})).max(100)})
+type CatalogHints={type:string;issuer:string;denomination:string;year:string}
+export function canSearchType(item:CatalogHints) {
+  return [item.issuer,item.denomination].every(v=>v.trim().length>0 && v.length<=80) && /^-?\d{1,4}$/.test(item.year.trim())
+}
+export async function discoverGuideType(key:string,item:CatalogHints,fetcher=fetch) {
+  const url=new URL('https://api.numista.com/v3/types')
+  url.search=new URLSearchParams({q:item.issuer+' '+item.denomination,year:item.year.trim(),
+    category:item.type,count:'100',lang:'en'}).toString()
+  const norm=(v:string)=>v.toLowerCase().normalize('NFKD').replace(/\p{M}/gu,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim()
+  try {
+    const response=await fetcher(url,{headers:{'Numista-API-Key':key},redirect:'manual',signal:AbortSignal.timeout(8000)})
+    if(!response.ok)return {status:response.status===429?'rate_limited':'unavailable'}
+    const data=guideTypes.parse(JSON.parse(new TextDecoder().decode(await boundedBody(response,1024*1024))))
+    const country=norm(item.issuer),denomination=norm(item.denomination)
+    const candidates=data.types.filter(r=>norm(r.issuer?.name ?? '')===country && (!r.category || r.category===item.type))
+    const precise=candidates.filter(r=>norm(r.title.split(/\s+[-–—]\s+|\s*\(/u)[0])===denomination)
+    // Never infer uniqueness from a truncated page or from a single loose keyword hit.
+    const match=data.count===data.types.length && candidates.length===1 && precise.length===1 ? precise[0].id : undefined
+    return {status:'reference_required',typeID:match,candidates:candidates.slice(0,8).map(r=>({id:r.id,label:r.title}))}
+  } catch { return {status:'unavailable'} }
+}
+
+export function guideIssueChoices<T extends z.infer<typeof issue>>(rows: T[], year: string, mintMark = '', variant = '') {
+  const clean = (value: unknown) => String(value ?? '').trim().normalize('NFKC').toLowerCase()
+  const date = year.trim()
+  if (date && !/^-?\d{1,4}$/.test(date)) return { issues: rows }
+  const undated = (row: T) => row.year == null && row.gregorian_year == null &&
+    (row.min_year == null || row.max_year == null)
+  const compatible = rows.filter(row =>
+    (!mintMark.trim() || clean(row.mint_letter) === clean(mintMark)) &&
+    (!variant.trim() || clean(row.comment) === clean(variant)) &&
+    (!date || undated(row) || [row.year,row.gregorian_year].some(y => y != null && Number(y) === Number(date)) ||
+      (row.min_year != null && row.max_year != null && Number(date) >= row.min_year && Number(date) <= row.max_year)))
+  const single = compatible.length === 1 ? compatible[0] : undefined
+  return { issues: compatible.length ? compatible : rows, match: single && (!date || !undated(single)) ? single.id : undefined }
+}
 export async function numistaGuide(key: string | undefined, typeID: number | undefined, issueID: number | undefined,
   currency: string, fetcher: typeof fetch = fetch) {
   const source = typeID ? 'https://en.numista.com/' + typeID : undefined
@@ -33,7 +72,7 @@ export async function numistaGuide(key: string | undefined, typeID: number | und
     const data: unknown = JSON.parse(new TextDecoder().decode(await boundedBody(res,2*1024*1024)))
     if (!issueID) {
       const issues = z.array(issue).parse(data).map(row => ({
-        id: row.id, label: [row.year ?? row.gregorian_year ?? [...new Set([row.min_year,row.max_year].filter(v=>v!=null))].join('–'),
+        ...row, label: [row.year ?? row.gregorian_year ?? [...new Set([row.min_year,row.max_year].filter(v=>v!=null))].join('–'),
           row.mint_letter, row.comment, 'Issue ' + row.id]
           .filter(value => value != null && value !== '').join(' · ')
       }))

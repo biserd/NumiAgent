@@ -3,7 +3,33 @@ import test from 'node:test'
 import { encode, decode } from 'jpeg-js'
 import { cardDetails } from '../src/web/cardDetails.ts'
 import { guideIssueChoices, numistaGuide, numistaType } from '../src/worker/numistaGuide.ts'
+import { numistaSales } from '../src/worker/numistaSales.ts'
 import { newAuctionAlerts } from '../src/worker/auctionAlerts.ts'
+
+test('Comparable sales use the exact Numista issue, original currency and disclosed premium basis',async()=>{
+  const row={issue_id:321,auction_house:{name:'Example Auctions'},auction_title:'Spring sale',lot_number:17,
+    auction_date:'2021-04-15',lot_url:'https://house.example/17',grade:'vf',
+    price:{amount:14,currency:'CAD',premium_included:false}}
+  const get=(body,status=200)=>numistaSales('fixture',44,321,1,async(url,options)=>{
+    assert.equal(url.pathname,'/v3/types/44/sales_records')
+    assert.equal(url.searchParams.get('issue_id'),'321')
+    assert.equal(url.searchParams.has('currency'),false)
+    assert.equal(options.redirect,'manual')
+    assert.equal(options.headers['Numista-API-Key'],'fixture')
+    return Response.json(body,{status})
+  })
+  const result=await get({sales_count:30,sales_records:[row,row,{...row,issue_id:322,lot_url:'https://house.example/18'},
+    {...row,lot_url:'javascript:alert(1)'},{...row,lot_url:'https://house.example/19',price:{...row.price,premium_included:true}},
+    {...row,lot_url:'https://house.example/20',price:{amount:8,currency:'JPY'}},
+    {...row,lot_url:'https://house.example/21',auction_date:'2099-01-01'}]})
+  assert.equal(result.nextPage,2)
+  assert.deepEqual(result.results.map(r=>[r.currency,r.amount,r.basis]),[['CAD',14,'hammer'],['CAD',14,'with_premium'],['JPY',8,'unspecified']])
+  assert.equal((await get({sales_count:0,sales_records:[]})).status,'no_matches')
+  assert.equal((await get({sales_count:1,sales_records:[{...row,issue_id:322}]})).results.length,0)
+  assert.equal((await get({},429)).status,'rate_limited')
+  assert.equal((await get({},403)).status,'unavailable')
+  assert.equal((await get({prices:[]})).status,'unavailable')
+})
 
 test('Automatic guide selection requires a unique compatible issue',()=>{
   const matchingIssue=(...args)=>guideIssueChoices(...args).match

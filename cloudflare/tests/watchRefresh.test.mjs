@@ -33,6 +33,7 @@ test('Account guide discovers a unique issue, remembers ambiguity resolution and
     assert.doesNotMatch(path.href,/Private|example.test/)
     if(path.pathname==='/v3/types')return Response.json({count:1,types:[{id:42,title:'5 cents',category:'coin',issuer:{name:'Canada'}}]})
     if(path.pathname.endsWith('/issues'))return Response.json(issues)
+    if(path.pathname.endsWith('/sales_records'))return Response.json({sales_count:0,sales_records:[]})
     return Response.json({currency:'USD',prices:[{grade:'vf',price:2}]})
   })
   const endpoint='http://test/valuations/i/guide'
@@ -53,6 +54,16 @@ test('Account guide discovers a unique issue, remembers ambiguity resolution and
   paths.length=0
   assert.equal((await read()).issueID,11)
   assert.deepEqual(paths,['/v3/types/42/issues/11/prices'])
+  const sales=async()=> (await app.fetch(new Request('http://test/valuations/i/numista-sales'),env)).json()
+  paths.length=0
+  assert.equal((await sales()).issueID,11)
+  assert.deepEqual(paths,['/v3/types/42/sales_records'])
+  db.exec("UPDATE items SET year='1935' WHERE id='i'")
+  paths.length=0
+  assert.equal((await sales()).status,'issue_required')
+  assert.equal(paths.some(p=>p.endsWith('/sales_records')),false)
+  db.exec("UPDATE items SET details='{\"mintMark\":\"S\"}' WHERE id='i'")
+  assert.equal((await sales()).issueID,12)
 })
 
 test('Scheduled gap email uses current holdings, opt-in and distinct lots',async t=>{

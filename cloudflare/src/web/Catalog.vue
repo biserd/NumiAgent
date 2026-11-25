@@ -6,6 +6,7 @@ import ItemFields from './ItemFields.vue'
 import PrivatePhoto from './PrivatePhoto.vue'
 import OpinionCard from './OpinionCard.vue'
 import PriceGuide from './PriceGuide.vue'
+import NumistaSales from './NumistaSales.vue'
 const props = defineProps<{startWithNew?:boolean;openedSpecimen?:string}>()
 const rows=ref<Specimen[]>([])
 const folders=ref<Folder[]>([])
@@ -57,6 +58,7 @@ const ocreType=ref<OcreType|null>(null)
 const saleImport=ref<({url:string;amount:number;currency?:string} & Record<string,unknown>)[]>([])
 const attestImport=ref(false)
 const saleResearch=ref<{status:string;results:SaleSuggestion[]}|null>(null)
+const salesVisible=ref(false)
 async function action(fn:()=>Promise<unknown>){
   error.value='';notice.value=''
   try {await fn()}catch(e){error.value=message(e)}
@@ -76,6 +78,7 @@ async function load(page=0){
 }
 async function open(id:string){
   const specimen=await request<Specimen>('/items/'+id)
+  if(active.value!==id) salesVisible.value=false
   active.value=id;detail.value=specimen;form.value={...specimen,details:specimen.details ?? {}}
   estimate.value=null;sale.value={...newSale(),grade:specimen.grade};useRate.value=false;ecbContext.value=''
   ocreId.value=specimen.details?.referenceUrl?.toString() ?? '';ocreType.value=null;saleImport.value=[];attestImport.value=false;saleResearch.value=null
@@ -84,6 +87,7 @@ async function open(id:string){
   await refreshValue()
 }
 function create(){
+  salesVisible.value=false
   active.value='new';detail.value=null;form.value={...emptyItem(),collection_id:folders.value[0]?.id ?? null}
   ocreId.value='';ocreType.value=null;saleImport.value=[];attestImport.value=false
   photosChanged.value=false
@@ -221,8 +225,14 @@ async function importSales(){
   notice.value='Sale evidence imported. Existing lot URLs were kept.'
 }
 async function findSales(){
-  if(!active.value || active.value==='new') return
-  saleResearch.value=await request('/valuations/'+active.value+'/research')
+  const id=active.value
+  if(!id || id==='new') return
+  const result=await request<NonNullable<typeof saleResearch.value>>('/valuations/'+id+'/research')
+  if(active.value===id) saleResearch.value=result
+}
+function toggleSales(event:Event){
+  salesVisible.value=(event.currentTarget as HTMLDetailsElement).open
+  if(salesVisible.value) void action(findSales)
 }
 function reviewSale(entry:SaleSuggestion){
   const {fx,...fields}=entry
@@ -369,14 +379,13 @@ async function importNumisGraph(event:Event) {
       <p v-if="detail && !detail.grade.trim() && estimate?.evidence.length">Save the specimen’s grade to compare sales in the same condition.</p>
       <p v-if="estimate">As of {{estimate.asOf}}. A range requires three strong, recent matches on a comparable grade and premium basis. Conversions use recorded rates.</p>
       <PriceGuide v-if="detail" :key="detail.id" :specimen="detail" :currency="estimate?.currency ?? 'USD'"/>
-      <details><summary>Research comparable sales</summary>
-        <p>Search an approved realized-sale feed for the saved catalog reference. Check the original lot and condition before adding evidence.</p>
-        <button type="button" @click="action(findSales)">Look for sale records</button>
+      <details :key="active" @toggle="toggleSales"><summary>Research comparable sales</summary>
+        <NumistaSales v-if="salesVisible && detail" :specimen="detail"/>
+        <p>Check the original lot and condition before adding sale evidence.</p>
         <a v-if="detail" :href="'https://www.ebay.com/sch/i.html?LH_Sold=1&amp;LH_Complete=1&amp;_nkw='+encodeURIComponent([detail.title,detail.year,detail.grade].filter(Boolean).join(' '))" target="_blank" rel="noreferrer">Compare sold listings on eBay ↗</a>
-        <p v-if="saleResearch?.status==='provider_not_configured'">NumiAgent doesn’t have a completed-sales feed connected.</p>
-        <p v-else-if="saleResearch?.status==='unavailable'">The realized-sale provider is unavailable.</p>
-        <p v-else-if="saleResearch?.status==='reference_required'">Save a catalog reference to search for the same type.</p>
-        <p v-else-if="saleResearch?.status==='no_matches'">No exact-reference sales were returned.</p>
+        <p v-if="saleResearch?.status==='unavailable'">The additional auction feed is unavailable.</p>
+        <p v-else-if="saleResearch?.status==='reference_required'">Save a catalog reference to search the additional auction feed.</p>
+        <p v-else-if="saleResearch?.status==='no_matches'">The additional auction feed returned no exact-reference sales.</p>
         <ul v-if="saleResearch?.results.length" class="record-list">
           <li v-for="entry in saleResearch.results" :key="entry.url">
             <a :href="entry.url" target="_blank" rel="noopener noreferrer">{{entry.house}} · {{entry.auction}} · Lot {{entry.lot}} ↗</a>

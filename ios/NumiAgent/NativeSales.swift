@@ -291,6 +291,28 @@ private struct SaleResearch: Decodable {
     let results: [SaleDraft]
 }
 
+private struct NumistaAuctionPage: Decodable {
+    struct Lot: Decodable, Identifiable {
+        let url: URL
+        let house, auction, date, lot, currency, basis: String
+        let grade: String?
+        let amount: Double
+        var id: URL { url }
+        var premiumLabel: String {
+            switch basis {
+            case "hammer": return "Hammer price"
+            case "with_premium": return "Includes buyer’s premium"
+            default: return "Premium unspecified"
+            }
+        }
+    }
+    let status: String
+    let typeID, issueID, nextPage: Int?
+    let source: URL?
+    let message: String?
+    let results: [Lot]?
+}
+
 struct SaleResearchScreen: View {
     let api: NumiAPI
     let item: Specimen
@@ -299,6 +321,11 @@ struct SaleResearchScreen: View {
     @State private var selected: SaleDraft?
     @State private var error: String?
     @State private var saleEditor = false
+    @State private var numista: NumistaAuctionPage?
+    @State private var salesPage = 1
+    @State private var numistaError: String?
+    @State private var checkingNumista = false
+    @State private var requestID = UUID()
     @State private var keywords: String
 
     init(api: NumiAPI, item: Specimen, onSave: @escaping () -> Void) {
@@ -321,10 +348,32 @@ struct SaleResearchScreen: View {
                 }
             }
             .listRowBackground(CollectorDesign.surface)
+            Section("Numista auction sales") {
+                if let source = numista?.source, let type = numista?.typeID {
+                    Link("Numista N# \(type)" + (numista?.issueID.map { " · Issue \($0)" } ?? ""), destination: source)
+                }
+                if checkingNumista { ProgressView("Looking up completed auctions") }
+                if let message = numistaError ?? numista?.message { Text(message).foregroundStyle(.secondary) }
+                ForEach(numista?.results ?? []) { lot in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Link("\(lot.house) · \(lot.auction) · Lot \(lot.lot)", destination: lot.url)
+                        Text([lot.date, lot.grade].compactMap { $0 }.joined(separator: " · "))
+                        Text(lot.amount, format: .currency(code: lot.currency).presentation(.isoCode))
+                        Text(lot.premiumLabel).font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                if salesPage > 1 { Button("Previous sales") { Task { await loadNumista(salesPage - 1) } } }
+                if let next = numista?.nextPage { Button("Next sales") { Task { await loadNumista(next) } } }
+                if numistaError != nil || ["unavailable","rate_limited","issue_required"].contains(numista?.status ?? "") {
+                    Button("Check again") { Task { await loadNumista(salesPage) } }
+                }
+            }
+            .disabled(checkingNumista)
+            .listRowBackground(CollectorDesign.surface)
             if let research {
-                if research.results.isEmpty {
+                if research.results.isEmpty && research.status != "provider_not_configured" {
                     Section {
-                        CollectorNotice(title: "No verified sales yet", message: explanation(research.status),
+                        CollectorNotice(title: "Additional auction feed", message: explanation(research.status),
                                         icon: "chart.bar", warning: research.status != "no_matches")
                     }
                     .listRowBackground(CollectorDesign.surface)
@@ -379,13 +428,34 @@ struct SaleResearchScreen: View {
             .padding(14)
             .background(CollectorDesign.surface)
         }
-        .task { await load() }
-        .refreshable { await load() }
+        .task { await refresh() }
+        .refreshable { await refresh() }
         .sheet(item: $selected) { sale in
             SaleEditor(api: api, itemID: item.id, sale: sale, onSave: onSave)
         }
         .sheet(isPresented: $saleEditor) {
             SaleEditor(api: api, itemID: item.id, onSave: onSave)
+        }
+    }
+
+    private func refresh() async {
+        async let feed: Void = load()
+        await loadNumista(1)
+        await feed
+    }
+
+    private func loadNumista(_ page: Int) async {
+        let current = UUID()
+        requestID = current
+        checkingNumista = true
+        numistaError = nil
+        defer { if requestID == current { checkingNumista = false } }
+        do {
+            let result: NumistaAuctionPage = try await api.get("/valuations/" + item.id + "/numista-sales",
+                                                              query: [URLQueryItem(name: "page", value: String(page))])
+            if current == requestID && !Task.isCancelled { numista = result; salesPage = page }
+        } catch {
+            if current == requestID && !Task.isCancelled { numistaError = error.localizedDescription }
         }
     }
 

@@ -48,7 +48,7 @@ private struct SwipeablePieceCard<ID: Hashable>: ViewModifier {
     let requestDelete: () -> Void
     @Environment(\.layoutDirection) private var direction
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @GestureState private var travel: CGFloat = 0
+    @State private var travel: CGFloat = 0
     @ScaledMetric(relativeTo: .caption) private var actionWidth: CGFloat = 68
 
     func body(content: Content) -> some View {
@@ -65,7 +65,7 @@ private struct SwipeablePieceCard<ID: Hashable>: ViewModifier {
                         Image(systemName: "trash")
                         Text("Delete").font(.caption.weight(.semibold))
                     }.frame(width: actionWidth).frame(maxHeight: .infinity)
-                        .foregroundStyle(.white).background(Color.red)
+                        .foregroundStyle(.white).background(Color(red: 0.72, green: 0.13, blue: 0.16))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Delete")
@@ -76,19 +76,70 @@ private struct SwipeablePieceCard<ID: Hashable>: ViewModifier {
         }
         .clipShape(.rect(cornerRadius: 12))
         .contentShape(Rectangle())
-        .simultaneousGesture(DragGesture(minimumDistance: 22)
-            .updating($travel) { value, state, _ in
-                if abs(value.translation.width) > abs(value.translation.height) * 1.5 {
-                    state = value.translation.width
-                }
+        .accessibilityElement(children: .contain)
+        .background {
+            CardPanArea { dx, finished in
+                if finished {
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                        travel = 0
+                        if abs(dx) > 27 { revealed = dx * sign > 0 ? id : nil }
+                    }
+                } else { travel = dx }
             }
-            .onEnded { value in
-                let dx = value.translation.width
-                guard abs(dx) > 27, abs(dx) > abs(value.translation.height) * 1.5 else { return }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
-                    revealed = dx * sign > 0 ? id : nil
-                }
-            })
+        }
+    }
+}
+
+// List owns the surrounding scroll gesture. Observe horizontal pans on that same
+// scroll view, scoped to this card’s bounds, so vertical scrolling and taps stay native.
+private struct CardPanArea: UIViewRepresentable {
+    var move: (CGFloat, Bool) -> Void
+
+    func makeUIView(context: Context) -> Area { Area() }
+    func updateUIView(_ view: Area, context: Context) { view.move = move }
+    static func dismantleUIView(_ view: Area, coordinator: ()) { view.detach() }
+
+    final class Area: UIView, UIGestureRecognizerDelegate {
+        var move: ((CGFloat, Bool) -> Void)?
+        private lazy var pan: UIPanGestureRecognizer = {
+            let recognizer = UIPanGestureRecognizer(target: self, action: #selector(dragged))
+            recognizer.maximumNumberOfTouches = 1
+            recognizer.delegate = self
+            return recognizer
+        }()
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            detach()
+            isUserInteractionEnabled = false
+            guard window != nil else { return }
+            var ancestor = superview
+            while let candidate = ancestor, !(candidate is UIScrollView) { ancestor = candidate.superview }
+            (ancestor ?? window)?.addGestureRecognizer(pan)
+        }
+
+        func detach() { pan.view?.removeGestureRecognizer(pan) }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            bounds.contains(touch.location(in: self))
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            let velocity = pan.velocity(in: self)
+            return abs(velocity.x) > abs(velocity.y) * 1.5
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
+
+        @objc private func dragged() {
+            let dx = pan.translation(in: self).x
+            switch pan.state {
+            case .began, .changed: move?(dx, false)
+            case .ended: move?(dx, true)
+            case .cancelled, .failed: move?(0, true)
+            default: break
+            }
+        }
     }
 }
 

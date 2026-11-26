@@ -196,8 +196,8 @@ final class GuestV1Tests: XCTestCase {
         addManually("Keep this token", to: app, isBanknote: false)
         quarter.swipeLeft()
         let action = app.buttons["Delete"].firstMatch
-        XCTAssertTrue(action.waitForExistence(timeout: 5))
         recordScreenshot("Swipe to delete – gallery", app)
+        XCTAssertTrue(action.waitForExistence(timeout: 5), app.debugDescription)
         action.tap()
         let prompt = app.alerts.firstMatch
         XCTAssertTrue(prompt.staticTexts["Delete “United States quarter”?"].waitForExistence(timeout: 5))

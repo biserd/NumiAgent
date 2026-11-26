@@ -16,7 +16,7 @@ export async function mergeItems(env:Env,user:string,target:string,source:string
   const extraFields = ['issuer','ruler','denomination','year','reference','grade']
   const keepKnown = extraFields.map(field=>`${field}=COALESCE(NULLIF(items.${field},''),extra.${field})`).join(',')
   const [, , , , , removed] = await env.DB.batch([
-    env.DB.prepare(`UPDATE items SET ${keepKnown},collection_id=COALESCE(items.collection_id,extra.collection_id),
+    env.DB.prepare(`UPDATE items SET ${keepKnown},type_locked=MAX(items.type_locked,extra.type_locked),collection_id=COALESCE(items.collection_id,extra.collection_id),
       notes=CASE WHEN extra.notes='' OR extra.notes=items.notes THEN items.notes WHEN items.notes='' THEN extra.notes
         ELSE substr(items.notes||char(10)||extra.notes,1,4000) END,
       tags=CASE WHEN extra.tags='' OR extra.tags=items.tags THEN items.tags WHEN items.tags='' THEN extra.tags

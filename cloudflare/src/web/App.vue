@@ -143,7 +143,7 @@ onUnmounted(()=>{
       <nav aria-label="Catalog"><button v-for="route in routes" :key="route" :aria-current="route===page ? 'page':undefined" @click="go(route)">{{ route }}</button></nav>
     </aside>
     <main class="workspace-main">
-      <Overview v-if="page==='Overview'" @imports="go('Imports')" @collection="go('Collection',$event)" @themes="go('Themes')"/>
+      <Overview v-if="page==='Overview'" @imports="go('Imports')" @collection="go('Collection',$event)" @specimen="viewSpecimen" @themes="go('Themes')"/>
       <Catalog v-else-if="page==='Collection'" :start-with-new="startWithNew" :opened-specimen="openedSpecimen"/>
       <GoalsMarket v-else-if="page==='Themes' || page==='Marketplace'" :key="page" :mode="page" :initial-query="marketQuery" @search="search"/>
       <Developer v-else-if="page==='Developer'"/>

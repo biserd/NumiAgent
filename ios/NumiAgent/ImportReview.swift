@@ -222,6 +222,10 @@ struct ImportReview: View {
                            reference: CoinCatalogMatch?, unidentified: Bool) {
         guard previewBatch == nil else { return }
         var draft = suggestion?.draft(using: reference) ?? ItemDraft()
+        if suggestion == nil, let kind = photo.candidates.first?.type, photo.candidates.allSatisfy({ $0.type == kind }) {
+            draft.type = kind
+            draft.typeLocked = true
+        }
         if unidentified {
             draft.type = photo.candidates.first?.type ?? "coin"
             draft.title = draft.type == "banknote" ? "Unidentified banknote" : "Unidentified coin"
@@ -355,7 +359,8 @@ private struct ImportPhotoSection: View {
     private func sidePhoto(_ side: ImportedPhoto, label: String? = nil) -> some View {
         VStack {
             SpecimenImage(api: api, id: sample ? nil : side.id,
-                          sampleAsset: sample && side.record == nil ? "DemoNickel" : nil)
+                          sampleAsset: sample && side.record == nil ? "DemoNickel" : nil,
+                          zoomLabel: "Zoom " + (label?.lowercased() ?? "specimen") + " photo")
                 .frame(height: label == nil ? (expanded ? 265 : 190) : (expanded ? 155 : 112))
                 .clipShape(.rect(cornerRadius: 8))
             if let label { Text(label).font(.caption).foregroundStyle(.secondary) }
@@ -508,7 +513,7 @@ struct SpecimenIdentificationSheet: View {
                             Text("Multiple items were detected. Review a match that belongs to this specimen.")
                                 .foregroundStyle(.secondary)
                         }
-                        ForEach(candidates.indices, id: \.self) { index in
+                        ForEach(candidates.indices.filter { item.typeLocked != true || candidates[$0].type == item.type }, id: \.self) { index in
                             Section {
                                 IdentificationChoice(suggestion: candidates[index]) { match in
                                     draft = candidates[index].draft(using: match, updating: item)

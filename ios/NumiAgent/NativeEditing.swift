@@ -103,9 +103,13 @@ struct ItemEditor: View {
         NavigationStack {
             Form {
                 Section("Identification") {
-                    Picker("Type", selection: $draft.type) {
-                        Text("Coin").tag("coin")
-                        Text("Banknote").tag("banknote")
+                    if draft.typeLocked == true {
+                        LabeledContent("Piece type", value: draft.type == "coin" ? "Coin" : "Banknote")
+                    } else {
+                        Picker("Type", selection: $draft.type) {
+                            Text("Coin").tag("coin")
+                            Text("Banknote").tag("banknote")
+                        }
                     }
                     TextField("Title", text: $draft.title)
                     TextField("Issuer", text: $draft.issuer)
@@ -192,7 +196,7 @@ struct ItemEditor: View {
         Section("Photos") {
             ForEach(photos.indices, id: \.self) { index in
                 let photo = photos[index]
-                SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil).frame(height: 140)
+                SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil, zoomLabel: "Zoom photo").frame(height: 140)
                 Picker("Side", selection: Binding(
                     get: { draft.photos?[safe: index]?.side ?? "overview" },
                     set: { if (draft.photos?.count ?? 0) > index { draft.photos?[index].side = $0 } }

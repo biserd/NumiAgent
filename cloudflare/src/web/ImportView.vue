@@ -3,6 +3,7 @@ import { computed, onActivated, onDeactivated, ref } from 'vue'
 import { cleanItem, emptyItem, message, photoURL, preparePhoto, request } from './api'
 import type { Box, Candidate, Folder, Link, Photo, RecordForm, ScanReview } from './api'
 import ItemFields from './ItemFields.vue'
+import PhotoViewer from './PhotoViewer.vue'
 
 defineEmits<{specimen:[id:string]}>()
 type ImportPhoto = Photo & {side?:'obverse'|'reverse'|null;slot?:number|null;record?:{id:string;title:string}|null;scan?:ScanReview}
@@ -131,10 +132,11 @@ function review(photo:Photo,candidate?:Candidate){
   reverse.value=active ? companions(active).find(p=>p.side==='reverse')?.id ?? '' : ''
   if(candidate){
     const {confidence:_confidence,crop:_crop,model:_model,referenceMatches:_references,...fields}=candidate
-    form.value={...emptyItem(),...fields,details:fields.details ?? {},collection_id:folders.value[0]?.id ?? null}
+    form.value={...emptyItem(),...fields,typeLocked:true,details:fields.details ?? {},collection_id:folders.value[0]?.id ?? null}
   } else {
     const type=active?.candidates[0]?.type ?? 'coin'
-    form.value={...emptyItem(),type,title:active?.slot!=null ? 'Unidentified '+type : '',collection_id:folders.value[0]?.id ?? null}
+    form.value={...emptyItem(),type,typeLocked:!!active?.candidates.length && active.candidates.every(p=>p.type===type),
+      title:active?.slot!=null ? 'Unidentified '+type : '',collection_id:folders.value[0]?.id ?? null}
   }
   references.value=candidate?.referenceMatches ?? []
   box.value=candidate?.crop ? {...candidate.crop}:{x:0,y:0,width:1,height:1}
@@ -225,7 +227,9 @@ async function bulk(){
       <article class="photo-card" v-for="(p,index) in subjects" :key="p.id">
         <div class="scan-views">
           <figure v-for="(view,position) in [p,...companions(p)]" :key="view.id">
-            <img v-if="view.state!=='uploading'" loading="lazy" :src="photoURL(view.id)" :alt="photoLabel(position)+' of item '+(index+1)">
+            <PhotoViewer v-if="view.state!=='uploading'" :src="photoURL(view.id)" :label="photoLabel(position)+' of item '+(index+1)">
+              <img loading="lazy" :src="photoURL(view.id)" :alt="photoLabel(position)+' of item '+(index+1)">
+            </PhotoViewer>
             <figcaption v-if="p.slot!=null || batch.paired">{{photoLabel(position)}}</figcaption>
           </figure>
         </div>

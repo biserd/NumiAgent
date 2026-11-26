@@ -26,6 +26,8 @@ struct TabletWorkspace: View {
     @ObservedObject var session: AppSession
     let account: Account?
     @StateObject private var capture: CaptureDraftStore
+    @StateObject private var catalogResults = CatalogResults()
+    @AppStorage("collector-list-view") private var listView = false
     @State private var section: CollectorTab? = PreviewLaunch.tab
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var compactColumn: NavigationSplitViewColumn = .content
@@ -76,6 +78,15 @@ struct TabletWorkspace: View {
         } detail: {
             NavigationStack {
                 workspaceDetail
+                    .toolbar {
+                        if activeSection == .collection && (specimen != nil || openedItemID != nil) {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Collection gallery", systemImage: "square.grid.2x2") {
+                                    specimen = nil; openedItemID = nil
+                                }
+                            }
+                        }
+                    }
             }
             .id(detailRoute)
         }
@@ -94,7 +105,7 @@ struct TabletWorkspace: View {
     private var workspaceList: some View {
         switch activeSection {
         case .collection:
-            CatalogScreen(api: session.api, demo: demo, capture: capture, query: $search,
+            CatalogScreen(results: catalogResults, api: session.api, demo: demo, capture: capture, query: $search,
                           openedItemID: $openedItemID, openCapture: openCapture, openAccount: nil,
                           itemCreated: openNewItem,
                           workspaceSelection: .init(item: $specimen, revision: catalogRevision))
@@ -134,8 +145,26 @@ struct TabletWorkspace: View {
                     catalogRevision += 1
                 }
             } else {
-                ContentUnavailableView("Select a specimen", systemImage: CollectorTab.collection.icon,
-                                       description: Text("Choose a coin or banknote to see its photos and valuation."))
+                ScrollView {
+                    if catalogResults.items.isEmpty {
+                        if catalogResults.loading { ProgressView("Loading collection") }
+                        else { ContentUnavailableView("No pieces to show", systemImage: "square.grid.2x2",
+                            description: Text(catalogResults.error ?? "Add a piece or change your search and filters.")) }
+                    } else {
+                        let cards = ForEach(catalogResults.items) { item in
+                            Button { specimen = item; compactColumn = .detail } label: {
+                                if listView { Label(item.title, systemImage: item.type == "coin" ? "circle" : "banknote")
+                                    .frame(maxWidth: .infinity, alignment: .leading).padding() }
+                                else { accountCard(item, api: session.api, demo: demo) }
+                            }.buttonStyle(.plain)
+                        }
+                        if listView { LazyVStack(alignment: .leading) { cards } }
+                        else { CollectionGrid { cards }.padding() }
+                        if catalogResults.next != nil {
+                            Button("Load more items") { catalogResults.requestedMore += 1 }.disabled(catalogResults.loading)
+                        }
+                    }
+                }.navigationTitle("Collection gallery").background(CollectorDesign.background)
             }
         case .capture:
             if let importID {

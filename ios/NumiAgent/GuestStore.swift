@@ -88,6 +88,14 @@ struct GuestPiece: Codable, Identifiable {
     var automaticFields: Set<GuestDetailField>?
     var manuallyEditedFields: Set<GuestDetailField>?
     var automaticReference: Bool?
+    var typeLocked: Bool?
+
+    var hasIdentifiedType: Bool {
+        if typeLocked == true { return true }
+        guard let suggestions = recognition?.suggestions, !suggestions.isEmpty else { return false }
+        return suggestions.allSatisfy { $0.type == type } ||
+            (status == .confirmed && suggestions.contains { $0.type == type })
+    }
 
     var displayTitle: String {
         title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -95,11 +103,23 @@ struct GuestPiece: Codable, Identifiable {
     }
 
     mutating func edit(_ field: GuestDetailField, value: String) {
+        if field == .type && hasIdentifiedType && value != type { return }
         self[keyPath: field.field] = value
         var edited = manuallyEditedFields ?? []
         edited.insert(field)
         manuallyEditedFields = edited
         automaticFields?.remove(field)
+    }
+
+    mutating func acceptRecognition(_ incoming: LocalRecognitionResult) {
+        var result = incoming
+        if hasIdentifiedType {
+            typeLocked = true
+            result.suggestions.removeAll { $0.type != type }
+            if result.suggestions.count != incoming.suggestions.count { result.likely = false }
+        }
+        recognition = result
+        fill(from: result)
     }
 
     mutating func fill(from result: LocalRecognitionResult) {
@@ -110,8 +130,13 @@ struct GuestPiece: Codable, Identifiable {
                   result.suggestions.allSatisfy({ $0[keyPath: key].localizedCaseInsensitiveCompare(first) == .orderedSame }) else { return nil }
             return first
         }
+        if let identified = agreed(\.type), ["coin", "banknote"].contains(identified) {
+            if typeLocked == true && type != identified { return }
+            type = identified
+            typeLocked = true
+        }
         let fields: [(GuestDetailField, String?)] = [
-            (.type, agreed(\.type)), (.title, likely?.title),
+            (.title, likely?.title),
             (.issuer, reading.issuer ?? agreed(\.issuer)),
             (.denomination, reading.denomination ?? agreed(\.denomination)),
             (.year, reading.year ?? likely?.year)
@@ -134,7 +159,10 @@ struct GuestPiece: Codable, Identifiable {
     }
 
     mutating func resetPhotoEvidence() {
-        for field in automaticFields ?? [] { self[keyPath: field.field] = field == .type ? "coin" : "" }
+        if hasIdentifiedType { typeLocked = true }
+        for field in automaticFields ?? [] where field != .type || typeLocked != true {
+            self[keyPath: field.field] = field == .type ? "coin" : ""
+        }
         automaticFields = nil
         if automaticReference == true { reference = nil }
         automaticReference = nil

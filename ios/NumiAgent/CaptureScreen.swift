@@ -738,13 +738,17 @@ private struct DraftPhotoRow: View {
     let moveLater: (() -> Void)?
     @State private var selection: PhotosPickerItem?
     @State private var showReplacement = false
+    @State private var inspecting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 if let file, let image = UIImage(contentsOfFile: file.path) {
-                    Image(uiImage: image).resizable().scaledToFill()
-                        .frame(width: 64, height: 56).clipShape(.rect(cornerRadius: 6)).accessibilityHidden(true)
+                    Button { inspecting = true } label: {
+                        Image(uiImage: image).resizable().scaledToFill().frame(width: 64, height: 56)
+                            .clipShape(.rect(cornerRadius: 6))
+                    }.buttonStyle(.plain).accessibilityLabel("Zoom photo \(number)")
+                        .fullScreenCover(isPresented: $inspecting) { PiecePhotoViewer(photo: image) }
                 }
                 VStack(alignment: .leading) {
                     Text(role).font(.headline).accessibilityIdentifier("draft-photo-\(number)")

@@ -1,7 +1,48 @@
 import SwiftUI
 import PhotosUI
+import ImageIO
+
+struct CollectionCard<Photo: View>: View {
+    let title: String
+    let subtitle: String
+    @ViewBuilder let photo: () -> Photo
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear.aspectRatio(1.35, contentMode: .fit)
+                .overlay { photo() }.clipped()
+                .background(CollectorDesign.highlight.opacity(0.35))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline).lineLimit(2)
+                if !subtitle.isEmpty { Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
+        }.background(CollectorDesign.surface, in: .rect(cornerRadius: 12))
+            .clipShape(.rect(cornerRadius: 12))
+            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(.secondary.opacity(0.22)) }
+            .contentShape(Rectangle()).accessibilityElement(children: .combine)
+    }
+}
+
+struct CollectionGrid<Content: View>: View {
+    @Environment(\.dynamicTypeSize) private var textSize
+    @Environment(\.horizontalSizeClass) private var widthClass
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: textSize.isAccessibilitySize ? 270 : widthClass == .regular ? 180 : 140),
+                                    spacing: 12, alignment: .top)], spacing: 14, content: content)
+    }
+}
+
+@MainActor final class CatalogResults: ObservableObject {
+    @Published var items: [Specimen] = []
+    @Published var next: Int?
+    @Published var loading = false
+    @Published var error: String?
+    @Published var requestedMore = 0
+}
 
 struct CatalogScreen: View {
+    @ObservedObject var results: CatalogResults
     private enum AddSheet: String, Identifiable {
         case actions, manual
         var id: String { rawValue }
@@ -22,10 +63,11 @@ struct CatalogScreen: View {
     @State private var type = ""
     @State private var folder = ""
     @State private var folders: [CollectionFolder] = []
-    @State private var items: [Specimen] = []
-    @State private var next: Int?
-    @State private var loading = false
-    @State private var error: String?
+    @AppStorage("collector-list-view") private var listView = false
+    private var items: [Specimen] { results.items }
+    private var loading: Bool { results.loading }
+    private var next: Int? { results.next }
+    private var error: String? { results.error }
 
     var body: some View {
         if workspaceSelection != nil { catalog }
@@ -51,7 +93,15 @@ struct CatalogScreen: View {
             }
             if !items.isEmpty {
                 Section {
-                    ForEach(items) { item in
+                    if workspaceSelection == nil && !listView {
+                        CollectionGrid {
+                            ForEach(items) { item in
+                                Button { openedItemID = item.id } label: {
+                                    accountCard(item, api: api, demo: demo)
+                                }.buttonStyle(.plain).accessibilityIdentifier("specimen-\(item.id)")
+                            }
+                        }.listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
+                    } else { ForEach(items) { item in
                         if workspaceSelection != nil {
                             NavigationLink(value: item.id) { row(item) }
                                 .accessibilityIdentifier("specimen-\(item.id)")
@@ -62,7 +112,7 @@ struct CatalogScreen: View {
                                 row(item)
                             }
                         }
-                    }
+                    } }
                     if let next {
                         Button("Load more items") { Task { await load(page: next, key: loadKey) } }.disabled(loading)
                     }
@@ -82,6 +132,9 @@ struct CatalogScreen: View {
         .scrollContentBackground(.hidden)
         .background(CollectorDesign.background)
         .navigationTitle("Collection")
+        .onChange(of: results.requestedMore) { _, _ in
+            if let next, !loading { Task { await load(page: next, key: loadKey) } }
+        }
         .searchable(text: $query, prompt: "Name, date, issuer or reference")
         .toolbar {
             if let openAccount {
@@ -188,6 +241,9 @@ struct CatalogScreen: View {
 
     private var filterMenu: some View {
         Menu("Filter collection", systemImage: "line.3.horizontal.decrease.circle") {
+            Button(listView ? "Show gallery" : "Show list", systemImage: listView ? "square.grid.2x2" : "list.bullet") {
+                listView.toggle()
+            }
             Picker("Item type", selection: $type) {
                 Text("All items").tag("")
                 Text("Coins").tag("coin")
@@ -236,15 +292,15 @@ struct CatalogScreen: View {
 
     private func load(page: Int, key: LoadKey) async {
         if demo {
-            items = DemoCollection.specimens.filter {
+            results.items = DemoCollection.specimens.filter {
                 key.query.isEmpty || [$0.title, $0.issuer, $0.year, $0.ruler, $0.reference].contains {
                     $0.localizedCaseInsensitiveContains(key.query)
                 }
             }
             return
         }
-        loading = true
-        error = nil
+        results.loading = true
+        results.error = nil
         do {
             let result: CollectionPage = try await api.get("/items", query: [
                 URLQueryItem(name: "q", value: key.query),
@@ -253,16 +309,22 @@ struct CatalogScreen: View {
                 URLQueryItem(name: "page", value: String(page))
             ])
             guard !Task.isCancelled, key == loadKey else { return }
-            items = page == 0 ? result.items : items + result.items.filter { resultItem in
+            results.items = page == 0 ? result.items : items + result.items.filter { resultItem in
                 !items.contains(where: { $0.id == resultItem.id })
             }
-            next = result.next
-            loading = false
+            results.next = result.next
+            results.loading = false
         } catch {
             guard !Task.isCancelled, key == loadKey else { return }
-            self.error = error.localizedDescription
-            loading = false
+            results.error = error.localizedDescription
+            results.loading = false
         }
+    }
+}
+
+@MainActor func accountCard(_ item: Specimen, api: NumiAPI, demo: Bool) -> some View {
+    CollectionCard(title: item.title, subtitle: item.subtitle) {
+        SpecimenImage(api: api, id: item.photo, sampleAsset: demo ? DemoCollection.photo(for: item) : nil)
     }
 }
 
@@ -304,9 +366,32 @@ struct SpecimenImage: View {
     let api: NumiAPI
     let id: String?
     let sampleAsset: String?
+    var zoomLabel: String? = nil
     @State private var image: UIImage?
+    @State private var inspecting = false
 
     var body: some View {
+        Group {
+            if let zoomLabel {
+                Button { inspecting = true } label: {
+                    thumbnail.overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "magnifyingglass").padding(8)
+                            .background(.regularMaterial, in: .circle).padding(6)
+                    }.contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel(zoomLabel)
+                    .disabled(image == nil && sampleAsset == nil)
+            } else { thumbnail.accessibilityHidden(true) }
+        }
+        .task(id: id) {
+            image = nil
+            if let id, let data = try? await api.photo(id), !Task.isCancelled { image = UIImage(data: data) }
+        }
+        .fullScreenCover(isPresented: $inspecting) {
+            if let photo = image ?? sampleAsset.flatMap({ UIImage(named: $0) }) { PiecePhotoViewer(photo: photo) }
+        }
+    }
+
+    private var thumbnail: some View {
         ZStack {
             Rectangle().fill(Color.secondary.opacity(0.08))
             if let image {
@@ -315,13 +400,6 @@ struct SpecimenImage: View {
                 Image(sampleAsset).resizable().scaledToFit()
             } else {
                 Image(systemName: "photo").foregroundStyle(.secondary)
-            }
-        }
-        .accessibilityHidden(true)
-        .task(id: id) {
-            image = nil
-            if let id, let data = try? await api.photo(id) {
-                image = UIImage(data: data)
             }
         }
     }
@@ -581,7 +659,7 @@ struct SpecimenScreen: View {
             }
             .padding(.vertical, 6)
         } else if item.photo != nil || sample != nil {
-            SpecimenImage(api: api, id: item.photo, sampleAsset: sample)
+            SpecimenImage(api: api, id: item.photo, sampleAsset: sample, zoomLabel: "Zoom specimen photo")
                 .frame(height: expanded ? 245 : 180)
                 .clipShape(.rect(cornerRadius: 12))
         }
@@ -608,7 +686,7 @@ struct SpecimenScreen: View {
 
     private func galleryPhoto(_ photo: PhotoLink, height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil)
+            SpecimenImage(api: api, id: photo.photoId, sampleAsset: nil, zoomLabel: "Zoom " + photo.side + " photo")
                 .frame(height: height)
                 .clipShape(.rect(cornerRadius: 8))
             Text(photo.side == "obverse" ? "Front" : photo.side == "reverse" ? "Back" : "Detail")

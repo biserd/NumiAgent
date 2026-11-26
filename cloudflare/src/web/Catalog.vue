@@ -4,6 +4,8 @@ import { cleanItem, emptyItem, message, photoURL, preparePhoto, request } from '
 import type { Candidate, Folder, Link, Photo, RecordForm, ScanReview, Specimen } from './api'
 import ItemFields from './ItemFields.vue'
 import PrivatePhoto from './PrivatePhoto.vue'
+import PhotoViewer from './PhotoViewer.vue'
+import SpecimenTile from './SpecimenTile.vue'
 import OpinionCard from './OpinionCard.vue'
 import PriceGuide from './PriceGuide.vue'
 import NumistaSales from './NumistaSales.vue'
@@ -190,7 +192,8 @@ async function addPhoto(event:Event){
 }
 function useObservation(observation:Candidate){
   const {type,title,issuer,ruler,year,denomination,reference,details}=observation
-  form.value={...form.value,type,title,issuer:issuer || form.value.issuer,ruler:ruler || form.value.ruler,
+  if(form.value.typeLocked && type!==form.value.type) return
+  form.value={...form.value,type,typeLocked:true,title,issuer:issuer || form.value.issuer,ruler:ruler || form.value.ruler,
     denomination:denomination || form.value.denomination,year:year || form.value.year,reference:reference || form.value.reference,
     details:{...form.value.details,...Object.fromEntries(Object.entries(details ?? {}).filter(([,value])=>!!value))}}
   notice.value='Review and save these details.'
@@ -317,7 +320,9 @@ async function importNumisGraph(event:Event) {
   <p role="alert" class="error" v-if="error">{{error}}</p><p role="status" v-if="notice">{{notice}}</p>
   <section v-if="active" class="panel">
     <div class="section-heading"><h2>{{active==='new'?'New specimen':detail?.title}}</h2><button @click="active=null">Close specimen</button></div>
-    <div v-if="form.photos?.length" class="photo-grid specimen-images"><figure v-for="(link,index) in form.photos" :key="index"><PrivatePhoto :id="link.photoId" :description="link.side" :crop="link.crop"/><figcaption>{{link.side}}</figcaption></figure></div>
+    <div v-if="form.photos?.length" class="photo-grid specimen-images"><figure v-for="link in form.photos" :key="link.photoId+link.side">
+      <PhotoViewer :src="photoURL(link.photoId)" :label="link.side+' photo'"><PrivatePhoto :id="link.photoId" :description="link.side" :crop="link.crop"/></PhotoViewer>
+      <figcaption>{{link.side}}</figcaption></figure></div>
     <OpinionCard v-if="detail && (detail.photos?.length || detail.photo)" :key="detail.id" :piece="detail" :valuation="estimate"/>
     <label v-if="detail && (detail.photos?.length ?? 0)<12">
       {{addingPhoto ? 'Adding photo…' : detail.photos?.length===1 ? 'Add the other side' : 'Add a photo'}}
@@ -342,7 +347,7 @@ async function importNumisGraph(event:Event) {
       <p v-if="visualSearching" role="status">Reading photos and checking references…</p>
       <p v-if="visualError" role="alert">{{visualError}}</p>
       <div v-if="visualSearch" aria-live="polite">
-        <button v-for="(candidate,index) in visualSearch.candidates" :key="index" @click="useObservation(candidate)">Review {{candidate.title}}</button>
+        <button v-for="(candidate,index) in visualSearch.candidates.filter(c=>!form.typeLocked || c.type===form.type)" :key="index" @click="useObservation(candidate)">Review {{candidate.title}}</button>
         <p v-if="visualSearch.scan?.next">{{visualSearch.scan.next}}</p>
         <p v-if="Object.values(visualSearch.scan?.providers ?? {}).includes('unavailable')">Some reference sources were unavailable.</p>
         <ul v-if="visualSearch.scan?.leads.length" aria-label="Possible references">
@@ -474,11 +479,7 @@ async function importNumisGraph(event:Event) {
   <p v-if="!rows.length" class="empty">No specimens match this view.</p>
   <div :class="['collection-results',layout]">
     <article v-for="row in rows" :key="row.id" class="photo-card">
-      <button class="specimen-button" @click="action(()=>open(row.id))">
-        <img v-if="row.photo" loading="lazy" :src="photoURL(row.photo)" alt="">
-        <span v-else class="no-photo" aria-hidden="true">{{row.type==='coin'?'◉':'▤'}}</span>
-        <span class="specimen-label"><strong>{{row.title}}</strong><small>{{[row.issuer,row.year,row.reference].filter(Boolean).join(' · ') || row.type}}</small></span>
-      </button>
+      <SpecimenTile :item="row" @open="action(()=>open(row.id))"/>
       <label class="check"><input v-model="selected" type="checkbox" :value="row.id" :disabled="selected.length>=50 && !selected.includes(row.id)">Select {{row.title}}</label>
     </article>
   </div>

@@ -165,6 +165,7 @@ export const sitePages:Record<string,SitePage> = {
         'If you request a launch email, we use the address you provide to send a confirmation and one launch announcement. The list is separate from NumiAgent accounts. You can remove your address using the link in the confirmation email. Unconfirmed requests expire after 24 hours. Confirmed entries are kept for up to one year.'
       ]},
       {title:'Access, export, and deletion',paragraphs:[
+        'On iPhone and iPad, checking Numista auction sales from a device-only record shares the piece type, issuer, denomination and year. Photos, notes and purchase details stay on the device. NumiAgent uses temporary lookup choices that expire after 15 minutes and limits how many requests each network can make.',
         'The app excludes its guest collection folder from automatic device backups. You can export a separate encrypted backup and choose where to save it, including iCloud Drive if you use it. Keep the recovery key separately. A spreadsheet export includes private fields only when you choose that option.',
         'Keep your collection in NumiAgent as long as you need it. Settings lets you export your records, revoke sessions, and request deletion. Use Developer access to revoke API keys and connected agents. Deletion disables access and queues removal of private records and photographs. Backup and operational copies may expire on their own schedules.'
       ],links:[{href:'/app#settings',label:'Manage your account'},contact]},

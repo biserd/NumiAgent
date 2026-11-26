@@ -203,6 +203,9 @@ private struct GuestPrivacyView: View {
                 Section("Online identification") {
                     Text("Local identification runs on this device. Search online sends the photos shown for that piece to NumiAgent for processing by Cloudflare Workers AI.")
                 }
+                Section("Comparable sales") {
+                    Text("When you check Numista, NumiAgent uses the piece type, issuer, denomination and year to look up completed auctions. Photos, notes and purchase details stay here.")
+                }
                 Section("Browser access") {
                     Text("You can open a separate web collection and sign in with your email. Opening the browser or signing in leaves your guest collection on this device.")
                     Button("Open web account", systemImage: "safari") { confirmBrowser = true }
@@ -241,6 +244,7 @@ private struct GuestPieceScreen: View {
     @State private var pendingPair: GuestPiece?
     @State private var zoomedSide: GuestSide?
     @State private var cardPresented = false
+    @State private var salesPresented = false
     @State private var showAlternatives = false
     @State private var selectedMatch = false
     @State private var onlineCompleted = false
@@ -254,6 +258,11 @@ private struct GuestPieceScreen: View {
                             Text(isDraft ? "Scan a piece" : piece.displayTitle)
                                 .font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
                             if isDraft { Text("Coins and banknotes").foregroundStyle(.secondary) }
+                        }
+                        if !isDraft || !piece.denomination.isBlank || !piece.title.isBlank {
+                            Button("Find comparable sales", systemImage: "chart.bar") { salesPresented = true }
+                                .buttonStyle(.bordered)
+                                .accessibilityIdentifier("guest-comparable-sales")
                         }
                         ViewThatFits(in: .horizontal) {
                             HStack(alignment: .top, spacing: 20) {
@@ -333,6 +342,9 @@ private struct GuestPieceScreen: View {
                 apply(suggestion)
                 catalogPicker = false
             }
+        }
+        .sheet(isPresented: $salesPresented) {
+            if let piece = store.piece(id) { DeviceSaleResearch(api: api, piece: piece) }
         }
         .sheet(isPresented: $cardPresented) {
             if let piece = store.piece(id), let collection = store.activeID {

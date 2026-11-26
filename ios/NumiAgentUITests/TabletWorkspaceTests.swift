@@ -2,6 +2,28 @@ import XCTest
 
 final class TabletWorkspaceTests: XCTestCase {
     @MainActor
+    func testDeviceOnlyQuarterHasComparableSales() {
+        let app = XCUIApplication()
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture"]
+        app.launch()
+        let quarter = app.staticTexts["United States quarter"].firstMatch
+        XCTAssertTrue(quarter.waitForExistence(timeout: 15))
+        quarter.tap()
+        let sales = app.buttons["guest-comparable-sales"].firstMatch
+        XCTAssertTrue(sales.waitForExistence(timeout: 10))
+        XCTAssertTrue(sales.isHittable)
+        sales.tap()
+        XCTAssertTrue(app.buttons["Check Numista auction sales"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["guest-sales-year"].value as? String, "1991")
+        XCTAssertEqual(app.textFields["guest-sales-denomination"].value as? String, "quarter dollar")
+        XCTAssertTrue(app.buttons["Check Numista auction sales"].isEnabled)
+        app.buttons["Done"].firstMatch.tap()
+        XCTAssertTrue(sales.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testPreviewSecondOpinionFromCollection() {
         let app = XCUIApplication()
         app.launchArguments = ["--preview-collection"]

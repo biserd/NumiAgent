@@ -206,7 +206,7 @@ final class GuestStore: ObservableObject {
         reload()
         #if DEBUG
         if root == nil, testID != nil, active == nil,
-           ProcessInfo.processInfo.arguments.contains("--guest-consent-fixture") {
+           ProcessInfo.processInfo.arguments.contains(where: { ["--guest-consent-fixture", "--guest-sales-fixture"].contains($0) }) {
             do {
                 guard let image = UIImage(named: "DemoNickel") else { throw GuestStorageError.missingPhoto }
                 let photo = try CaptureDraftStore.jpeg(image)
@@ -217,6 +217,15 @@ final class GuestStore: ObservableObject {
                 try changePiece(id) {
                     $0.recognition = LocalRecognitionResult()
                     $0.edit(.issuer, value: "Collector correction")
+                }
+                if ProcessInfo.processInfo.arguments.contains("--guest-sales-fixture") {
+                    try changePiece(id) {
+                        $0.edit(.title, value: "United States quarter")
+                        $0.edit(.issuer, value: "United States of America")
+                        $0.edit(.denomination, value: "quarter dollar")
+                        $0.edit(.year, value: "1991")
+                    }
+                    try save(id, status: .unidentified)
                 }
             } catch { self.error = error.localizedDescription }
         }

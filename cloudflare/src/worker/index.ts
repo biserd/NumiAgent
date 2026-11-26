@@ -14,6 +14,7 @@ import { publicPage } from './publicSite'
 import { exchangeRates, ocre } from './officialData'
 import { verifyPhotoRelease } from './photoRelease'
 import { guestScans } from './guestScans'
+import { guestSales } from './guestSales'
 import { waitlist, waitlistRetentionDays } from './launchWaitlist'
 import { generateCardFrame } from './cardFrame'
 import { catalogEntryId, catalogQuery, getCatalogEntry, getCatalogRelease, searchCatalog } from './referenceCatalog'
@@ -27,6 +28,7 @@ api.post('/contact',submitContact)
 api.route('/launch-waitlist',waitlist)
 api.post('/internal/photo-release',verifyPhotoRelease)
 api.route('/guest-scans',guestScans)
+api.route('/guest-sales',guestSales)
 api.use('*',async(c,next)=>{
   const authorization = c.req.header('Authorization')
   if (authorization !== undefined) return authorizeDeveloper(c,authorization,next)
@@ -119,6 +121,7 @@ async function maintenance(env:Env) {
     env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(now()),
     env.DB.prepare('DELETE FROM developer_keys WHERE expires<=?').bind(now()),
     env.DB.prepare('DELETE FROM guest_scans WHERE expires<=?').bind(now()),
+    env.DB.prepare('DELETE FROM guest_sale_choices WHERE expires<=?').bind(now()),
     env.DB.prepare('DELETE FROM limits WHERE window<?').bind(now()-8*86400),
     env.DB.prepare('DELETE FROM contact_messages WHERE created<?').bind(now()-contactRetentionDays*86400),
     env.DB.prepare('DELETE FROM launch_waitlist WHERE (confirmed_at IS NULL AND requested_at<=?) OR confirmed_at<=?')

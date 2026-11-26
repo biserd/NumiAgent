@@ -66,6 +66,52 @@ test('Account guide discovers a unique issue, remembers ambiguity resolution and
   assert.equal((await sales()).issueID,12)
 })
 
+test('Device-only quarter selects a type and mint before requesting sold lots within the shared quota',async t=>{
+  const vite=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,watch:null},appType:'custom'})
+  t.after(()=>vite.close())
+  const {guestSales}=await vite.ssrLoadModule('/src/worker/guestSales.ts')
+  const db=new DatabaseSync(':memory:')
+  t.after(()=>db.close())
+  for(const file of ['0001_initial.sql','0014_guest_sale_choices.sql']) db.exec(await readFile('migrations/'+file,'utf8'))
+  const env={DB:binding(db),APP_ORIGIN:'https://example.test',NUMISTA_API_KEY:'fixture'}
+  const search={type:'coin',issuer:'United States of America',denomination:'quarter dollar',year:'1991'}
+  const request=(input,headers={})=>guestSales.fetch(new Request(env.APP_ORIGIN+'/',{method:'POST',
+    headers:{Origin:env.APP_ORIGIN,'Content-Type':'application/json',...headers},body:JSON.stringify(input)}),env)
+  let lookups=0
+  t.mock.method(globalThis,'fetch',async url=>{
+    const path=new URL(url)
+    if(path.pathname==='/v3/types'){
+      assert.equal(path.searchParams.get('q'),'United States quarter')
+      return Response.json({count:2,types:[{id:55,title:'¼ Dollar "Washington Quarter"',issuer:{name:'United States'}},
+        {id:25416,title:'10 Dollars "American Gold Eagle" (Bullion Coinage)',issuer:{name:'United States'}}]})
+    }
+    if(path.pathname.endsWith('/issues'))return Response.json([{id:1,year:1990},{id:2,year:1991,mint_letter:'P'},{id:3,year:1991,mint_letter:'D'}])
+    assert.equal(path.pathname,'/v3/types/55/sales_records')
+    assert.equal(path.searchParams.get('issue_id'),'3')
+    lookups++
+    return Response.json({sales_count:0,sales_records:[]})
+  })
+  assert.equal((await request({...search,photos:['private']})).status,400)
+  assert.equal((await request(search,{Origin:'https://elsewhere.test'})).status,403)
+  assert.equal((await request(search,{Authorization:'Bearer developer'})).status,403)
+  const types=await (await request(search)).json()
+  assert.deepEqual(types.choices.map(c=>c.id),[55])
+  const issues=await (await request({ticket:types.ticket,choice:55})).json()
+  assert.deepEqual(issues.choices.map(c=>c.id),[2,3])
+  assert.equal((await request({ticket:issues.ticket,choice:1})).status,400)
+  assert.equal(lookups,0)
+  const result=await (await request({ticket:issues.ticket,choice:3})).json()
+  assert.equal(result.status,'no_matches')
+  assert.equal(result.issueID,3)
+  assert.equal(lookups,1)
+  db.exec("UPDATE limits SET count=200 WHERE action='numista_sales' AND subject='global'")
+  assert.equal((await request({ticket:issues.ticket,choice:3})).status,429)
+  assert.equal(lookups,1)
+  db.exec('UPDATE guest_sale_choices SET expires=0')
+  assert.equal((await request({ticket:issues.ticket,choice:3})).status,404)
+  assert.equal(db.prepare('SELECT count(*) AS n FROM items').get().n,0)
+})
+
 test('Scheduled gap email uses current holdings, opt-in and distinct lots',async t=>{
   const vite=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,watch:null},appType:'custom'})
   t.after(()=>vite.close())

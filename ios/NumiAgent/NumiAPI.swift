@@ -259,6 +259,12 @@ final class NumiAPI {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    func deviceSales<T: Decodable>(_ payload: some Encodable) async throws -> T {
+        let (data, _) = try await send("/guest-sales", method: "POST", body: JSONEncoder().encode(payload),
+                                       authenticated: false)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
     func write(_ path: String, method: String, payload: (any Encodable)? = nil) async throws {
         let body = try payload.map { try JSONEncoder().encode($0) }
         _ = try await send(path, method: method, body: body)

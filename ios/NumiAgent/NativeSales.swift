@@ -292,6 +292,7 @@ private struct SaleResearch: Decodable {
 }
 
 private struct NumistaAuctionPage: Decodable {
+    struct Choice: Decodable, Identifiable { let id: Int; let label: String }
     struct Lot: Decodable, Identifiable {
         let url: URL
         let house, auction, date, lot, currency, basis: String
@@ -311,6 +312,112 @@ private struct NumistaAuctionPage: Decodable {
     let source: URL?
     let message: String?
     let results: [Lot]?
+    let choices: [Choice]?
+    let ticket: String?
+}
+
+private struct AuctionLotRow: View {
+    let lot: NumistaAuctionPage.Lot
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Link("\(lot.house) · \(lot.auction) · Lot \(lot.lot)", destination: lot.url)
+            Text([lot.date, lot.grade].compactMap { $0 }.joined(separator: " · "))
+            Text(lot.amount, format: .currency(code: lot.currency).presentation(.isoCode))
+            Text(lot.premiumLabel).font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct DeviceSaleResearch: View {
+    private struct Hints: Codable {
+        let type: String
+        var issuer, denomination, year: String
+        var isReady: Bool {
+            !issuer.isBlank && !denomination.isBlank && issuer.count <= 80 && denomination.count <= 80 &&
+            year.range(of: #"^-?\d{1,4}$"#, options: .regularExpression) != nil
+        }
+    }
+    private struct Selection: Encodable { let ticket: String; let choice: Int }
+    let api: NumiAPI
+    private let title: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var hints: Hints
+    @State private var history: [NumistaAuctionPage] = []
+    @State private var loading = false
+    @State private var error: String?
+
+    init(api: NumiAPI, piece: GuestPiece) {
+        self.api = api
+        title = piece.displayTitle
+        _hints = State(initialValue: Hints(type: piece.type, issuer: piece.issuer,
+                                          denomination: piece.denomination, year: piece.year))
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(title).font(.headline)
+                    if history.isEmpty {
+                        TextField("Issuer or country", text: $hints.issuer)
+                        TextField("Denomination", text: $hints.denomination)
+                            .accessibilityIdentifier("guest-sales-denomination")
+                        TextField("Year", text: $hints.year)
+                            .accessibilityIdentifier("guest-sales-year")
+                        Button("Check Numista auction sales") { Task { await lookup(hints) } }
+                            .disabled(!hints.isReady || loading)
+                    }
+                } footer: {
+                    if history.isEmpty {
+                        Text("Check Numista with the piece type, issuer, denomination and year. Your photos and private details stay on this device.")
+                    }
+                }
+                if loading { ProgressView("Checking Numista") }
+                if let error { Text(error).foregroundStyle(.secondary) }
+                if let page = history.last {
+                    Section("Numista auction sales") {
+                        if let source = page.source, let type = page.typeID {
+                            Link("Numista N# \(type)" + (page.issueID.map { " · Issue \($0)" } ?? ""), destination: source)
+                        }
+                        if let message = page.message { Text(message) }
+                        if let ticket = page.ticket {
+                            ForEach(page.choices ?? []) { option in
+                                Button(page.status == "choose_type" ? "\(option.label) · N# \(option.id)" : option.label) {
+                                    Task { await lookup(Selection(ticket: ticket, choice: option.id)) }
+                                }
+                            }
+                            if let next = page.nextPage {
+                                Button("Next sales") { Task { await lookup(Selection(ticket: ticket, choice: next)) } }
+                            }
+                        }
+                        ForEach(page.results ?? []) { AuctionLotRow(lot: $0) }
+                    }
+                    Section {
+                        if history.count > 1 { Button("Previous results") { history.removeLast(); error = nil } }
+                        Button("Change search details") { history.removeAll(); error = nil }
+                    }
+                }
+                if let sold = soldListingsURL([hints.issuer, hints.year, hints.denomination].filter { !$0.isBlank }.joined(separator: " ")) {
+                    Link("Search sold listings on eBay", destination: sold)
+                }
+            }
+            .disabled(loading)
+            .navigationTitle("Comparable sales")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+
+    private func lookup(_ request: some Encodable) async {
+        guard !loading else { return }
+        loading = true
+        error = nil
+        defer { loading = false }
+        do {
+            let page: NumistaAuctionPage = try await api.deviceSales(request)
+            history.append(page)
+        } catch { self.error = error.localizedDescription }
+    }
 }
 
 struct SaleResearchScreen: View {
@@ -355,12 +462,7 @@ struct SaleResearchScreen: View {
                 if checkingNumista { ProgressView("Looking up completed auctions") }
                 if let message = numistaError ?? numista?.message { Text(message).foregroundStyle(.secondary) }
                 ForEach(numista?.results ?? []) { lot in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Link("\(lot.house) · \(lot.auction) · Lot \(lot.lot)", destination: lot.url)
-                        Text([lot.date, lot.grade].compactMap { $0 }.joined(separator: " · "))
-                        Text(lot.amount, format: .currency(code: lot.currency).presentation(.isoCode))
-                        Text(lot.premiumLabel).font(.footnote).foregroundStyle(.secondary)
-                    }
+                    AuctionLotRow(lot: lot)
                 }
                 if salesPage > 1 { Button("Previous sales") { Task { await loadNumista(salesPage - 1) } } }
                 if let next = numista?.nextPage { Button("Next sales") { Task { await loadNumista(next) } } }

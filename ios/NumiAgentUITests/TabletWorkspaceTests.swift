@@ -187,9 +187,12 @@ final class GuestV1Tests: XCTestCase {
     @MainActor
     func testSwipeGalleryCardCancelsThenDeletesOnlyThatPiece() {
         continueAfterFailure = false
+        let previousAppearance = XCUIDevice.shared.appearance
+        XCUIDevice.shared.appearance = .light
+        defer { XCUIDevice.shared.appearance = previousAppearance }
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
-                               "-collector-list-view", "NO", "-AppleInterfaceStyle", "Light"]
+                               "-collector-list-view", "NO"]
         app.launch()
         let quarter = galleryCard("United States quarter", in: app)
         XCTAssertTrue(quarter.waitForExistence(timeout: 15))
@@ -217,9 +220,12 @@ final class GuestV1Tests: XCTestCase {
     @MainActor
     func testSwipeListRowWithAccessibilityText() {
         continueAfterFailure = false
+        let previousAppearance = XCUIDevice.shared.appearance
+        XCUIDevice.shared.appearance = .dark
+        defer { XCUIDevice.shared.appearance = previousAppearance }
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
-                               "-collector-list-view", "YES", "-AppleInterfaceStyle", "Dark",
+                               "-collector-list-view", "YES",
                                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityM"]
         app.launch()
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "list-piece-")).firstMatch

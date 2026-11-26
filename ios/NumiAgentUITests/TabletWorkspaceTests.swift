@@ -287,24 +287,24 @@ final class GuestV1Tests: XCTestCase {
         for _ in 0..<8 where !save.isHittable { app.swipeUp() }
         XCTAssertTrue(save.isHittable)
         save.tap()
-        XCTAssertTrue(app.staticTexts["Unidentified coin"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(galleryCard("Unidentified coin", in: app).waitForExistence(timeout: 10))
         XCTAssertFalse(resume.exists)
 
         addManually("Test banknote", to: app, isBanknote: true)
         addManually("Unknown piece", to: app, isBanknote: false)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.staticTexts["Test banknote"].firstMatch.waitForExistence(timeout: 15))
-        XCTAssertTrue(app.staticTexts["Unknown piece"].firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["Unidentified coin"].firstMatch.exists)
+        XCTAssertTrue(galleryCard("Test banknote", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(galleryCard("Unknown piece", in: app).exists)
+        XCTAssertTrue(galleryCard("Unidentified coin", in: app).exists)
         XCTAssertFalse(app.buttons["Send sign-in link"].exists)
         let search = app.searchFields.firstMatch
         if !search.isHittable { app.swipeDown() }
         XCTAssertTrue(search.isHittable)
         search.tap()
         search.typeText("banknote")
-        XCTAssertTrue(app.staticTexts["Test banknote"].firstMatch.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.staticTexts["Unknown piece"].firstMatch.exists)
+        XCTAssertTrue(galleryCard("Test banknote", in: app).waitForExistence(timeout: 10))
+        XCTAssertFalse(galleryCard("Unknown piece", in: app).exists)
     }
 
     @MainActor
@@ -313,6 +313,11 @@ final class GuestV1Tests: XCTestCase {
         app.launchArguments = ["--guest-storage-acceptance"]
         app.launch()
         XCTAssertTrue(app.staticTexts["Guest storage checks passed"].waitForExistence(timeout: 20), app.debugDescription)
+    }
+
+    @MainActor
+    private func galleryCard(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label == %@", "gallery-piece-", title)).firstMatch
     }
 
     @MainActor
@@ -336,6 +341,6 @@ final class GuestV1Tests: XCTestCase {
         for _ in 0..<5 where !save.isHittable { app.swipeUp() }
         XCTAssertTrue(save.isHittable)
         save.tap()
-        XCTAssertTrue(app.staticTexts[title].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(galleryCard(title, in: app).waitForExistence(timeout: 10))
     }
 }

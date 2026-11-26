@@ -222,7 +222,10 @@ struct GuestWorkspace: View {
                 CollectionCard(title: piece.displayTitle, subtitle: [piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: " · ")) {
                     thumbnail(piece)
                 }
-            }.buttonStyle(.plain).accessibilityIdentifier("gallery-piece-\(piece.id)")
+            }.buttonStyle(.plain)
+                .accessibilityLabel(piece.displayTitle)
+                .accessibilityValue([piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: ", "))
+                .accessibilityIdentifier("gallery-piece-\(piece.id)")
         }
     }
 
@@ -822,6 +825,7 @@ struct PiecePhotoViewer: View {
         NavigationStack {
             InteractivePhoto(photo: photo, command: command) { factor = $0 }
                 .accessibilityLabel("Specimen photo")
+                .accessibilityIdentifier("photo-zoom-surface")
                 .accessibilityValue("\(Int((factor * 100).rounded())) percent")
                 .accessibilityAdjustableAction { direction in
                     issue(direction == .increment ? factor * 2 : factor / 2)

@@ -185,6 +185,7 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal((await usingKey('/items','bad', 'GET',{Cookie:a})).status,401)
     assert.equal((await usingKey('/items',key.secret,'POST',{Cookie:a,Origin:base})).status,403)
     assert.equal((await usingKey('/me/developer-keys')).status,403)
+    assert.equal((await usingKey('/valuations/'+randomUUID()+'/numista-sales')).status,403)
     assert.equal((await usingKey('/items/export.csv')).status,403)
     assert.equal((await api('/me/developer-keys/'+key.id,b,'DELETE')).status,204)
     assert.equal((await usingKey('/items')).status,200)
@@ -474,6 +475,10 @@ test('Wrangler end to end: bulk ingestion, tenant isolation, sale evidence, Roma
     assert.equal(progress.priorities.length,3)
     assert.equal(progress.missingReferences,1)
     const guidePath='/valuations/'+specimen.id+'/guide'
+    const numistaPath='/valuations/'+specimen.id+'/numista-sales'
+    assert.equal((await json(await api(numistaPath,a))).status,'provider_not_configured')
+    assert.equal((await api(numistaPath,b)).status,404)
+    assert.equal((await api(numistaPath+'?page=0',a)).status,400)
     assert.equal((await json(await api(guidePath+'?type=123',a))).status,'provider_not_configured')
     assert.equal((await api(guidePath,b)).status,404)
     assert.equal((await api(guidePath+'?issue=-1',a)).status,400)

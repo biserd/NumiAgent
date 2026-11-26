@@ -4,6 +4,7 @@ import type { Item, Sale, Slot } from '../shared/domain'
 import { convertLegacyCoin, legacyBatch } from '../shared/legacy'
 import { all, body, digest, fail, limit, now, one, router, run, uid } from './core'
 import { canSearchType, discoverGuideType, guideIssueChoices, numistaGuide, numistaType } from './numistaGuide'
+import { numistaSales } from './numistaSales'
 import type { Env } from './core'
 import { previewTheme } from './themePlanning'
 import { researchSales } from './saleResearch'
@@ -314,6 +315,17 @@ async function guideQuota(env:Env,user:string) {
   await limit(env,'numista_guide',user,40)
   await limit(env,'numista_guide','global',400)
 }
+async function guideReference(env:Env,user:string,specimen:Awaited<ReturnType<typeof findItem>>,automatic:boolean,type?:number,issue?:number) {
+  const saved = automatic && !type && !issue ? await one<{type_id:number;issue_id:number}>(env,
+    'SELECT type_id,issue_id FROM specimen_guide_links WHERE item_id=? AND identity=?',specimen.id,await guideIdentity(specimen)) : null
+  const typeID = type ?? saved?.type_id ?? numistaType(specimen.reference) ?? numistaType(specimen.details?.referenceUrl ?? '')
+  if (automatic && !typeID && env.NUMISTA_API_KEY && canSearchType(specimen)) {
+    await guideQuota(env,user)
+    const found = await discoverGuideType(env.NUMISTA_API_KEY,specimen)
+    return {typeID:found.typeID,issueID:issue,discovery:found}
+  }
+  return {typeID,issueID:issue ?? saved?.issue_id}
+}
 async function specimenGuide(env: Env, user: string, specimen: Awaited<ReturnType<typeof findItem>>, typeID: number | undefined,
   issueID: number | undefined, currency: string, automatic: boolean) {
   const lookup = async (id?: number) => {
@@ -332,17 +344,9 @@ valuations.get('/:id/guide',async c=>{
   const params = z.object({type:guideNumber.optional(),issue:guideNumber.optional(),auto:z.literal('1').optional(),currency:guideCurrency}).safeParse(c.req.query())
   if (!params.success) return fail(400,'Use a numeric Numista ID and a three-letter currency')
   const {auto,currency,type,issue} = params.data
-  const saved = auto && !type && !issue ? await one<{type_id:number;issue_id:number}>(c.env,
-    'SELECT type_id,issue_id FROM specimen_guide_links WHERE item_id=? AND identity=?',specimen.id,await guideIdentity(specimen)) : null
-  let typeID = type ?? saved?.type_id ?? numistaType(specimen.reference) ?? numistaType(specimen.details?.referenceUrl ?? '')
-  const key = c.env.NUMISTA_API_KEY
-  if(auto && !typeID && key && canSearchType(specimen)) {
-    await guideQuota(c.env,user)
-    const found=await discoverGuideType(key,specimen)
-    if(!found.typeID) return c.json({...found,currency})
-    typeID=found.typeID
-  }
-  return c.json(await specimenGuide(c.env,user,specimen,typeID,issue ?? saved?.issue_id,currency,!!auto))
+  const {typeID,issueID,discovery} = await guideReference(c.env,user,specimen,!!auto,type,issue)
+  if (!typeID && discovery) return c.json({...discovery,currency})
+  return c.json(await specimenGuide(c.env,user,specimen,typeID,issueID,currency,!!auto))
 })
 valuations.post('/:id/guide',async c=>{
   const user=c.get('user').id
@@ -360,6 +364,32 @@ valuations.get('/:id/research',async c=>{
   const user=c.get('user').id
   const specimen=await findItem(c.env,user,c.req.param('id'))
   return c.json(await researchSales(c.env,user,specimen))
+})
+// First-party collector view only. Licensed records stay out of stored valuations, exports, developer keys and MCP.
+valuations.get('/:id/numista-sales',async c=>{
+  const user=c.get('user').id
+  const specimen=await findItem(c.env,user,c.req.param('id'))
+  const page=guideNumber.safeParse(c.req.query('page') ?? 1)
+  if (!page.success) return fail(400,'Use a positive page number')
+  const key=c.env.NUMISTA_API_KEY
+  if (!key) return c.json({status:'provider_not_configured',message:'Numista sales lookup is unavailable.'})
+  const {typeID,issueID:saved,discovery}=await guideReference(c.env,user,specimen,true)
+  const unavailable={status:'unavailable',message:'Numista could not return sales records. Try again later.'}
+  if (!typeID && discovery && discovery.status!=='reference_required') return c.json(unavailable)
+  const issueRequired={status:'issue_required',message:'Choose the matching catalog type and issue in the Numista price guide to see its auction sales.'}
+  if (!typeID) return c.json(issueRequired)
+  let issueID=saved
+  if (!issueID) {
+    await guideQuota(c.env,user)
+    const choices=await numistaGuide(key,typeID,undefined,'USD')
+    if (choices.status==='choose_issue' && 'issues' in choices) {
+      issueID=guideIssueChoices(choices.issues,specimen.year,specimen.details?.mintMark,specimen.details?.variant).match
+    } else if (choices.status!=='no_issues' && choices.status!=='not_found') return c.json(unavailable)
+  }
+  if (!issueID) return c.json({...issueRequired,typeID,source:'https://en.numista.com/'+typeID})
+  await limit(c.env,'numista_sales',user,20)
+  await limit(c.env,'numista_sales','global',200)
+  return c.json(await numistaSales(key,typeID,issueID,page.data))
 })
 valuations.get('/:id',async c=>{
   const currency = (c.req.query('currency') ?? 'USD').toUpperCase()

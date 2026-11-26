@@ -98,17 +98,17 @@ export async function saveItems(env: Env,user:string,entries:{id:string; input:I
     await requireCollection(env,user,key)
   }
   const photos = new Set(entries.flatMap(e=>e.input.photos?.map(p=>p.photoId) ?? []))
-  const kindsByPhoto=new Map<string,string[]>()
+  const candidatesByPhoto=new Map<string,{type:string;title:string}[]>()
   for (const key of photos) {
     const photo=await one<{candidates:string|null}>(env,`SELECT candidates FROM photos WHERE id=? AND user_id=? AND state IN ('manual','review','saved','failed')`,key,user)
     if (!photo) return fail(404,'Photo unavailable for cataloging')
-    kindsByPhoto.set(key,(JSON.parse(photo.candidates ?? '[]') as {type:string}[]).map(candidate=>candidate.type))
+    candidatesByPhoto.set(key,JSON.parse(photo.candidates ?? '[]'))
   }
   const statements = entries.flatMap(({id:key,input:i,update})=>{
     if (!update && i.photos?.length) {
-      const kinds=new Set(i.photos.flatMap(p=>kindsByPhoto.get(p.photoId) ?? []))
-      if(kinds.size===1 && !kinds.has(i.type)) return fail(409,'The identified piece type cannot be changed')
-      if(kinds.has(i.type)) i={...i,typeLocked:true}
+      const candidates=i.photos.flatMap(p=>candidatesByPhoto.get(p.photoId) ?? [])
+      // Older clients accepted a scan by posting its fields. A photo attachment alone can also be manual.
+      if(candidates.some(c=>c.type===i.type && c.title===i.title)) i={...i,typeLocked:true}
     }
     const first = update
       ? env.DB.prepare('UPDATE items SET collection_id=?,type=?,title=?,issuer=?,ruler=?,denomination=?,year=?,reference=?,grade=?,notes=?,tags=?,details=?,updated=?,type_locked=MAX(type_locked,?) WHERE id=? AND user_id=?').bind(...itemValues(i),now(),Number(!!i.typeLocked),key,user)

@@ -79,18 +79,20 @@ struct GuestWorkspace: View {
                     if widthClass != .regular && !listView {
                         CollectionGrid { gridCards }
                             .listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
-                    } else { ForEach(filtered) { piece in
-                        NavigationLink(value: piece.id) {
-                            HStack {
-                            thumbnail(piece).frame(width: 46, height: 46).clipShape(.rect(cornerRadius: 8))
-                            VStack(alignment: .leading) {
-                                Text(piece.displayTitle)
-                                Text([piece.issuer, piece.denomination, piece.year].filter { !$0.isEmpty }.joined(separator: " · "))
-                                    .font(.footnote).foregroundStyle(.secondary)
-                            }
+                    } else {
+                        ForEach(filtered) { piece in
+                            NavigationLink(value: piece.id) {
+                                HStack {
+                                    thumbnail(piece).frame(width: 46, height: 46).clipShape(.rect(cornerRadius: 8))
+                                    VStack(alignment: .leading) {
+                                        Text(piece.displayTitle)
+                                        Text([piece.issuer, piece.denomination, piece.year].filter { !$0.isEmpty }.joined(separator: " · "))
+                                            .font(.footnote).foregroundStyle(.secondary)
+                                    }
+                                }
                             }
                         }
-                    } }
+                    }
                 }
             }
             .navigationTitle(store.active?.name ?? "My collection")

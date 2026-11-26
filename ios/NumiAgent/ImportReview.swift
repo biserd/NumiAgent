@@ -505,18 +505,19 @@ struct SpecimenIdentificationSheet: View {
                         if candidates == nil { Button("Try again") { Task { await identify() } } }
                     }
                     if let candidates {
-                        if candidates.isEmpty {
+                        let compatible = candidates.filter { item.typeLocked != true || $0.type == item.type }
+                        if compatible.isEmpty {
                             Text(enteredLegends ? "No catalog type matched those inscriptions." :
                                 "No match found. A closer photo of each side can help.").foregroundStyle(.secondary)
                         }
-                        if candidates.count > 1 {
+                        if compatible.count > 1 {
                             Text("Multiple items were detected. Review a match that belongs to this specimen.")
                                 .foregroundStyle(.secondary)
                         }
-                        ForEach(candidates.indices.filter { item.typeLocked != true || candidates[$0].type == item.type }, id: \.self) { index in
+                        ForEach(compatible.indices, id: \.self) { index in
                             Section {
-                                IdentificationChoice(suggestion: candidates[index]) { match in
-                                    draft = candidates[index].draft(using: match, updating: item)
+                                IdentificationChoice(suggestion: compatible[index]) { match in
+                                    draft = compatible[index].draft(using: match, updating: item)
                                 }
                             }
                         }

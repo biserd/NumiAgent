@@ -101,18 +101,20 @@ struct CatalogScreen: View {
                                 }.buttonStyle(.plain).accessibilityIdentifier("specimen-\(item.id)")
                             }
                         }.listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
-                    } else { ForEach(items) { item in
-                        if workspaceSelection != nil {
-                            NavigationLink(value: item.id) { row(item) }
-                                .accessibilityIdentifier("specimen-\(item.id)")
-                        } else {
-                            NavigationLink {
-                                SpecimenScreen(item: item, api: api, demo: demo, onChange: reload)
-                            } label: {
-                                row(item)
+                    } else {
+                        ForEach(items) { item in
+                            if workspaceSelection != nil {
+                                NavigationLink(value: item.id) { row(item) }
+                                    .accessibilityIdentifier("specimen-\(item.id)")
+                            } else {
+                                NavigationLink {
+                                    SpecimenScreen(item: item, api: api, demo: demo, onChange: reload)
+                                } label: {
+                                    row(item)
+                                }
                             }
                         }
-                    } }
+                    }
                     if let next {
                         Button("Load more items") { Task { await load(page: next, key: loadKey) } }.disabled(loading)
                     }
@@ -384,7 +386,20 @@ struct SpecimenImage: View {
         }
         .task(id: id) {
             image = nil
-            if let id, let data = try? await api.photo(id), !Task.isCancelled { image = UIImage(data: data) }
+            guard let id, let data = try? await api.photo(id), !Task.isCancelled else { return }
+            if zoomLabel != nil {
+                image = UIImage(data: data)
+            } else {
+                let preview = await Task.detached(priority: .utility) {
+                    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil as CGImage? }
+                    return CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                        kCGImageSourceCreateThumbnailFromImageAlways: true,
+                        kCGImageSourceCreateThumbnailWithTransform: true,
+                        kCGImageSourceThumbnailMaxPixelSize: 560
+                    ] as CFDictionary)
+                }.value
+                if let preview, !Task.isCancelled { image = UIImage(cgImage: preview) }
+            }
         }
         .fullScreenCover(isPresented: $inspecting) {
             if let photo = image ?? sampleAsset.flatMap({ UIImage(named: $0) }) { PiecePhotoViewer(photo: photo) }

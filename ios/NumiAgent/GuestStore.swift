@@ -145,7 +145,7 @@ struct GuestPiece: Codable, Identifiable {
         for (field, value) in fields {
             guard manuallyEditedFields?.contains(field) != true else { continue }
             let current = self[keyPath: field.field]
-            guard current.isBlank || filled.contains(field) || (field == .type && current == "coin") else { continue }
+            guard current.isBlank || filled.contains(field) else { continue }
             if let value, !value.isBlank {
                 self[keyPath: field.field] = value
                 filled.insert(field)

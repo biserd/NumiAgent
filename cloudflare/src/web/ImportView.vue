@@ -174,7 +174,7 @@ async function bulk(){
   await action(async()=>{
     for(let i=0;i<eligible.length;i+=20) {
       const chunk=eligible.slice(i,i+20)
-      await request('/items/bulk','POST',chunk.map(p=>({...p.candidates[0],collection_id:folders.value[0]?.id ?? null,
+      await request('/items/bulk','POST',chunk.map(p=>({...p.candidates[0],typeLocked:true,collection_id:folders.value[0]?.id ?? null,
         photos:[{photoId:p.id,side:'overview',crop:p.candidates[0].crop}]})))
       selected.value=selected.value.filter(id=>!chunk.some(photo=>photo.id===id))
     }
@@ -266,7 +266,9 @@ async function bulk(){
           <small>{{reference.kind}} · {{reference.attribution}} · {{reference.license}}</small>
         </li>
       </ul>
-      <div class="crop-frame"><img :src="photoURL(current)" alt="Original photo and indicated crop"><div :style="rectStyle"></div></div>
+      <PhotoViewer :src="photoURL(current)" label="Original photo">
+        <div class="crop-frame"><img :src="photoURL(current)" alt="Original photo and indicated crop"><div :style="rectStyle"></div></div>
+      </PhotoViewer>
       <form @submit.prevent="save">
         <fieldset><legend>Crop (% of the original photo)</legend><div class="form-grid">
           <label v-for="key in (['x','y','width','height'] as const)" :key="key">{{key}}
@@ -277,7 +279,7 @@ async function bulk(){
           <label>Photo side<select v-model="side"><option value="obverse">Obverse</option><option value="reverse">Reverse</option><option value="overview">Overview</option></select></label>
           <label>Pair with another photo<select v-model="reverse"><option value="">No pairing</option><option v-for="other in reverseOptions" :key="other.id" :value="other.id">Photo {{(batch?.photos.findIndex(p=>p.id===other.id) ?? 0)+1}} · {{other.candidates[0]?.title ?? other.state}}</option></select></label>
         </div>
-        <img class="pair-preview" v-if="reverse" :src="photoURL(reverse)" alt="Paired photograph">
+        <PhotoViewer v-if="reverse" :src="photoURL(reverse)" label="Paired photograph"><img class="pair-preview" :src="photoURL(reverse)" alt="Paired photograph"></PhotoViewer>
         <ItemFields v-model="form" :folders="folders"/>
         <button class="primary">Save specimen</button>
         <button type="button" @click="current=''">Close review</button>

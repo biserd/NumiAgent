@@ -335,7 +335,7 @@ async function importNumisGraph(event:Event) {
         <label>Imported photo<select v-model="attachPhoto"><option value="">Select a photo</option><option v-for="(photo,index) in uploadPhotos" :key="photo.id" :value="photo.id">{{photo.candidates[0]?.title || 'Photo '+(index+1)}}</option></select></label>
         <label>Side<select v-model="attachSide"><option value="obverse">Obverse</option><option value="reverse">Reverse</option><option value="overview">Overview</option></select></label>
       </div>
-      <img v-if="attachPhoto" class="pair-preview" :src="photoURL(attachPhoto)" alt="Selected private photo">
+      <PhotoViewer v-if="attachPhoto" :src="photoURL(attachPhoto)" label="Selected private photo"><img class="pair-preview" :src="photoURL(attachPhoto)" alt="Selected private photo"></PhotoViewer>
       <button :disabled="!attachPhoto || (form.photos?.length ?? 0)>=12 || !!form.photos?.some(photo=>photo.photoId===attachPhoto && photo.side===attachSide)" @click="attach">Add photo link</button>
       <p v-if="photosChanged">Save the specimen to keep these photo links.</p>
     </details>

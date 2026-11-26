@@ -10,6 +10,10 @@ final class TabletWorkspaceTests: XCTestCase {
         app.launch()
         let quarter = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
         XCTAssertTrue(quarter.waitForExistence(timeout: 15))
+        let gallery = XCTAttachment(screenshot: app.screenshot())
+        gallery.name = "Device collection gallery on iPad"
+        gallery.lifetime = .keepAlways
+        add(gallery)
         quarter.tap()
         let sales = app.buttons["guest-comparable-sales"].firstMatch
         XCTAssertTrue(sales.waitForExistence(timeout: 10))
@@ -29,8 +33,8 @@ final class TabletWorkspaceTests: XCTestCase {
         surface.pinch(withScale: 2, velocity: 1)
         XCTAssertTrue(zoomOut.isEnabled)
         app.buttons["Fit photo"].firstMatch.tap()
-        XCTAssertTrue(NSPredicate(format: "enabled == false").evaluate(with: zoomOut) ||
-                      XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == false"), object: zoomOut)], timeout: 3) == .completed)
+        let fitted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == false"), object: zoomOut)
+        XCTAssertEqual(XCTWaiter.wait(for: [fitted], timeout: 4), .completed)
     }
 
     @MainActor

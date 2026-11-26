@@ -4,6 +4,32 @@ import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 import { createServer } from 'vite'
 
+test('Identified types survive migration while manual records can still be corrected', async t => {
+  const db = new DatabaseSync(':memory:')
+  t.after(() => db.close())
+  db.exec(await readFile('migrations/0001_initial.sql', 'utf8'))
+  db.exec(`INSERT INTO users(id,email,created) VALUES('u','collector@example.test',0);
+    INSERT INTO imports(id,user_id,label,analyze,created) VALUES('b','u','Import',1,0)`)
+  const photo = db.prepare("INSERT INTO photos(id,user_id,batch_id,mime,bytes,sha,state,created,updated,candidates) VALUES(?,'u','b','image/jpeg',1,?,'saved',0,0,?)")
+  const item = db.prepare("INSERT INTO items(id,user_id,type,title,created,updated) VALUES(?,'u',?,?,0,0)")
+  const link = db.prepare("INSERT INTO item_photos(user_id,item_id,photo_id,side) VALUES('u',?,?,'overview')")
+  photo.run('original','a',JSON.stringify([{type:'banknote',title:'Ten pesos'}]))
+  photo.run('second','b',JSON.stringify([{type:'coin',title:'Quarter dollar'}]))
+  for (const [id,kind,title,photoId] of [
+    ['original','banknote','My edited title','original'],
+    ['accepted','coin','QUARTER DOLLAR','second'],
+    ['manual','banknote','Hand-entered record','original']
+  ]) {
+    item.run(id,kind,title)
+    link.run(id,photoId)
+  }
+  db.exec(await readFile('migrations/0015_identified_item_type.sql','utf8'))
+  const change = db.prepare('UPDATE items SET type=? WHERE id=?')
+  assert.throws(() => change.run('coin','original'), /identified item type is fixed/)
+  assert.throws(() => change.run('banknote','accepted'), /identified item type is fixed/)
+  assert.equal(change.run('coin','manual').changes, 1)
+})
+
 function binding(db) {
   return {batch:async statements=>Promise.all(statements.map(s=>s.run())),prepare:sql=>({bind:(...args)=>{
     const stmt=db.prepare(sql)

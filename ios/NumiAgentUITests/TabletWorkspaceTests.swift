@@ -185,6 +185,41 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
+    func testGallerySwipeWithSystemReduceMotionEnabled() {
+        continueAfterFailure = false
+        let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+        settings.activate()
+        let toggle = settings.switches.matching(NSPredicate(format: "label CONTAINS[c] %@", "Reduce Motion")).firstMatch
+        if !toggle.waitForExistence(timeout: 4) {
+            let accessibility = settings.staticTexts["Accessibility"].firstMatch
+            for _ in 0..<5 where !accessibility.isHittable { settings.swipeUp() }
+            XCTAssertTrue(accessibility.isHittable, settings.debugDescription)
+            accessibility.tap()
+            let motion = settings.staticTexts["Motion"].firstMatch
+            for _ in 0..<3 where !motion.isHittable { settings.swipeUp() }
+            XCTAssertTrue(motion.isHittable, settings.debugDescription)
+            motion.tap()
+        }
+        XCTAssertTrue(toggle.waitForExistence(timeout: 6), settings.debugDescription)
+        if toggle.value as? String != "1" { toggle.tap() }
+        XCTAssertEqual(toggle.value as? String, "1")
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture", "-collector-list-view", "NO"]
+        app.launch()
+        let card = galleryCard("United States quarter", in: app)
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        swipeWithinCard(card)
+        let delete = app.buttons["Delete"].firstMatch
+        XCTAssertTrue(delete.waitForExistence(timeout: 6), app.debugDescription)
+        delete.tap()
+        let cancel = app.alerts.firstMatch.buttons["Cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        cancel.tap()
+        XCTAssertTrue(card.exists)
+    }
+
+
+    @MainActor
     func testSwipeGalleryCardCancelsThenDeletesOnlyThatPiece() {
         continueAfterFailure = false
         let previousAppearance = XCUIDevice.shared.appearance
@@ -197,7 +232,7 @@ final class GuestV1Tests: XCTestCase {
         let quarter = galleryCard("United States quarter", in: app)
         XCTAssertTrue(quarter.waitForExistence(timeout: 15))
         addManually("Keep this token", to: app, isBanknote: false)
-        quarter.swipeLeft()
+        swipeWithinCard(quarter)
         let action = app.buttons["Delete"].firstMatch
         recordScreenshot("Swipe to delete – gallery", app)
         XCTAssertTrue(action.waitForExistence(timeout: 5), app.debugDescription)
@@ -206,7 +241,7 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(prompt.staticTexts["Delete “United States quarter”?"].waitForExistence(timeout: 5))
         prompt.buttons["Cancel"].tap()
         XCTAssertTrue(quarter.isHittable)
-        quarter.swipeLeft()
+        swipeWithinCard(quarter)
         action.tap()
         prompt.buttons["Delete"].tap()
         let removed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: quarter)
@@ -215,6 +250,13 @@ final class GuestV1Tests: XCTestCase {
         app.launch()
         XCTAssertTrue(galleryCard("Keep this token", in: app).waitForExistence(timeout: 15))
         XCTAssertFalse(quarter.exists)
+    }
+
+    @MainActor
+    private func swipeWithinCard(_ card: XCUIElement) {
+        let start = card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+        let end = card.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
+        start.press(forDuration: 0.03, thenDragTo: end, withVelocity: .fast, thenHoldForDuration: 0)
     }
 
     @MainActor
@@ -229,6 +271,7 @@ final class GuestV1Tests: XCTestCase {
                                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityM"]
         app.launch()
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "list-piece-")).firstMatch
+        XCUIDevice.shared.appearance = .dark
         XCTAssertTrue(row.waitForExistence(timeout: 15))
         if !row.isHittable { app.swipeUp() }
         row.swipeLeft()

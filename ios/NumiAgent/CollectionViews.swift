@@ -45,18 +45,17 @@ struct CollectionGrid<Content: View>: View {
 private struct SwipeablePieceCard<ID: Hashable>: ViewModifier {
     let id: ID
     @Binding var revealed: ID?
+    let activate: () -> Void
     let requestDelete: () -> Void
     @Environment(\.layoutDirection) private var direction
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var travel: CGFloat = 0
     @ScaledMetric(relativeTo: .caption) private var actionWidth: CGFloat = 68
 
     func body(content: Content) -> some View {
         let open = revealed == id
         let sign: CGFloat = direction == .leftToRight ? -1 : 1
-        let reveal = min(actionWidth, max(0, (open ? actionWidth : 0) + travel * sign))
         ZStack(alignment: .trailing) {
-            if reveal > 0 {
+            if open {
                 Button(role: .destructive) {
                     revealed = nil
                     requestDelete()
@@ -72,74 +71,73 @@ private struct SwipeablePieceCard<ID: Hashable>: ViewModifier {
             }
             content
                 .accessibilityAction(named: "Delete", requestDelete)
-                .offset(x: sign * reveal)
+                .overlay {
+                    GeometryReader { geometry in
+                        CardTouchArea(activate: activate) { swipe in
+                            let trailing: UISwipeGestureRecognizer.Direction = direction == .leftToRight ? .left : .right
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                                revealed = swipe == trailing ? id : nil
+                            }
+                        }
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .accessibilityHidden(true)
+                    }
+                }
+                .offset(x: open ? sign * actionWidth : 0)
         }
         .clipShape(.rect(cornerRadius: 12))
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
-        .background {
-            CardPanArea { dx, finished in
-                if finished {
-                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
-                        travel = 0
-                        if abs(dx) > 27 { revealed = dx * sign > 0 ? id : nil }
-                    }
-                } else { travel = dx }
-            }
-        }
     }
 }
 
-// List owns the surrounding scroll gesture. Observe horizontal pans on that same
-// scroll view, scoped to this card’s bounds, so vertical scrolling and taps stay native.
-private struct CardPanArea: UIViewRepresentable {
-    var move: (CGFloat, Bool) -> Void
+// Receive touches on the visible card. The SwiftUI button underneath supplies
+// its label, primary action and Delete action to assistive technology.
+private struct CardTouchArea: UIViewRepresentable {
+    let activate: () -> Void
+    let swiped: (UISwipeGestureRecognizer.Direction) -> Void
 
-    func makeUIView(context: Context) -> Area { Area() }
-    func updateUIView(_ view: Area, context: Context) { view.move = move }
-    static func dismantleUIView(_ view: Area, coordinator: ()) { view.detach() }
+    func makeUIView(context: Context) -> Surface { Surface() }
+    func updateUIView(_ view: Surface, context: Context) {
+        view.activate = activate
+        view.swiped = swiped
+    }
 
-    final class Area: UIView, UIGestureRecognizerDelegate {
-        var move: ((CGFloat, Bool) -> Void)?
-        private lazy var pan: UIPanGestureRecognizer = {
-            let recognizer = UIPanGestureRecognizer(target: self, action: #selector(dragged))
-            recognizer.maximumNumberOfTouches = 1
-            recognizer.delegate = self
-            return recognizer
-        }()
+    final class Surface: UIView, UIGestureRecognizerDelegate {
+        var activate: (() -> Void)?
+        var swiped: ((UISwipeGestureRecognizer.Direction) -> Void)?
 
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            detach()
-            isUserInteractionEnabled = false
-            guard window != nil else { return }
-            var ancestor = superview
-            while let candidate = ancestor, !(candidate is UIScrollView) { ancestor = candidate.superview }
-            (ancestor ?? window)?.addGestureRecognizer(pan)
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isAccessibilityElement = false
+            backgroundColor = .clear
+            let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
+            addGestureRecognizer(tap)
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(panned(_:)))
+            pan.maximumNumberOfTouches = 1
+            pan.delegate = self
+            addGestureRecognizer(pan)
+            tap.require(toFail: pan)
         }
 
-        func detach() { pan.view?.removeGestureRecognizer(pan) }
+        required init?(coder: NSCoder) { return nil }
 
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            bounds.contains(touch.location(in: self))
-        }
-
-        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard gestureRecognizer === pan else { return super.gestureRecognizerShouldBegin(gestureRecognizer) }
+        override func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer else { return super.gestureRecognizerShouldBegin(recognizer) }
             let velocity = pan.velocity(in: self)
-            return abs(velocity.x) > abs(velocity.y) * 1.5
+            return abs(velocity.x) > 1.4 * abs(velocity.y)
         }
 
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            other is UIPanGestureRecognizer
+        }
 
-        @objc private func dragged() {
-            let dx = pan.translation(in: self).x
-            switch pan.state {
-            case .began, .changed: move?(dx, false)
-            case .ended: move?(dx, true)
-            case .cancelled, .failed: move?(0, true)
-            default: break
-            }
+        @objc private func tapped() { activate?() }
+        @objc private func panned(_ gesture: UIPanGestureRecognizer) {
+            guard gesture.state == .ended else { return }
+            let dx = gesture.translation(in: self).x
+            if abs(dx) >= 28 { swiped?(dx < 0 ? .left : .right) }
         }
     }
 }
@@ -147,9 +145,9 @@ private struct CardPanArea: UIViewRepresentable {
 extension View {
     @ViewBuilder
     func phoneCardDelete<ID: Hashable>(id: ID, revealed: Binding<ID?>, enabled: Bool = true,
-                                       action: @escaping () -> Void) -> some View {
+                                       activate: @escaping () -> Void, action: @escaping () -> Void) -> some View {
         if enabled && UIDevice.current.userInterfaceIdiom == .phone {
-            modifier(SwipeablePieceCard(id: id, revealed: revealed, requestDelete: action))
+            modifier(SwipeablePieceCard(id: id, revealed: revealed, activate: activate, requestDelete: action))
         } else { self }
     }
 
@@ -241,12 +239,13 @@ struct CatalogScreen: View {
                     if workspaceSelection == nil && !listView {
                         CollectionGrid(itemCount: items.count) {
                             ForEach(items) { item in
-                                Button {
+                                let activate = {
                                     if revealedItem != nil { revealedItem = nil } else { openedItemID = item.id }
-                                } label: {
+                                }
+                                Button(action: activate) {
                                     accountCard(item, api: api, demo: demo)
                                 }.buttonStyle(.plain).accessibilityIdentifier("specimen-\(item.id)")
-                                    .phoneCardDelete(id: item.id, revealed: $revealedItem, enabled: !demo) { deleteTarget = item }
+                                    .phoneCardDelete(id: item.id, revealed: $revealedItem, enabled: !demo, activate: activate) { deleteTarget = item }
                                     .disabled(deletingIDs.contains(item.id))
                             }
                         }.listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)

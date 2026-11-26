@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 30
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
-      XCODEBUILDMCP_ENABLED_WORKFLOWS: simulator,ui-automation
+      XCODEBUILDMCP_ENABLED_WORKFLOWS: simulator,ui-automation,session-management
       SENTRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
@@ -47,16 +47,42 @@ jobs:
       - name: Inspect accessible gallery labels with XcodeBuildMCP
         run: |
           set -euo pipefail
-          for iteration in 1 2 3; do
-            xcodebuildmcp ui-automation snapshot-ui --simulator-id "$DEVICE" > "$RUNNER_TEMP/swipe-evidence/gallery.txt"
-            if grep -Eiq 'United States quarter|gallery-piece-' "$RUNNER_TEMP/swipe-evidence/gallery.txt"; then
-              cat "$RUNNER_TEMP/swipe-evidence/gallery.txt"
-              exit 0
-            fi
-            sleep 2
-          done
-          cat "$RUNNER_TEMP/swipe-evidence/gallery.txt"
-          exit 1
+          python3 - <<'PY' | tee "$RUNNER_TEMP/swipe-evidence/gallery.txt"
+          import json, os, subprocess, time
+          server = subprocess.Popen(["xcodebuildmcp", "mcp"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+          def send(method, payload, number=None):
+              request = dict(jsonrpc="2.0", method=method, params=payload)
+              if number is not None: request["id"] = number
+              server.stdin.write(json.dumps(request) + "\n")
+              server.stdin.flush()
+              if number is None: return
+              for line in server.stdout:
+                  response = json.loads(line)
+                  if response.get("id") == number:
+                      if "error" in response: raise RuntimeError(response["error"])
+                      return response["result"]
+              raise RuntimeError("XcodeBuildMCP exited before responding")
+          try:
+              send("initialize", {"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"numi-swipe-verification","version":"1"}}, 1)
+              send("notifications/initialized", {})
+              tools = {t["name"]:t for t in send("tools/list", {}, 2)["tools"]}
+              snapshot = next(n for n in tools if n in ("snapshot_ui","describe_ui"))
+              def call(name, args, i):
+                  return send("tools/call", {"name": name, "arguments":args}, i)
+              default = next((n for n in tools if n in ("session_set_defaults","session-set-defaults")),None)
+              if default:
+                  print(json.dumps(call(default, {"simulatorId":os.environ["DEVICE"]}, 3)), flush=True)
+              props = tools[snapshot]["inputSchema"].get("properties", {})
+              args = {"simulatorId":os.environ["DEVICE"]} if "simulatorId" in props or not default else {}
+              for i in range(4,7):
+                  result = json.dumps(call(snapshot, args, i), ensure_ascii=False)
+                  print(result, flush=True)
+                  if "United States quarter" in result or "gallery-piece-" in result: break
+                  time.sleep(2)
+              else: raise RuntimeError("Quarter missing from the runtime accessibility tree")
+          finally:
+              server.terminate()
+          PY
       - name: Exercise both swipe flows and the system Reduce Motion setting using XcodeBuildMCP
         if: always() && env.DEVICE != ''
         run: |

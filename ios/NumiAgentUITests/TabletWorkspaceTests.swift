@@ -201,13 +201,17 @@ final class GuestV1Tests: XCTestCase {
             motion.tap()
         }
         XCTAssertTrue(toggle.waitForExistence(timeout: 6), settings.debugDescription)
-        if toggle.value as? String != "1" { toggle.tap() }
-        XCTAssertEqual(toggle.value as? String, "1")
+        if toggle.value as? String != "1" {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        }
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: toggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, settings.debugDescription)
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture", "-collector-list-view", "NO"]
         app.launch()
         let card = galleryCard("United States quarter", in: app)
         XCTAssertTrue(card.waitForExistence(timeout: 15))
+        print("Guest accessibility tree before swiping: " + app.debugDescription)
         swipeWithinCard(card)
         let delete = app.buttons["Delete"].firstMatch
         XCTAssertTrue(delete.waitForExistence(timeout: 6), app.debugDescription)

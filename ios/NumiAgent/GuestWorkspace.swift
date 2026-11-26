@@ -77,7 +77,7 @@ struct GuestWorkspace: View {
                                                description: Text(search.isEmpty ? "Scan or enter a piece to get started." : "Try another search or filter."))
                     }
                     if widthClass != .regular && !listView {
-                        CollectionGrid { gridCards }
+                        CollectionGrid(itemCount: filtered.count) { gridCards }
                             .listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
                     } else {
                         ForEach(filtered) { piece in
@@ -157,7 +157,7 @@ struct GuestWorkspace: View {
                                 }.buttonStyle(.plain)
                             }
                         }.padding()
-                    } else { CollectionGrid { gridCards }.padding() }
+                    } else { CollectionGrid(itemCount: filtered.count) { gridCards }.padding() }
                 }.navigationTitle("Collection gallery").background(CollectorDesign.background)
             }
         }
@@ -824,12 +824,6 @@ struct PiecePhotoViewer: View {
     var body: some View {
         NavigationStack {
             InteractivePhoto(photo: photo, command: command) { factor = $0 }
-                .accessibilityLabel("Specimen photo")
-                .accessibilityIdentifier("photo-zoom-surface")
-                .accessibilityValue("\(Int((factor * 100).rounded())) percent")
-                .accessibilityAdjustableAction { direction in
-                    issue(direction == .increment ? factor * 2 : factor / 2)
-                }
                 .background(.black)
                 .navigationTitle("Photo").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
@@ -857,79 +851,112 @@ private struct InteractivePhoto: UIViewRepresentable {
     let command: PhotoZoomCommand?
     let changed: (CGFloat) -> Void
 
-    func makeUIView(context: Context) -> PhotoScrollView {
-        let view = PhotoScrollView(frame: .zero)
-        view.picture.image = photo
-        view.changed = changed
-        return view
+    func makeUIView(context: Context) -> PhotoViewport {
+        PhotoViewport(photo: photo, changed: changed)
     }
 
-    func updateUIView(_ view: PhotoScrollView, context: Context) {
-        if let command, command.id != view.lastCommand {
-            view.lastCommand = command.id
-            view.setZoomScale(command.scale, animated: true)
-        }
+    func updateUIView(_ view: PhotoViewport, context: Context) {
+        guard let command, command.id != view.lastCommand else { return }
+        view.lastCommand = command.id
+        view.zoom(to: command.scale, at: view.midpoint)
     }
 }
 
-private final class PhotoScrollView: UIScrollView, UIScrollViewDelegate {
-    let picture = UIImageView()
-    var changed: ((CGFloat) -> Void)?
+private final class PhotoViewport: UIView {
+    private let picture: UIImageView
+    private let changed: (CGFloat) -> Void
+    private var scale: CGFloat = 1
+    private var offset = CGPoint.zero
+    private var previousPinch = CGPoint.zero
     var lastCommand: UUID?
-    private var lastSize = CGSize.zero
+    var midpoint: CGPoint { CGPoint(x: bounds.midX, y: bounds.midY) }
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        minimumZoomScale = 1
-        maximumZoomScale = 8
-        contentInsetAdjustmentBehavior = .never
-        showsHorizontalScrollIndicator = false
-        showsVerticalScrollIndicator = false
+    init(photo: UIImage, changed: @escaping (CGFloat) -> Void) {
+        self.picture = UIImageView(image: photo)
+        self.changed = changed
+        super.init(frame: .zero)
+        clipsToBounds = true
+        isMultipleTouchEnabled = true
         backgroundColor = .black
-        delegate = self
         picture.contentMode = .scaleAspectFit
         addSubview(picture)
-        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(toggleZoom(_:)))
-        doubleTap.numberOfTapsRequired = 2
-        addGestureRecognizer(doubleTap)
+        addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinched(_:))))
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(dragged(_:)))
+        pan.maximumNumberOfTouches = 1
+        addGestureRecognizer(pan)
+        let tap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped(_:)))
+        tap.numberOfTapsRequired = 2
+        addGestureRecognizer(tap)
+        isAccessibilityElement = true
         accessibilityIdentifier = "photo-zoom-surface"
+        accessibilityLabel = "Specimen photo"
+        accessibilityTraits = [.image, .adjustable]
+        accessibilityValue = "100 percent"
     }
 
     required init?(coder: NSCoder) { nil }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let size = bounds.size
-        guard size != lastSize, size.width > 0, size.height > 0, let image = picture.image else { return }
-        lastSize = size
-        setZoomScale(1, animated: false)
-        let fit = min(size.width / image.size.width, size.height / image.size.height)
-        let fitted = CGSize(width: image.size.width * fit, height: image.size.height * fit)
-        picture.frame = CGRect(origin: .zero, size: fitted)
-        contentSize = fitted
-        centerPicture()
+        positionPicture()
     }
 
-    func viewForZooming(in scrollView: UIScrollView) -> UIView? { picture }
-
-    func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        centerPicture()
-        changed?(zoomScale)
+    private func positionPicture() {
+        guard let size = picture.image?.size, size.width > 0, size.height > 0 else { return }
+        let fit = min(bounds.width / size.width, bounds.height / size.height)
+        let width = size.width * fit * scale, height = size.height * fit * scale
+        let maxX = max(0, (width - bounds.width) / 2), maxY = max(0, (height - bounds.height) / 2)
+        offset.x = min(maxX, max(-maxX, offset.x))
+        offset.y = min(maxY, max(-maxY, offset.y))
+        picture.frame = CGRect(x: bounds.midX + offset.x - width / 2, y: bounds.midY + offset.y - height / 2,
+                               width: width, height: height)
     }
 
-    private func centerPicture() {
-        let x = max(0, (bounds.width - picture.frame.width) / 2)
-        let y = max(0, (bounds.height - picture.frame.height) / 2)
-        contentInset = UIEdgeInsets(top: y, left: x, bottom: y, right: x)
+    func zoom(to proposed: CGFloat, at anchor: CGPoint, movingTo newAnchor: CGPoint? = nil) {
+        let next = min(8, max(1, proposed))
+        let ratio = next / scale, destination = newAnchor ?? anchor
+        offset.x = destination.x - bounds.midX + (offset.x - anchor.x + bounds.midX) * ratio
+        offset.y = destination.y - bounds.midY + (offset.y - anchor.y + bounds.midY) * ratio
+        let previous = scale
+        scale = next
+        positionPicture()
+        if next != previous {
+            accessibilityValue = "\(Int((next * 100).rounded())) percent"
+            changed(next)
+        }
     }
 
-    @objc private func toggleZoom(_ tap: UITapGestureRecognizer) {
-        if zoomScale > 1.01 { setZoomScale(1, animated: true); return }
-        let point = tap.location(in: picture)
-        let size = CGSize(width: bounds.width / 3, height: bounds.height / 3)
-        zoom(to: CGRect(x: point.x - size.width / 2, y: point.y - size.height / 2,
-                        width: size.width, height: size.height), animated: true)
+    @objc private func pinched(_ gesture: UIPinchGestureRecognizer) {
+        guard gesture.numberOfTouches >= 2 else { return }
+        let center = gesture.location(in: self)
+        switch gesture.state {
+        case .began:
+            previousPinch = center
+            zoom(to: scale * gesture.scale, at: center)
+        case .changed:
+            zoom(to: scale * gesture.scale, at: previousPinch, movingTo: center)
+            previousPinch = center
+        default:
+            return
+        }
+        gesture.scale = 1
     }
+
+    @objc private func dragged(_ gesture: UIPanGestureRecognizer) {
+        guard scale > 1 else { return }
+        let delta = gesture.translation(in: self)
+        offset.x += delta.x
+        offset.y += delta.y
+        gesture.setTranslation(.zero, in: self)
+        positionPicture()
+    }
+
+    @objc private func doubleTapped(_ gesture: UITapGestureRecognizer) {
+        zoom(to: scale > 1.01 ? 1 : 3, at: gesture.location(in: self))
+    }
+
+    override func accessibilityIncrement() { zoom(to: scale * 2, at: midpoint) }
+    override func accessibilityDecrement() { zoom(to: scale / 2, at: midpoint) }
 }
 
 struct PhotoTextDetails: View {

@@ -159,7 +159,7 @@ struct TabletWorkspace: View {
                             }.buttonStyle(.plain)
                         }
                         if listView { LazyVStack(alignment: .leading) { cards } }
-                        else { CollectionGrid { cards }.padding() }
+                        else { CollectionGrid(itemCount: catalogResults.items.count) { cards }.padding() }
                         if catalogResults.next != nil {
                             Button("Load more items") { catalogResults.requestedMore += 1 }.disabled(catalogResults.loading)
                         }

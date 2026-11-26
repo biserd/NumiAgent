@@ -31,7 +31,8 @@ final class TabletWorkspaceTests: XCTestCase {
         let surface = app.descendants(matching: .any)["photo-zoom-surface"].firstMatch
         XCTAssertTrue(surface.waitForExistence(timeout: 5))
         surface.pinch(withScale: 2, velocity: 1)
-        XCTAssertTrue(zoomOut.isEnabled)
+        let enlarged = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: zoomOut)
+        XCTAssertEqual(XCTWaiter.wait(for: [enlarged], timeout: 4), .completed, "Pinching should enlarge the specimen")
         app.buttons["Fit photo"].firstMatch.tap()
         let fitted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == false"), object: zoomOut)
         XCTAssertEqual(XCTWaiter.wait(for: [fitted], timeout: 4), .completed)

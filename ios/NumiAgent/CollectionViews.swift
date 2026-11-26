@@ -26,10 +26,18 @@ struct CollectionCard<Photo: View>: View {
 struct CollectionGrid<Content: View>: View {
     @Environment(\.dynamicTypeSize) private var textSize
     @Environment(\.horizontalSizeClass) private var widthClass
+    let itemCount: Int
     @ViewBuilder let content: () -> Content
+    private var columns: [GridItem] {
+        if widthClass == .regular && (1...2).contains(itemCount) && !textSize.isAccessibilitySize {
+            return Array(repeating: GridItem(.flexible(minimum: 120, maximum: 400), spacing: 12, alignment: .top), count: itemCount)
+        }
+        let minimum: CGFloat = textSize.isAccessibilitySize ? 270 : widthClass == .regular ? 180 : 140
+        return [GridItem(.adaptive(minimum: minimum), spacing: 12, alignment: .top)]
+    }
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: textSize.isAccessibilitySize ? 270 : widthClass == .regular ? 180 : 140),
-                                    spacing: 12, alignment: .top)], spacing: 14, content: content)
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 14, content: content)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -94,7 +102,7 @@ struct CatalogScreen: View {
             if !items.isEmpty {
                 Section {
                     if workspaceSelection == nil && !listView {
-                        CollectionGrid {
+                        CollectionGrid(itemCount: items.count) {
                             ForEach(items) { item in
                                 Button { openedItemID = item.id } label: {
                                     accountCard(item, api: api, demo: demo)

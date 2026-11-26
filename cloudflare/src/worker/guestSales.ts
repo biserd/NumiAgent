@@ -8,6 +8,13 @@ const terms = z.object({type:z.enum(['coin','banknote']),issuer:z.string().trim(
   denomination:z.string().trim().min(1).max(80),year:z.string().trim().regex(/^-?\d{1,4}$/)}).strict()
 const pick = z.object({ticket:z.string().regex(/^[a-f0-9]{64}$/),choice:z.number().int().positive()}).strict()
 type Choice = { id:number; label:string }
+// Keyword matches can include bullion weights or other coins mentioning the requested face value.
+const usCoins=[
+  {input:/^(?:quarter(?: dollar)?|25 cents)$/i,query:'quarter',title:/^(?:¼\s*dollar|1\/4\s*dollar|25\s*cents?|quarter dollar|washington quarter)\b/i},
+  {input:/^(?:nickel|five cents|5 cents)$/i,query:'5 cents',title:/^(?:5\s*cents?|five cents|half dime|1\/2\s*dime|½\s*dime)\b/i},
+  {input:/^(?:one dime|dime|10 cents)$/i,query:'dime',title:/^(?:(?:1|one)\s+dime|dime|10\s*cents?)\b/i},
+  {input:/^(?:one cent|cent|penny|1 cent)$/i,query:'cent',title:/^(?:(?:1|one)\s*cent|cent|penny)\b/i}
+]
 type Selection = { step:'type'; year:string; allowed:number[] } |
   { step:'issue'; typeID:number; allowed:number[] } | { step:'page'; typeID:number; issueID:number; allowed:number[] }
 
@@ -66,17 +73,13 @@ guestSales.post('/',async c=>{
     return c.json(await lots(c.env,key,ip,selected.typeID,selected.issueID,input.choice))
   }
   const us=/^(united states(?: of america)?|usa|u\.s\.)$/i.test(input.issuer)
-  const coins:Record<string,string>={'quarter dollar':'quarter','five cents':'5 cents','one dime':'dime','one cent':'cent'}
-  const hints=us ? {...input,issuer:'United States',denomination:input.type==='coin' ?
-    (coins[input.denomination.toLowerCase()] ?? input.denomination) : input.denomination} : input
+  const faceValue=us && input.type==='coin' ? usCoins.find(coin=>coin.input.test(input.denomination)) : undefined
+  const hints=us ? {...input,issuer:'United States',denomination:faceValue?.query ?? input.denomination} : input
   await quota(c.env,ip,'guide')
   const found=await discoverGuideType(key,hints)
   if (found.status!=='reference_required') return c.json(unavailable)
   let choices:Choice[]=found.candidates ?? []
-  if (us && hints.type==='coin' && /^(?:quarter|quarter dollar|25 cents)$/i.test(hints.denomination)) {
-    // Numista also matches "quarter ounce" bullion. Require the denomination in the catalog title.
-    choices=choices.filter(option=>/¼\s*dollar|1\/4\s*dollar|\b25\s*cents?\b|\bquarter dollar\b|\bwashington quarter\b/i.test(option.label))
-  }
+  if (faceValue) choices=choices.filter(option=>faceValue.title.test(option.label))
   if (!choices.length) return c.json({status:'no_matches',message:'Numista found no matching catalog types. Check your search details.'})
   return c.json({status:'choose_type',message:'Choose the catalog type that matches your piece.',choices,
     ticket:await ticket(c.env,{step:'type',year:input.year,allowed:choices.map(o=>o.id)})})

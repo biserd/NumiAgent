@@ -124,7 +124,8 @@ private struct CardPanArea: UIViewRepresentable {
             bounds.contains(touch.location(in: self))
         }
 
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard gestureRecognizer === pan else { return super.gestureRecognizerShouldBegin(gestureRecognizer) }
             let velocity = pan.velocity(in: self)
             return abs(velocity.x) > abs(velocity.y) * 1.5
         }

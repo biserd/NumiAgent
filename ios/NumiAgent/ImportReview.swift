@@ -222,6 +222,10 @@ struct ImportReview: View {
                            reference: CoinCatalogMatch?, unidentified: Bool) {
         guard previewBatch == nil else { return }
         var draft = suggestion?.draft(using: reference) ?? ItemDraft()
+        if suggestion == nil, let kind = photo.candidates.first?.type, photo.candidates.allSatisfy({ $0.type == kind }) {
+            draft.type = kind
+            draft.typeLocked = true
+        }
         if unidentified {
             draft.type = photo.candidates.first?.type ?? "coin"
             draft.title = draft.type == "banknote" ? "Unidentified banknote" : "Unidentified coin"
@@ -355,7 +359,8 @@ private struct ImportPhotoSection: View {
     private func sidePhoto(_ side: ImportedPhoto, label: String? = nil) -> some View {
         VStack {
             SpecimenImage(api: api, id: sample ? nil : side.id,
-                          sampleAsset: sample && side.record == nil ? "DemoNickel" : nil)
+                          sampleAsset: sample && side.record == nil ? "DemoNickel" : nil,
+                          zoomLabel: "Zoom " + (label?.lowercased() ?? "specimen") + " photo")
                 .frame(height: label == nil ? (expanded ? 265 : 190) : (expanded ? 155 : 112))
                 .clipShape(.rect(cornerRadius: 8))
             if let label { Text(label).font(.caption).foregroundStyle(.secondary) }
@@ -500,18 +505,19 @@ struct SpecimenIdentificationSheet: View {
                         if candidates == nil { Button("Try again") { Task { await identify() } } }
                     }
                     if let candidates {
-                        if candidates.isEmpty {
+                        let compatible = candidates.filter { item.typeLocked != true || $0.type == item.type }
+                        if compatible.isEmpty {
                             Text(enteredLegends ? "No catalog type matched those inscriptions." :
                                 "No match found. A closer photo of each side can help.").foregroundStyle(.secondary)
                         }
-                        if candidates.count > 1 {
+                        if compatible.count > 1 {
                             Text("Multiple items were detected. Review a match that belongs to this specimen.")
                                 .foregroundStyle(.secondary)
                         }
-                        ForEach(candidates.indices, id: \.self) { index in
+                        ForEach(compatible.indices, id: \.self) { index in
                             Section {
-                                IdentificationChoice(suggestion: candidates[index]) { match in
-                                    draft = candidates[index].draft(using: match, updating: item)
+                                IdentificationChoice(suggestion: compatible[index]) { match in
+                                    draft = compatible[index].draft(using: match, updating: item)
                                 }
                             }
                         }

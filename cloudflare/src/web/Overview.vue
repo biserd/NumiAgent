@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { message, request } from './api'
+import { message, request, type Specimen } from './api'
+import SpecimenTile from './SpecimenTile.vue'
 
 defineEmits<{
   imports:[];
   collection:[create:boolean];
+  specimen:[id:string];
   themes:[];
 }>()
 type Statistics = {
@@ -14,6 +16,7 @@ type Statistics = {
 type BatchSummary = {id:string;label:string;total:number;pending:number;cancelled:number}
 const stats=ref<Statistics|null>(null)
 const batches=ref<BatchSummary[]>([])
+const recent=ref<Specimen[]>([])
 const error=ref('')
 const total=computed(()=>stats.value?.counts.reduce((sum,row)=>sum+row.count,0) ?? 0)
 const usd=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0})
@@ -25,6 +28,7 @@ onMounted(async()=>{
     ])
     stats.value=statistics
     batches.value=imports.slice(0,3)
+    if(total.value) recent.value=(await request<{items:Specimen[]}>('/items?sort=recent')).items.slice(0,8)
   } catch (e) {error.value=message(e)}
 })
 </script>
@@ -34,6 +38,12 @@ onMounted(async()=>{
     <p>Keep your coins, banknotes, photographs, and auction evidence together.</p>
   </div>
   <p v-if="error" class="error" role="alert">{{error}}</p>
+  <section v-if="recent.length" aria-label="Collection gallery">
+    <div class="section-heading"><h2>Recently added</h2><button @click="$emit('collection',false)">View collection</button></div>
+    <div class="collection-results grid"><article v-for="piece in recent" :key="piece.id" class="photo-card">
+      <SpecimenTile :item="piece" @open="$emit('specimen',piece.id)"/>
+    </article></div>
+  </section>
   <div v-if="stats" class="metrics">
     <div v-for="kind in ['coin','banknote']" :key="kind"><span>{{kind==='coin'?'Coins':'Banknotes'}}</span><strong>{{stats.counts.find(row=>row.type===kind)?.count ?? 0}}</strong></div>
     <div><span>Photos</span><strong>{{stats.photos}}</strong></div>

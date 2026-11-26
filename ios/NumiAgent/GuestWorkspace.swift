@@ -1,4 +1,5 @@
 import AVFoundation
+import ImageIO
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -35,6 +36,8 @@ private enum GuestFilter: String, CaseIterable, Identifiable {
 }
 
 struct GuestWorkspace: View {
+    @Environment(\.horizontalSizeClass) private var widthClass
+    @AppStorage("collector-list-view") private var listView = false
     @ObservedObject var store: GuestStore
     let api: NumiAPI
     let accountTitle: String?
@@ -73,12 +76,20 @@ struct GuestWorkspace: View {
                                                systemImage: "square.grid.2x2",
                                                description: Text(search.isEmpty ? "Scan or enter a piece to get started." : "Try another search or filter."))
                     }
-                    ForEach(filtered) { piece in
-                        NavigationLink(value: piece.id) {
-                            VStack(alignment: .leading) {
-                                Text(piece.displayTitle)
-                                Text([piece.issuer, piece.denomination, piece.year].filter { !$0.isEmpty }.joined(separator: " · "))
-                                    .font(.footnote).foregroundStyle(.secondary)
+                    if widthClass != .regular && !listView {
+                        CollectionGrid(itemCount: filtered.count) { gridCards }
+                            .listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
+                    } else {
+                        ForEach(filtered) { piece in
+                            NavigationLink(value: piece.id) {
+                                HStack {
+                                    thumbnail(piece).frame(width: 46, height: 46).clipShape(.rect(cornerRadius: 8))
+                                    VStack(alignment: .leading) {
+                                        Text(piece.displayTitle)
+                                        Text([piece.issuer, piece.denomination, piece.year].filter { !$0.isEmpty }.joined(separator: " · "))
+                                            .font(.footnote).foregroundStyle(.secondary)
+                                    }
+                                }
                             }
                         }
                     }
@@ -89,6 +100,9 @@ struct GuestWorkspace: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu("Collection menu", systemImage: "ellipsis.circle") {
+                        Button(listView ? "Show gallery" : "Show list", systemImage: listView ? "square.grid.2x2" : "list.bullet") {
+                            listView.toggle()
+                        }
                         if store.collections.count > 1 {
                             Section("On this iPhone") {
                                 ForEach(store.collections) { collection in
@@ -119,9 +133,32 @@ struct GuestWorkspace: View {
             if let selected, store.piece(selected) != nil {
                 GuestPieceScreen(store: store, api: api, id: selected, newPiece: nil) { self.selected = nil }
                     .id(selected)
+                    .toolbar {
+                        if widthClass == .regular {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Collection gallery", systemImage: "square.grid.2x2") { self.selected = nil }
+                            }
+                        }
+                    }
             } else {
-                ContentUnavailableView("My collection", systemImage: "square.grid.2x2",
-                                       description: Text("Select a piece to open its record."))
+                ScrollView {
+                    if filtered.isEmpty {
+                        ContentUnavailableView(search.isEmpty ? "No pieces to show" : "No matches", systemImage: "square.grid.2x2",
+                            description: Text("Scan a piece or change your search and filters."))
+                    } else if listView {
+                        LazyVStack(alignment: .leading, spacing: 8) {
+                            ForEach(filtered) { piece in
+                                Button { selected = piece.id } label: {
+                                    HStack {
+                                        thumbnail(piece).frame(width: 64, height: 64)
+                                        Text(piece.displayTitle).font(.headline)
+                                        Spacer()
+                                    }
+                                }.buttonStyle(.plain)
+                            }
+                        }.padding()
+                    } else { CollectionGrid(itemCount: filtered.count) { gridCards }.padding() }
+                }.navigationTitle("Collection gallery").background(CollectorDesign.background)
             }
         }
         .task {
@@ -177,6 +214,26 @@ struct GuestWorkspace: View {
         }
     }
 
+    private var gridCards: some View {
+        ForEach(filtered) { piece in
+            Button {
+                if widthClass == .regular { selected = piece.id } else { editor = piece }
+            } label: {
+                CollectionCard(title: piece.displayTitle, subtitle: [piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: " · ")) {
+                    thumbnail(piece)
+                }
+            }.buttonStyle(.plain)
+                .accessibilityLabel(piece.displayTitle)
+                .accessibilityValue([piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: ", "))
+                .accessibilityIdentifier("gallery-piece-\(piece.id)")
+        }
+    }
+
+    private func thumbnail(_ piece: GuestPiece) -> some View {
+        let photo = GuestSide.allCases.compactMap { piece.photos[$0] }.first
+        return LocalThumbnail(url: photo.map { store.photoURL($0) }, type: piece.type)
+    }
+
     private func draftNumber(_ id: UUID) -> Int {
         let index = store.active?.drafts.firstIndex { $0.id == id } ?? 0
         return (store.active?.pieces.count ?? 0) + index + 1
@@ -186,6 +243,33 @@ struct GuestWorkspace: View {
     private func open(_ id: UUID) { act { try store.resume(id); editor = store.piece(id) } }
     private func act(_ action: () throws -> Void) {
         do { try action() } catch { store.error = error.localizedDescription }
+    }
+}
+
+private struct LocalThumbnail: View {
+    let url: URL?
+    let type: String
+    @State private var thumbnail: UIImage?
+    var body: some View {
+        ZStack {
+            Color.secondary.opacity(0.06)
+            if let thumbnail { Image(uiImage: thumbnail).resizable().scaledToFit() }
+            else { Image(systemName: type == "coin" ? "circle.circle" : "banknote").font(.title2).foregroundStyle(.secondary) }
+        }
+        .accessibilityHidden(true)
+        .task(id: url) {
+            thumbnail = nil
+            guard let url else { return }
+            let image = await Task.detached(priority: .utility) { () -> UIImage? in
+                guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                      let bitmap = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                        kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true,
+                        kCGImageSourceThumbnailMaxPixelSize: 480
+                      ] as CFDictionary) else { return nil }
+                return UIImage(cgImage: bitmap)
+            }.value
+            if !Task.isCancelled { thumbnail = image }
+        }
     }
 }
 
@@ -332,9 +416,9 @@ private struct GuestPieceScreen: View {
                 camera = false
             }.ignoresSafeArea()
         }
-        .sheet(item: $zoomedSide) { side in
+        .fullScreenCover(item: $zoomedSide) { side in
             if let id = store.piece(id)?.photos[side], let photo = UIImage(contentsOfFile: store.photoURL(id).path) {
-                GuestPhotoPreview(photo: photo)
+                PiecePhotoViewer(photo: photo)
             }
         }
         .sheet(isPresented: $catalogPicker) {
@@ -396,20 +480,16 @@ private struct GuestPieceScreen: View {
                 HStack(alignment: .top, spacing: 8) {
                     ForEach(GuestSide.allCases) { side in
                         if let photo = piece.photos[side], let image = UIImage(contentsOfFile: store.photoURL(photo).path) {
-                            Image(uiImage: image).resizable().scaledToFit()
-                                .frame(maxWidth: .infinity).frame(height: 115)
-                                .padding(6)
-                                .background(CollectorDesign.highlight.opacity(0.5), in: .rect(cornerRadius: 12))
-                                .accessibilityLabel("Photo \(photoNumber(side))")
-                                .overlay(alignment: .bottomTrailing) {
-                                    Button { zoomedSide = side } label: {
-                                        Image(systemName: "magnifyingglass").frame(width: 44, height: 44)
-                                            .background(CollectorDesign.surface, in: .rect(cornerRadius: 10))
-                                            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(CollectorDesign.tint.opacity(0.35)))
-                                    }.buttonStyle(.plain)
-                                        .foregroundStyle(.tint).padding(5)
-                                        .accessibilityLabel("Zoom photo \(photoNumber(side))")
-                                }
+                            Button { zoomedSide = side } label: {
+                                Image(uiImage: image).resizable().scaledToFit()
+                                    .frame(maxWidth: .infinity).frame(height: 115).padding(6)
+                                    .background(CollectorDesign.highlight.opacity(0.5), in: .rect(cornerRadius: 12))
+                                    .overlay(alignment: .bottomTrailing) {
+                                        Image(systemName: "magnifyingglass").padding(9)
+                                            .background(CollectorDesign.surface, in: .circle).padding(5)
+                                    }
+                                    .contentShape(Rectangle())
+                            }.buttonStyle(.plain).accessibilityLabel("Zoom photo \(photoNumber(side))")
                         } else {
                             Image(systemName: "photo").font(.title2).foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity).frame(height: 127)
@@ -508,7 +588,7 @@ private struct GuestPieceScreen: View {
                     }.accessibilityIdentifier("guest-search-online").disabled(busy)
                 }
             }
-            details
+            details(piece)
             if let result = piece.recognition, !result.suggestions.isEmpty, !result.likely {
                 scanButton(showAlternatives ? "Hide possible matches" : "See possible matches",
                            icon: showAlternatives ? "chevron.up" : "chevron.down") { showAlternatives.toggle() }
@@ -535,15 +615,20 @@ private struct GuestPieceScreen: View {
         }
     }
 
-    private var details: some View {
+    private func details(_ piece: GuestPiece) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("Record details").font(.headline).accessibilityAddTraits(.isHeader)
                 Spacer()
                 Text("Editable").font(.caption).foregroundStyle(.secondary)
             }
-            Picker("Type", selection: field(.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
-                .pickerStyle(.segmented)
+            if piece.hasIdentifiedType {
+                LabeledContent("Piece type", value: piece.type == "coin" ? "Coin" : "Banknote")
+                    .accessibilityIdentifier("identified-piece-type")
+            } else {
+                Picker("Type", selection: field(.type)) { Text("Coin").tag("coin"); Text("Banknote").tag("banknote") }
+                    .pickerStyle(.segmented)
+            }
             detailRow("Name", field: .title)
             detailRow("Issuer or country", field: .issuer)
             detailRow("Denomination", field: .denomination)
@@ -641,8 +726,7 @@ private struct GuestPieceScreen: View {
             guard !Task.isCancelled, let current = store.piece(id), photoVersion(current) == version,
                   current.recognition == nil else { return }
             try store.changePiece(id) {
-                $0.recognition = result
-                $0.fill(from: result)
+                $0.acceptRecognition(result)
             }
         } catch {
             if !Task.isCancelled { recognitionError = "Couldn’t read these photos. You can still enter details." }
@@ -663,8 +747,7 @@ private struct GuestPieceScreen: View {
                                             denomination: "5 cents", year: "2007", reference: nil, evidence: [])
                 try store.changePiece(id) {
                     let result = LocalRecognitionResult(suggestions: [match], likely: true)
-                    $0.recognition = result
-                    $0.fill(from: result)
+                    $0.acceptRecognition(result)
                 }
                 onlineCompleted = true
                 return
@@ -683,8 +766,7 @@ private struct GuestPieceScreen: View {
                     matches.observations = $0.recognition?.observations ?? []
                     matches.photoReading = $0.recognition?.photoReading
                     if matches.suggestions.isEmpty, let local = $0.recognition { matches = local }
-                    $0.recognition = matches
-                    $0.fill(from: matches)
+                    $0.acceptRecognition(matches)
                     $0.onlineJob = nil
                 }
                 onlineCompleted = true
@@ -707,9 +789,15 @@ private struct GuestPieceScreen: View {
     }
 
     private func apply(_ suggestion: LocalSuggestion) {
+        guard let current = store.piece(id), !current.hasIdentifiedType || current.type == suggestion.type else {
+            store.error = "Choose a match with the same piece type."
+            return
+        }
         act {
             try store.changePiece(id) { piece in
-                let fields: [(GuestDetailField, String)] = [(.type, suggestion.type), (.title, suggestion.title),
+                piece.type = suggestion.type
+                piece.typeLocked = true
+                let fields: [(GuestDetailField, String)] = [(.title, suggestion.title),
                     (.issuer, suggestion.issuer), (.denomination, suggestion.denomination), (.year, suggestion.year)]
                 for (field, value) in fields where !value.isBlank {
                     guard piece.manuallyEditedFields?.contains(field) != true else { continue }
@@ -727,37 +815,148 @@ private struct GuestPieceScreen: View {
     private func act(_ action: () throws -> Void) { do { try action() } catch { store.error = error.localizedDescription } }
 }
 
-private struct GuestPhotoPreview: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var scale: CGFloat = 1
-    @GestureState private var magnification: CGFloat = 1
+struct PiecePhotoViewer: View {
     let photo: UIImage
+    @Environment(\.dismiss) private var dismiss
+    @State private var factor: CGFloat = 1
+    @State private var command: PhotoZoomCommand?
 
     var body: some View {
         NavigationStack {
-            GeometryReader { proxy in
-                ScrollView([.horizontal, .vertical]) {
-                    Image(uiImage: photo).resizable().scaledToFit()
-                        .frame(width: proxy.size.width * zoom, height: proxy.size.height * zoom)
-                        .accessibilityLabel("Coin or banknote photo")
-                }.gesture(MagnificationGesture().updating($magnification) { amount, state, _ in state = amount }
-                    .onEnded { scale = min(max(scale * $0, 1), 5) })
-                    .onTapGesture(count: 2) { scale = scale == 1 ? 2 : 1 }
-            }
-            .background(Color(uiColor: .systemBackground))
-            .navigationTitle("Photo").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-                ToolbarItem(placement: .primaryAction) {
-                    Button(scale == 1 ? "Zoom in" : "Reset zoom", systemImage: scale == 1 ? "plus.magnifyingglass" : "minus.magnifyingglass") {
-                        scale = scale == 1 ? 2 : 1
-                    }
+            InteractivePhoto(photo: photo, command: command) { factor = $0 }
+                .background(.black)
+                .navigationTitle("Photo").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+                .safeAreaInset(edge: .bottom) {
+                    HStack(spacing: 20) {
+                        Button { issue(factor / 2) } label: {
+                            Image(systemName: "minus.magnifyingglass").frame(width: 44, height: 44)
+                        }.disabled(factor <= 1.001).accessibilityLabel("Zoom out")
+                        Button("Fit") { issue(1) }.frame(minWidth: 44, minHeight: 44).accessibilityLabel("Fit photo")
+                        Button { issue(factor * 2) } label: {
+                            Image(systemName: "plus.magnifyingglass").frame(width: 44, height: 44)
+                        }.disabled(factor >= 7.999).accessibilityLabel("Zoom in")
+                    }.buttonStyle(.bordered).frame(maxWidth: .infinity).padding(8).background(.bar)
                 }
-            }
         }
     }
 
-    private var zoom: CGFloat { min(max(scale * magnification, 1), 5) }
+    private func issue(_ scale: CGFloat) { command = PhotoZoomCommand(scale: min(8, max(1, scale))) }
+}
+
+private struct PhotoZoomCommand { let id = UUID(); let scale: CGFloat }
+
+private struct InteractivePhoto: UIViewRepresentable {
+    let photo: UIImage
+    let command: PhotoZoomCommand?
+    let changed: (CGFloat) -> Void
+
+    func makeUIView(context: Context) -> PhotoViewport {
+        PhotoViewport(photo: photo, changed: changed)
+    }
+
+    func updateUIView(_ view: PhotoViewport, context: Context) {
+        guard let command, command.id != view.lastCommand else { return }
+        view.lastCommand = command.id
+        view.zoom(to: command.scale, at: view.midpoint)
+    }
+}
+
+private final class PhotoViewport: UIView {
+    private let picture: UIImageView
+    private let changed: (CGFloat) -> Void
+    private var scale: CGFloat = 1
+    private var offset = CGPoint.zero
+    private var previousPinch = CGPoint.zero
+    var lastCommand: UUID?
+    var midpoint: CGPoint { CGPoint(x: bounds.midX, y: bounds.midY) }
+
+    init(photo: UIImage, changed: @escaping (CGFloat) -> Void) {
+        self.picture = UIImageView(image: photo)
+        self.changed = changed
+        super.init(frame: .zero)
+        clipsToBounds = true
+        isMultipleTouchEnabled = true
+        backgroundColor = .black
+        picture.contentMode = .scaleAspectFit
+        addSubview(picture)
+        addGestureRecognizer(UIPinchGestureRecognizer(target: self, action: #selector(pinched(_:))))
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(dragged(_:)))
+        pan.maximumNumberOfTouches = 1
+        addGestureRecognizer(pan)
+        let tap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped(_:)))
+        tap.numberOfTapsRequired = 2
+        addGestureRecognizer(tap)
+        isAccessibilityElement = true
+        accessibilityIdentifier = "photo-zoom-surface"
+        accessibilityLabel = "Specimen photo"
+        accessibilityTraits = [.image, .adjustable]
+        accessibilityValue = "100 percent"
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        positionPicture()
+    }
+
+    private func positionPicture() {
+        guard let size = picture.image?.size, size.width > 0, size.height > 0 else { return }
+        let fit = min(bounds.width / size.width, bounds.height / size.height)
+        let width = size.width * fit * scale, height = size.height * fit * scale
+        let maxX = max(0, (width - bounds.width) / 2), maxY = max(0, (height - bounds.height) / 2)
+        offset.x = min(maxX, max(-maxX, offset.x))
+        offset.y = min(maxY, max(-maxY, offset.y))
+        picture.frame = CGRect(x: bounds.midX + offset.x - width / 2, y: bounds.midY + offset.y - height / 2,
+                               width: width, height: height)
+    }
+
+    func zoom(to proposed: CGFloat, at anchor: CGPoint, movingTo newAnchor: CGPoint? = nil) {
+        let next = min(8, max(1, proposed))
+        let ratio = next / scale, destination = newAnchor ?? anchor
+        offset.x = destination.x - bounds.midX + (offset.x - anchor.x + bounds.midX) * ratio
+        offset.y = destination.y - bounds.midY + (offset.y - anchor.y + bounds.midY) * ratio
+        let previous = scale
+        scale = next
+        positionPicture()
+        if next != previous {
+            accessibilityValue = "\(Int((next * 100).rounded())) percent"
+            changed(next)
+        }
+    }
+
+    @objc private func pinched(_ gesture: UIPinchGestureRecognizer) {
+        guard gesture.numberOfTouches >= 2 else { return }
+        let center = gesture.location(in: self)
+        switch gesture.state {
+        case .began:
+            previousPinch = center
+            zoom(to: scale * gesture.scale, at: center)
+        case .changed:
+            zoom(to: scale * gesture.scale, at: previousPinch, movingTo: center)
+            previousPinch = center
+        default:
+            return
+        }
+        gesture.scale = 1
+    }
+
+    @objc private func dragged(_ gesture: UIPanGestureRecognizer) {
+        guard scale > 1 else { return }
+        let delta = gesture.translation(in: self)
+        offset.x += delta.x
+        offset.y += delta.y
+        gesture.setTranslation(.zero, in: self)
+        positionPicture()
+    }
+
+    @objc private func doubleTapped(_ gesture: UITapGestureRecognizer) {
+        zoom(to: scale > 1.01 ? 1 : 3, at: gesture.location(in: self))
+    }
+
+    override func accessibilityIncrement() { zoom(to: scale * 2, at: midpoint) }
+    override func accessibilityDecrement() { zoom(to: scale / 2, at: midpoint) }
 }
 
 struct PhotoTextDetails: View {

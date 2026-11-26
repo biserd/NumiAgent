@@ -23,6 +23,7 @@ struct PhotoLink: Codable, Identifiable {
 
 struct ItemDraft: Encodable {
     var type = "coin"
+    var typeLocked: Bool?
     var title = ""
     var ruler = ""
     var issuer = ""
@@ -44,6 +45,7 @@ struct ItemDraft: Encodable {
 
     init(item: Specimen) {
         type = item.type
+        typeLocked = item.typeLocked
         title = item.title
         ruler = item.ruler
         issuer = item.issuer
@@ -202,6 +204,7 @@ struct PhotoCandidate: Decodable {
     func draft(using record: CoinCatalogMatch? = nil, updating item: Specimen? = nil) -> ItemDraft {
         var draft = item.map { ItemDraft(item: $0) } ?? ItemDraft()
         draft.type = type
+        draft.typeLocked = true
         draft.title = title
         draft.ruler = ruler.flatMap { $0.isBlank ? nil : $0 } ?? draft.ruler
         draft.issuer = issuer.flatMap { $0.isBlank ? nil : $0 } ?? draft.issuer

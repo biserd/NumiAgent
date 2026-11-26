@@ -18,6 +18,7 @@ export type Photo = {id:string;state:string;candidates:Candidate[];error?:string
 export type Box = {x:number;y:number;width:number;height:number}
 export type Link = {photoId:string;side:'obverse'|'reverse'|'overview';crop?:Box|null}
 export type RecordForm = {
+  typeLocked?:boolean;
   type:'coin'|'banknote';title:string;issuer:string;ruler:string;denomination:string;year:string;reference:string;
   grade:string;notes:string;tags:string;collection_id:string|null;details:Record<string,string|number|undefined>;photos?:Link[]
 }

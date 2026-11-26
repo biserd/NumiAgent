@@ -505,6 +505,7 @@ private struct SignInScreen: View {
 }
 
 private struct CollectorTabs: View {
+    @StateObject private var catalogResults = CatalogResults()
     @ObservedObject var session: AppSession
     let account: Account?
     @StateObject private var capture: CaptureDraftStore
@@ -526,7 +527,7 @@ private struct CollectorTabs: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            CatalogScreen(api: session.api, demo: demo, capture: capture, query: $search,
+            CatalogScreen(results: catalogResults, api: session.api, demo: demo, capture: capture, query: $search,
                           openedItemID: $openedItemID, openCapture: openCapture,
                           openAccount: { showAccount = true }, itemCreated: openNewItem, revision: catalogRevision)
                 .tabItem { Label(CollectorTab.collection.title, systemImage: CollectorTab.collection.icon) }

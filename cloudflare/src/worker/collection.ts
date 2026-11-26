@@ -11,12 +11,12 @@ import { researchSales } from './saleResearch'
 import { capabilities } from './marketCapabilities'
 import { mergeItems } from './mergeItems'
 
-const record = item.extend({ photos: z.array(photoLink).max(12).optional() })
+const record = item.extend({ photos: z.array(photoLink).max(12).optional(), typeLocked:z.boolean().optional() })
 type Input = z.infer<typeof record>
 type Row = Omit<Item,'details'> & {id: string; created: number; updated: number; details:string; photo:string|null}
 const select = `SELECT i.*, (SELECT photo_id FROM item_photos
  WHERE user_id=i.user_id AND item_id=i.id ORDER BY CASE side WHEN 'obverse' THEN 0 WHEN 'overview' THEN 1 ELSE 2 END LIMIT 1) AS photo FROM items i`
-const decode = (row: Row) => ({...row,details:JSON.parse(row.details) as Item['details']})
+const decode = ({type_locked,...row}: Row & {type_locked?:number}) => ({...row,typeLocked:type_locked===1,details:JSON.parse(row.details) as Item['details']})
 export async function listItems(env: Env, user: string, query = '', type = '', page = 0, collection = '', sort = 'recent') {
   const term = '%' + query.replace(/[\\%_]/g,'\\$&') + '%'
   const order = sort === 'title' ? 'i.title COLLATE NOCASE,i.id' : 'i.created DESC,i.id DESC'
@@ -50,14 +50,18 @@ export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:stri
       SELECT COUNT(*) FROM photos companion WHERE companion.batch_id=p.batch_id AND companion.user_id=p.user_id
       AND companion.id<>p.id AND companion.state='manual'))`
   const guard = [key,user,attempt,Number(reviewed),Number(reviewed)]
+  const proposed = JSON.parse(candidates) as {type:string}[]
+  if (reviewed && proposed.length && proposed.every(p=>p.type===proposed[0].type) && input.type!==proposed[0].type)
+    return fail(409,'The identified piece type cannot be changed')
+  const locked = !reviewed || proposed.some(p=>p.type===input.type)
   const timestamp = now()
-  const values = [key,user,...itemValues(input),timestamp,timestamp]
+  const values = [key,user,...itemValues(input),timestamp,timestamp,Number(locked)]
   const placeholders = values.map(()=>'?').join(',')
   // One stable item key per photo. The transaction commits the record, link and status together.
   const paired = photo.pair_side==='obverse'
   const anchor=photo.scan_slot ?? null
   const statements = [
-    env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated)
+    env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated,type_locked)
       SELECT ${placeholders} WHERE EXISTS(${current}) ON CONFLICT(id) DO NOTHING`)
       .bind(...values,...guard),
     env.DB.prepare(`INSERT INTO item_photos(user_id,item_id,photo_id,side,crop)
@@ -80,9 +84,9 @@ export async function saveIdentifiedPhoto(env:Env, photo:{id:string;user_id:stri
   return saved.meta.changes > 0
 }
 function insertItem(env:Env, user:string, key:string, input:Input, legacyId:string|null=null) {
-  return env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated,legacy_coin_id)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,legacy_coin_id) DO NOTHING`)
-    .bind(key,user,...itemValues(input),now(),now(),legacyId)
+  return env.DB.prepare(`INSERT INTO items(id,user_id,collection_id,type,title,issuer,ruler,denomination,year,reference,grade,notes,tags,details,created,updated,legacy_coin_id,type_locked)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,legacy_coin_id) DO NOTHING`)
+    .bind(key,user,...itemValues(input),now(),now(),legacyId,Number(!!input.typeLocked))
 }
 async function requireCollection(env:Env,user:string,key:string) {
   if (!await one(env,'SELECT 1 FROM collections WHERE id=? AND user_id=?',key,user)) fail(404,'Collection unavailable')
@@ -94,12 +98,20 @@ export async function saveItems(env: Env,user:string,entries:{id:string; input:I
     await requireCollection(env,user,key)
   }
   const photos = new Set(entries.flatMap(e=>e.input.photos?.map(p=>p.photoId) ?? []))
+  const candidatesByPhoto=new Map<string,{type:string;title:string}[]>()
   for (const key of photos) {
-    if (!await one(env,`SELECT 1 FROM photos WHERE id=? AND user_id=? AND state IN ('manual','review','saved','failed')`,key,user)) fail(404,'Photo unavailable for cataloging')
+    const photo=await one<{candidates:string|null}>(env,`SELECT candidates FROM photos WHERE id=? AND user_id=? AND state IN ('manual','review','saved','failed')`,key,user)
+    if (!photo) return fail(404,'Photo unavailable for cataloging')
+    candidatesByPhoto.set(key,JSON.parse(photo.candidates ?? '[]'))
   }
   const statements = entries.flatMap(({id:key,input:i,update})=>{
+    if (!update && i.photos?.length) {
+      const candidates=i.photos.flatMap(p=>candidatesByPhoto.get(p.photoId) ?? [])
+      // Older clients accepted a scan by posting its fields. A photo attachment alone can also be manual.
+      if(candidates.some(c=>c.type===i.type && c.title===i.title)) i={...i,typeLocked:true}
+    }
     const first = update
-      ? env.DB.prepare('UPDATE items SET collection_id=?,type=?,title=?,issuer=?,ruler=?,denomination=?,year=?,reference=?,grade=?,notes=?,tags=?,details=?,updated=? WHERE id=? AND user_id=?').bind(...itemValues(i),now(),key,user)
+      ? env.DB.prepare('UPDATE items SET collection_id=?,type=?,title=?,issuer=?,ruler=?,denomination=?,year=?,reference=?,grade=?,notes=?,tags=?,details=?,updated=?,type_locked=MAX(type_locked,?) WHERE id=? AND user_id=?').bind(...itemValues(i),now(),Number(!!i.typeLocked),key,user)
       : insertItem(env,user,key,i)
     if (!i.photos) return [first]
     return [first,env.DB.prepare('DELETE FROM item_photos WHERE item_id=? AND user_id=?').bind(key,user),
@@ -108,7 +120,11 @@ export async function saveItems(env: Env,user:string,entries:{id:string; input:I
         env.DB.prepare(`UPDATE photos SET state='saved',updated=? WHERE user_id=? AND id=? AND state IN ('manual','review','failed','saved')`).bind(now(),user,p.photoId)
       ])]
   })
-  await env.DB.batch(statements)
+  try { await env.DB.batch(statements) }
+  catch (error) {
+    if (String(error).includes('identified item type is fixed')) return fail(409,'The identified piece type cannot be changed')
+    throw error
+  }
   return entries.map(e=>e.id)
 }
 export async function stats(env: Env,user: string) {

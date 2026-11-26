@@ -25,7 +25,8 @@ function setMeasurement(key: string,event: Event) {
 <template>
   <div class="form-grid">
     <label>Title<input v-model="item.title" required maxlength="180"></label>
-    <label>Type<select v-model="item.type"><option value="coin">Coin</option><option value="banknote">Banknote</option></select></label>
+    <div v-if="item.typeLocked"><strong>Piece type</strong><div>{{item.type==='coin'?'Coin':'Banknote'}}</div></div>
+    <label v-else>Type<select v-model="item.type"><option value="coin">Coin</option><option value="banknote">Banknote</option></select></label>
     <label v-for="[key,label] in fields" :key="key">{{label}}<input v-model="item[key]" maxlength="180"></label>
     <label>Collection<select v-model="item.collection_id"><option :value="null">Unfiled</option><option v-for="f in folders" :key="f.id" :value="f.id">{{f.name}}</option></select></label>
   </div>

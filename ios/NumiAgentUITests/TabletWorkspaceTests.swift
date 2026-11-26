@@ -8,8 +8,12 @@ final class TabletWorkspaceTests: XCTestCase {
         defer { XCUIDevice.shared.orientation = .portrait }
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture"]
         app.launch()
-        let quarter = app.staticTexts["United States quarter"].firstMatch
+        let quarter = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
         XCTAssertTrue(quarter.waitForExistence(timeout: 15))
+        let gallery = XCTAttachment(screenshot: app.screenshot())
+        gallery.name = "Device collection gallery on iPad"
+        gallery.lifetime = .keepAlways
+        add(gallery)
         quarter.tap()
         let sales = app.buttons["guest-comparable-sales"].firstMatch
         XCTAssertTrue(sales.waitForExistence(timeout: 10))
@@ -21,6 +25,17 @@ final class TabletWorkspaceTests: XCTestCase {
         XCTAssertTrue(app.buttons["Check Numista auction sales"].isEnabled)
         app.buttons["Done"].firstMatch.tap()
         XCTAssertTrue(sales.waitForExistence(timeout: 5))
+        app.buttons["Zoom photo 1"].firstMatch.tap()
+        let zoomOut = app.buttons["Zoom out"].firstMatch
+        XCTAssertTrue(zoomOut.waitForExistence(timeout: 5))
+        let surface = app.descendants(matching: .any)["photo-zoom-surface"].firstMatch
+        XCTAssertTrue(surface.waitForExistence(timeout: 5))
+        surface.pinch(withScale: 2, velocity: 1)
+        let enlarged = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: zoomOut)
+        XCTAssertEqual(XCTWaiter.wait(for: [enlarged], timeout: 4), .completed, "Pinching should enlarge the specimen")
+        app.buttons["Fit photo"].firstMatch.tap()
+        let fitted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == false"), object: zoomOut)
+        XCTAssertEqual(XCTWaiter.wait(for: [fitted], timeout: 4), .completed)
     }
 
     @MainActor
@@ -217,6 +232,7 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertEqual(title.value as? String, "2007 Jefferson nickel")
         XCTAssertEqual(app.textFields["guest-field-issuer"].value as? String, "Collector correction")
         XCTAssertEqual(app.textFields["guest-field-year"].value as? String, "2007")
+        XCTAssertFalse(app.segmentedControls.buttons["Banknote"].exists)
         XCTAssertFalse(app.buttons["Send selected photos"].exists)
         XCTAssertEqual(app.buttons["guest-save-record"].label, "Save to collection")
     }
@@ -272,24 +288,24 @@ final class GuestV1Tests: XCTestCase {
         for _ in 0..<8 where !save.isHittable { app.swipeUp() }
         XCTAssertTrue(save.isHittable)
         save.tap()
-        XCTAssertTrue(app.staticTexts["Unidentified coin"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(galleryCard("Unidentified coin", in: app).waitForExistence(timeout: 10))
         XCTAssertFalse(resume.exists)
 
         addManually("Test banknote", to: app, isBanknote: true)
         addManually("Unknown piece", to: app, isBanknote: false)
         app.terminate()
         app.launch()
-        XCTAssertTrue(app.staticTexts["Test banknote"].firstMatch.waitForExistence(timeout: 15))
-        XCTAssertTrue(app.staticTexts["Unknown piece"].firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["Unidentified coin"].firstMatch.exists)
+        XCTAssertTrue(galleryCard("Test banknote", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(galleryCard("Unknown piece", in: app).exists)
+        XCTAssertTrue(galleryCard("Unidentified coin", in: app).exists)
         XCTAssertFalse(app.buttons["Send sign-in link"].exists)
         let search = app.searchFields.firstMatch
         if !search.isHittable { app.swipeDown() }
         XCTAssertTrue(search.isHittable)
         search.tap()
         search.typeText("banknote")
-        XCTAssertTrue(app.staticTexts["Test banknote"].firstMatch.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.staticTexts["Unknown piece"].firstMatch.exists)
+        XCTAssertTrue(galleryCard("Test banknote", in: app).waitForExistence(timeout: 10))
+        XCTAssertFalse(galleryCard("Unknown piece", in: app).exists)
     }
 
     @MainActor
@@ -298,6 +314,11 @@ final class GuestV1Tests: XCTestCase {
         app.launchArguments = ["--guest-storage-acceptance"]
         app.launch()
         XCTAssertTrue(app.staticTexts["Guest storage checks passed"].waitForExistence(timeout: 20), app.debugDescription)
+    }
+
+    @MainActor
+    private func galleryCard(_ title: String, in app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label == %@", "gallery-piece-", title)).firstMatch
     }
 
     @MainActor
@@ -321,6 +342,6 @@ final class GuestV1Tests: XCTestCase {
         for _ in 0..<5 where !save.isHittable { app.swipeUp() }
         XCTAssertTrue(save.isHittable)
         save.tap()
-        XCTAssertTrue(app.staticTexts[title].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(galleryCard(title, in: app).waitForExistence(timeout: 10))
     }
 }

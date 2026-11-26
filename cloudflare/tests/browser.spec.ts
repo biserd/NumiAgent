@@ -158,6 +158,24 @@ test('Grouped scan drafts survive navigation and save one record per physical it
   await saved.first().click()
   await expect(page.getByRole('heading',{name:'1998 Hong Kong 1 dollar',exact:true})).toBeVisible()
   await expect(page.locator('.specimen-images img')).toHaveCount(2)
+  const editor=page.locator('form').filter({has:page.getByRole('button',{name:'Save specimen',exact:true})})
+  await expect(editor.getByText('Piece type',{exact:true})).toBeVisible()
+  await expect(editor.getByLabel('Type',{exact:true})).toHaveCount(0)
+  await page.locator('.specimen-images button').first().click()
+  const viewer=page.getByRole('dialog')
+  await expect(viewer).toBeVisible()
+  const box=(await viewer.locator('.photo-surface').boundingBox())!
+  const center={x:box.x+box.width/2,y:box.y+box.height/2}
+  const touch=await page.context().newCDPSession(page)
+  const fingers=(spread:number)=>[-1,1].map((sign,i)=>({x:center.x+sign*spread,y:center.y,id:i+1}))
+  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:fingers(25)})
+  await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:fingers(55)})
+  await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+  await expect(viewer.getByRole('button',{name:'Zoom out'})).toBeEnabled()
+  await viewer.getByRole('button',{name:'Fit',exact:true}).click()
+  await expect(viewer.getByRole('status')).toHaveText('100%')
+  await viewer.getByRole('button',{name:'Done'}).click()
+  await expect(viewer).toHaveCount(0)
 })
 
 test('Public information pages and contact form work without an account',async({page})=>{

@@ -3,6 +3,7 @@ import { computed, onActivated, onDeactivated, ref } from 'vue'
 import { cleanItem, emptyItem, message, photoURL, preparePhoto, request } from './api'
 import type { Box, Candidate, Folder, Link, Photo, RecordForm, ScanReview } from './api'
 import ItemFields from './ItemFields.vue'
+import PhotoViewer from './PhotoViewer.vue'
 
 defineEmits<{specimen:[id:string]}>()
 type ImportPhoto = Photo & {side?:'obverse'|'reverse'|null;slot?:number|null;record?:{id:string;title:string}|null;scan?:ScanReview}
@@ -131,10 +132,11 @@ function review(photo:Photo,candidate?:Candidate){
   reverse.value=active ? companions(active).find(p=>p.side==='reverse')?.id ?? '' : ''
   if(candidate){
     const {confidence:_confidence,crop:_crop,model:_model,referenceMatches:_references,...fields}=candidate
-    form.value={...emptyItem(),...fields,details:fields.details ?? {},collection_id:folders.value[0]?.id ?? null}
+    form.value={...emptyItem(),...fields,typeLocked:true,details:fields.details ?? {},collection_id:folders.value[0]?.id ?? null}
   } else {
     const type=active?.candidates[0]?.type ?? 'coin'
-    form.value={...emptyItem(),type,title:active?.slot!=null ? 'Unidentified '+type : '',collection_id:folders.value[0]?.id ?? null}
+    form.value={...emptyItem(),type,typeLocked:!!active?.candidates.length && active.candidates.every(p=>p.type===type),
+      title:active?.slot!=null ? 'Unidentified '+type : '',collection_id:folders.value[0]?.id ?? null}
   }
   references.value=candidate?.referenceMatches ?? []
   box.value=candidate?.crop ? {...candidate.crop}:{x:0,y:0,width:1,height:1}
@@ -172,7 +174,7 @@ async function bulk(){
   await action(async()=>{
     for(let i=0;i<eligible.length;i+=20) {
       const chunk=eligible.slice(i,i+20)
-      await request('/items/bulk','POST',chunk.map(p=>({...p.candidates[0],collection_id:folders.value[0]?.id ?? null,
+      await request('/items/bulk','POST',chunk.map(p=>({...p.candidates[0],typeLocked:true,collection_id:folders.value[0]?.id ?? null,
         photos:[{photoId:p.id,side:'overview',crop:p.candidates[0].crop}]})))
       selected.value=selected.value.filter(id=>!chunk.some(photo=>photo.id===id))
     }
@@ -225,7 +227,9 @@ async function bulk(){
       <article class="photo-card" v-for="(p,index) in subjects" :key="p.id">
         <div class="scan-views">
           <figure v-for="(view,position) in [p,...companions(p)]" :key="view.id">
-            <img v-if="view.state!=='uploading'" loading="lazy" :src="photoURL(view.id)" :alt="photoLabel(position)+' of item '+(index+1)">
+            <PhotoViewer v-if="view.state!=='uploading'" :src="photoURL(view.id)" :label="photoLabel(position)+' of item '+(index+1)">
+              <img loading="lazy" :src="photoURL(view.id)" :alt="photoLabel(position)+' of item '+(index+1)">
+            </PhotoViewer>
             <figcaption v-if="p.slot!=null || batch.paired">{{photoLabel(position)}}</figcaption>
           </figure>
         </div>
@@ -262,7 +266,9 @@ async function bulk(){
           <small>{{reference.kind}} · {{reference.attribution}} · {{reference.license}}</small>
         </li>
       </ul>
-      <div class="crop-frame"><img :src="photoURL(current)" alt="Original photo and indicated crop"><div :style="rectStyle"></div></div>
+      <PhotoViewer :src="photoURL(current)" label="Original photo">
+        <div class="crop-frame"><img :src="photoURL(current)" alt="Original photo and indicated crop"><div :style="rectStyle"></div></div>
+      </PhotoViewer>
       <form @submit.prevent="save">
         <fieldset><legend>Crop (% of the original photo)</legend><div class="form-grid">
           <label v-for="key in (['x','y','width','height'] as const)" :key="key">{{key}}
@@ -273,7 +279,7 @@ async function bulk(){
           <label>Photo side<select v-model="side"><option value="obverse">Obverse</option><option value="reverse">Reverse</option><option value="overview">Overview</option></select></label>
           <label>Pair with another photo<select v-model="reverse"><option value="">No pairing</option><option v-for="other in reverseOptions" :key="other.id" :value="other.id">Photo {{(batch?.photos.findIndex(p=>p.id===other.id) ?? 0)+1}} · {{other.candidates[0]?.title ?? other.state}}</option></select></label>
         </div>
-        <img class="pair-preview" v-if="reverse" :src="photoURL(reverse)" alt="Paired photograph">
+        <PhotoViewer v-if="reverse" :src="photoURL(reverse)" label="Paired photograph"><img class="pair-preview" :src="photoURL(reverse)" alt="Paired photograph"></PhotoViewer>
         <ItemFields v-model="form" :folders="folders"/>
         <button class="primary">Save specimen</button>
         <button type="button" @click="current=''">Close review</button>

@@ -585,7 +585,7 @@ private struct GuestPieceScreen: View {
                     }.accessibilityIdentifier("guest-search-online").disabled(busy)
                 }
             }
-            details
+            details(piece)
             if let result = piece.recognition, !result.suggestions.isEmpty, !result.likely {
                 scanButton(showAlternatives ? "Hide possible matches" : "See possible matches",
                            icon: showAlternatives ? "chevron.up" : "chevron.down") { showAlternatives.toggle() }
@@ -612,7 +612,7 @@ private struct GuestPieceScreen: View {
         }
     }
 
-    private var details: some View {
+    private func details(_ piece: GuestPiece) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Text("Record details").font(.headline).accessibilityAddTraits(.isHeader)

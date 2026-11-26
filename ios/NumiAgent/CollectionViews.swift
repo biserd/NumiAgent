@@ -41,12 +41,143 @@ struct CollectionGrid<Content: View>: View {
     }
 }
 
+// A gallery is a single List row. Each card needs its own trailing action.
+private struct SwipeablePieceCard<ID: Hashable>: ViewModifier {
+    let id: ID
+    @Binding var revealed: ID?
+    let activate: () -> Void
+    let requestDelete: () -> Void
+    @Environment(\.layoutDirection) private var direction
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .caption) private var actionWidth: CGFloat = 68
+
+    func body(content: Content) -> some View {
+        let open = revealed == id
+        let sign: CGFloat = direction == .leftToRight ? -1 : 1
+        ZStack(alignment: .trailing) {
+            if open {
+                Button(role: .destructive) {
+                    revealed = nil
+                    requestDelete()
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "trash")
+                        Text("Delete").font(.caption.weight(.semibold))
+                    }.frame(width: actionWidth).frame(maxHeight: .infinity)
+                        .foregroundStyle(.white).background(Color(red: 0.72, green: 0.13, blue: 0.16))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Delete")
+            }
+            content
+                .accessibilityAction(named: "Delete", requestDelete)
+                .overlay {
+                    GeometryReader { geometry in
+                        CardTouchArea(activate: activate) { swipe in
+                            let trailing: UISwipeGestureRecognizer.Direction = direction == .leftToRight ? .left : .right
+                            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                                revealed = swipe == trailing ? id : nil
+                            }
+                        }
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .accessibilityHidden(true)
+                    }
+                }
+                .offset(x: open ? sign * actionWidth : 0)
+        }
+        .clipShape(.rect(cornerRadius: 12))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .contain)
+    }
+}
+
+// Receive touches on the visible card. The SwiftUI button underneath supplies
+// its label, primary action and Delete action to assistive technology.
+private struct CardTouchArea: UIViewRepresentable {
+    let activate: () -> Void
+    let swiped: (UISwipeGestureRecognizer.Direction) -> Void
+
+    func makeUIView(context: Context) -> Surface { Surface() }
+    func updateUIView(_ view: Surface, context: Context) {
+        view.activate = activate
+        view.swiped = swiped
+    }
+
+    final class Surface: UIView, UIGestureRecognizerDelegate {
+        var activate: (() -> Void)?
+        var swiped: ((UISwipeGestureRecognizer.Direction) -> Void)?
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            isAccessibilityElement = false
+            backgroundColor = .clear
+            let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
+            addGestureRecognizer(tap)
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(panned(_:)))
+            pan.maximumNumberOfTouches = 1
+            pan.delegate = self
+            addGestureRecognizer(pan)
+            tap.require(toFail: pan)
+        }
+
+        required init?(coder: NSCoder) { return nil }
+
+        override func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer else { return super.gestureRecognizerShouldBegin(recognizer) }
+            let velocity = pan.velocity(in: self)
+            return abs(velocity.x) > 1.4 * abs(velocity.y)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            other is UIPanGestureRecognizer
+        }
+
+        @objc private func tapped() { activate?() }
+        @objc private func panned(_ gesture: UIPanGestureRecognizer) {
+            guard gesture.state == .ended else { return }
+            let dx = gesture.translation(in: self).x
+            if abs(dx) >= 28 { swiped?(dx < 0 ? .left : .right) }
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func phoneCardDelete<ID: Hashable>(id: ID, revealed: Binding<ID?>, enabled: Bool = true,
+                                       activate: @escaping () -> Void, action: @escaping () -> Void) -> some View {
+        if enabled && UIDevice.current.userInterfaceIdiom == .phone {
+            modifier(SwipeablePieceCard(id: id, revealed: revealed, activate: activate, requestDelete: action))
+        } else { self }
+    }
+
+    @ViewBuilder
+    func phoneRowDelete(enabled: Bool = true, action: @escaping () -> Void) -> some View {
+        if enabled && UIDevice.current.userInterfaceIdiom == .phone {
+            swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(action: action) { Label("Delete", systemImage: "trash") }.tint(.red)
+            }
+        } else { self }
+    }
+
+    func confirmPieceDeletion<Item>(_ item: Binding<Item?>, title: (Item) -> String,
+                                    message: String, delete: @escaping (Item) -> Void) -> some View {
+        alert(item.wrappedValue.map { "Delete “" + title($0) + "”?" } ?? "Delete piece?",
+              isPresented: Binding(get: { item.wrappedValue != nil }, set: { if !$0 { item.wrappedValue = nil } }),
+              presenting: item.wrappedValue) { target in
+            Button("Delete", role: .destructive) { delete(target) }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in Text(message) }
+    }
+}
+
 @MainActor final class CatalogResults: ObservableObject {
     @Published var items: [Specimen] = []
     @Published var next: Int?
     @Published var loading = false
     @Published var error: String?
     @Published var requestedMore = 0
+    var loadGeneration = 0
 }
 
 struct CatalogScreen: View {
@@ -68,6 +199,10 @@ struct CatalogScreen: View {
     var workspaceSelection: WorkspaceListSelection<Specimen>? = nil
     @State private var addSheet: AddSheet?
     @State private var managingFolders = false
+    @State private var revealedItem: String?
+    @State private var deleteTarget: Specimen?
+    @State private var deletingIDs = Set<String>()
+    @State private var deletionError: String?
     @State private var type = ""
     @State private var folder = ""
     @State private var folders: [CollectionFolder] = []
@@ -104,9 +239,14 @@ struct CatalogScreen: View {
                     if workspaceSelection == nil && !listView {
                         CollectionGrid(itemCount: items.count) {
                             ForEach(items) { item in
-                                Button { openedItemID = item.id } label: {
+                                let activate = {
+                                    if revealedItem != nil { revealedItem = nil } else { openedItemID = item.id }
+                                }
+                                Button(action: activate) {
                                     accountCard(item, api: api, demo: demo)
                                 }.buttonStyle(.plain).accessibilityIdentifier("specimen-\(item.id)")
+                                    .phoneCardDelete(id: item.id, revealed: $revealedItem, enabled: !demo, activate: activate) { deleteTarget = item }
+                                    .disabled(deletingIDs.contains(item.id))
                             }
                         }.listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
                     } else {
@@ -120,6 +260,8 @@ struct CatalogScreen: View {
                                 } label: {
                                     row(item)
                                 }
+                                .phoneRowDelete(enabled: !demo) { deleteTarget = item }
+                                .disabled(deletingIDs.contains(item.id))
                             }
                         }
                     }
@@ -142,6 +284,14 @@ struct CatalogScreen: View {
         .scrollContentBackground(.hidden)
         .background(CollectorDesign.background)
         .navigationTitle("Collection")
+        .onChange(of: listView) { _, _ in revealedItem = nil }
+        .onChange(of: loadKey) { _, _ in revealedItem = nil }
+        .confirmPieceDeletion($deleteTarget, title: { $0.title }, message: "This removes the piece from your NumiAgent account.") { item in
+            Task { await deletePiece(item) }
+        }
+        .alert("Couldn’t delete piece", isPresented: Binding(get: { deletionError != nil }, set: { if !$0 { deletionError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(deletionError ?? "") }
         .onChange(of: results.requestedMore) { _, _ in
             if let next, !loading { Task { await load(page: next, key: loadKey) } }
         }
@@ -281,6 +431,16 @@ struct CatalogScreen: View {
         }
     }
 
+    private func deletePiece(_ item: Specimen) async {
+        guard !demo, deletingIDs.insert(item.id).inserted else { return }
+        defer { deletingIDs.remove(item.id) }
+        do {
+            try await api.deleteSpecimen(item.id)
+            results.items.removeAll { $0.id == item.id }
+            await load(page: 0, key: loadKey)
+        } catch { deletionError = error.localizedDescription }
+    }
+
     private func reload() {
         Task { await load(page: 0, key: loadKey) }
     }
@@ -309,6 +469,8 @@ struct CatalogScreen: View {
             }
             return
         }
+        if page == 0 { results.loadGeneration += 1 }
+        let generation = results.loadGeneration
         results.loading = true
         results.error = nil
         do {
@@ -318,14 +480,14 @@ struct CatalogScreen: View {
                 URLQueryItem(name: "collection", value: key.folder),
                 URLQueryItem(name: "page", value: String(page))
             ])
-            guard !Task.isCancelled, key == loadKey else { return }
+            guard !Task.isCancelled, key == loadKey, generation == results.loadGeneration else { return }
             results.items = page == 0 ? result.items : items + result.items.filter { resultItem in
                 !items.contains(where: { $0.id == resultItem.id })
             }
             results.next = result.next
             results.loading = false
         } catch {
-            guard !Task.isCancelled, key == loadKey else { return }
+            guard !Task.isCancelled, key == loadKey, generation == results.loadGeneration else { return }
             results.error = error.localizedDescription
             results.loading = false
         }
@@ -638,7 +800,7 @@ struct SpecimenScreen: View {
             Button("Delete specimen", role: .destructive) {
                 Task {
                     do {
-                        try await api.write("/items/" + item.id, method: "DELETE")
+                        try await api.deleteSpecimen(item.id)
                         if let onDelete { onDelete() }
                         else { onChange(); dismiss() }
                     } catch { detailError = error.localizedDescription }

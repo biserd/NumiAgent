@@ -266,6 +266,10 @@ final class NumiAPI {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    func deleteSpecimen(_ id: String) async throws {
+        try await write("/items/" + id, method: "DELETE")
+    }
+
     func write(_ path: String, method: String, payload: (any Encodable)? = nil) async throws {
         let body = try payload.map { try JSONEncoder().encode($0) }
         _ = try await send(path, method: method, body: body)

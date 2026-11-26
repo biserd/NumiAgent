@@ -361,7 +361,9 @@ struct DeviceSaleResearch: View {
                     if history.isEmpty {
                         TextField("Issuer or country", text: $hints.issuer)
                         TextField("Denomination", text: $hints.denomination)
+                            .accessibilityIdentifier("guest-sales-denomination")
                         TextField("Year", text: $hints.year)
+                            .accessibilityIdentifier("guest-sales-year")
                         Button("Check Numista auction sales") { Task { await lookup(hints) } }
                             .disabled(!hints.isReady || loading)
                     }

@@ -197,7 +197,7 @@ final class GuestV1Tests: XCTestCase {
         let quarter = galleryCard("United States quarter", in: app)
         XCTAssertTrue(quarter.waitForExistence(timeout: 15))
         addManually("Keep this token", to: app, isBanknote: false)
-        quarter.swipeLeft()
+        swipeWithinCard(quarter)
         let action = app.buttons["Delete"].firstMatch
         recordScreenshot("Swipe to delete – gallery", app)
         XCTAssertTrue(action.waitForExistence(timeout: 5), app.debugDescription)
@@ -206,7 +206,7 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(prompt.staticTexts["Delete “United States quarter”?"].waitForExistence(timeout: 5))
         prompt.buttons["Cancel"].tap()
         XCTAssertTrue(quarter.isHittable)
-        quarter.swipeLeft()
+        swipeWithinCard(quarter)
         action.tap()
         prompt.buttons["Delete"].tap()
         let removed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: quarter)
@@ -215,6 +215,13 @@ final class GuestV1Tests: XCTestCase {
         app.launch()
         XCTAssertTrue(galleryCard("Keep this token", in: app).waitForExistence(timeout: 15))
         XCTAssertFalse(quarter.exists)
+    }
+
+    @MainActor
+    private func swipeWithinCard(_ card: XCUIElement) {
+        let start = card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+        let end = card.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5))
+        start.press(forDuration: 0.03, thenDragTo: end, withVelocity: .fast, thenHoldForDuration: 0)
     }
 
     @MainActor
@@ -229,6 +236,7 @@ final class GuestV1Tests: XCTestCase {
                                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityM"]
         app.launch()
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "list-piece-")).firstMatch
+        XCUIDevice.shared.appearance = .dark
         XCTAssertTrue(row.waitForExistence(timeout: 15))
         if !row.isHittable { app.swipeUp() }
         row.swipeLeft()

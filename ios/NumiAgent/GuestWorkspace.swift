@@ -230,10 +230,11 @@ struct GuestWorkspace: View {
 
     private var gridCards: some View {
         ForEach(filtered) { piece in
-            Button {
+            let activate = {
                 if revealedPiece != nil { revealedPiece = nil }
                 else if widthClass == .regular { selected = piece.id } else { editor = piece }
-            } label: {
+            }
+            Button(action: activate) {
                 CollectionCard(title: piece.displayTitle, subtitle: [piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: " · ")) {
                     thumbnail(piece)
                 }
@@ -241,7 +242,7 @@ struct GuestWorkspace: View {
                 .accessibilityLabel(piece.displayTitle)
                 .accessibilityValue([piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: ", "))
                 .accessibilityIdentifier("gallery-piece-\(piece.id)")
-                .phoneCardDelete(id: piece.id, revealed: $revealedPiece) { deleteTarget = piece }
+                .phoneCardDelete(id: piece.id, revealed: $revealedPiece, activate: activate) { deleteTarget = piece }
         }
     }
 

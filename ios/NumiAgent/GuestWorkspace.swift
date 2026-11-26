@@ -45,6 +45,8 @@ struct GuestWorkspace: View {
     @Binding var scanOnOpen: Bool
     @State private var selected: UUID?
     @State private var editor: GuestPiece?
+    @State private var revealedPiece: UUID?
+    @State private var deleteTarget: GuestPiece?
     @State private var search = ""
     @State private var filter = GuestFilter.all
     @State private var menu: GuestFileAction?
@@ -91,6 +93,8 @@ struct GuestWorkspace: View {
                                     }
                                 }
                             }
+                            .accessibilityIdentifier("list-piece-\(piece.id)")
+                            .phoneRowDelete { deleteTarget = piece }
                         }
                     }
                 }
@@ -197,6 +201,16 @@ struct GuestWorkspace: View {
         }
         .sheet(item: $menu) { action in GuestFiles(store: store, action: action) }
         .sheet(isPresented: $showPrivacy) { GuestPrivacyView() }
+        .onChange(of: listView) { _, _ in revealedPiece = nil }
+        .onChange(of: search) { _, _ in revealedPiece = nil }
+        .onChange(of: filter) { _, _ in revealedPiece = nil }
+        .onChange(of: store.activeID) { _, _ in revealedPiece = nil; deleteTarget = nil }
+        .confirmPieceDeletion($deleteTarget, title: { $0.displayTitle }, message: "This removes the piece from the collection on this device.") { piece in
+            act {
+                try store.delete(piece.id)
+                if selected == piece.id { selected = nil }
+            }
+        }
         .guestStorageAlert(store)
     }
 
@@ -217,7 +231,8 @@ struct GuestWorkspace: View {
     private var gridCards: some View {
         ForEach(filtered) { piece in
             Button {
-                if widthClass == .regular { selected = piece.id } else { editor = piece }
+                if revealedPiece != nil { revealedPiece = nil }
+                else if widthClass == .regular { selected = piece.id } else { editor = piece }
             } label: {
                 CollectionCard(title: piece.displayTitle, subtitle: [piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: " · ")) {
                     thumbnail(piece)
@@ -226,6 +241,7 @@ struct GuestWorkspace: View {
                 .accessibilityLabel(piece.displayTitle)
                 .accessibilityValue([piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: ", "))
                 .accessibilityIdentifier("gallery-piece-\(piece.id)")
+                .phoneCardDelete(id: piece.id, revealed: $revealedPiece) { deleteTarget = piece }
         }
     }
 

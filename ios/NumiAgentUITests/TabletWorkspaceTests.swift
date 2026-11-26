@@ -185,6 +185,66 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
+    func testSwipeGalleryCardCancelsThenDeletesOnlyThatPiece() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
+                               "-collector-list-view", "NO", "-AppleInterfaceStyle", "Light"]
+        app.launch()
+        let quarter = galleryCard("United States quarter", in: app)
+        XCTAssertTrue(quarter.waitForExistence(timeout: 15))
+        addManually("Keep this token", to: app, isBanknote: false)
+        quarter.swipeLeft()
+        let action = app.buttons["Delete"].firstMatch
+        XCTAssertTrue(action.waitForExistence(timeout: 5))
+        recordScreenshot("Swipe to delete – gallery", app)
+        action.tap()
+        let prompt = app.alerts.firstMatch
+        XCTAssertTrue(prompt.staticTexts["Delete “United States quarter”?"].waitForExistence(timeout: 5))
+        prompt.buttons["Cancel"].tap()
+        XCTAssertTrue(quarter.isHittable)
+        quarter.swipeLeft()
+        action.tap()
+        prompt.buttons["Delete"].tap()
+        let removed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: quarter)
+        XCTAssertEqual(XCTWaiter.wait(for: [removed], timeout: 5), .completed)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(galleryCard("Keep this token", in: app).waitForExistence(timeout: 15))
+        XCTAssertFalse(quarter.exists)
+    }
+
+    @MainActor
+    func testSwipeListRowWithAccessibilityText() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
+                               "-collector-list-view", "YES", "-AppleInterfaceStyle", "Dark",
+                               "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityM"]
+        app.launch()
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "list-piece-")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 15))
+        if !row.isHittable { app.swipeUp() }
+        row.swipeLeft()
+        let action = app.buttons["Delete"].firstMatch
+        XCTAssertTrue(action.waitForExistence(timeout: 5))
+        recordScreenshot("Swipe to delete – list with larger text", app)
+        action.tap()
+        let prompt = app.alerts.firstMatch
+        XCTAssertTrue(prompt.staticTexts["Delete “United States quarter”?"].waitForExistence(timeout: 5))
+        prompt.buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["No pieces yet"].firstMatch.waitForExistence(timeout: 8))
+    }
+
+    @MainActor
+    private func recordScreenshot(_ name: String, _ app: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
     func testSecondOpinionCardUsesBothPhotosWithoutSigningIn() {
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"]

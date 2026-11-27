@@ -17,7 +17,7 @@ env:
 jobs:
   build:
     runs-on: xcode-27
-    timeout-minutes: 35
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
@@ -111,7 +111,7 @@ jobs:
           if-no-files-found: error
   ipad:
     runs-on: xcode-27
-    timeout-minutes: 22
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:

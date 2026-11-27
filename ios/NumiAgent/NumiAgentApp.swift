@@ -224,7 +224,7 @@ struct NumiAgentApp: App {
         case .signedOut, .unavailable:
             if guest.active != nil { localWorkspace(account: nil) }
             else {
-                GuestWelcome(start: {
+                GuestWelcome(api: session.api, start: {
                     do { try guest.openCollection(); scanOnOpen = true }
                     catch { guest.error = error.localizedDescription }
                 }, signIn: { signInSheet = true }, restore: { restoreSheet = true })

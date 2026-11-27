@@ -2,6 +2,36 @@ import XCTest
 
 final class TabletWorkspaceTests: XCTestCase {
     @MainActor
+    func testFirstValueSampleOnTablet() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--test-dark-appearance"]
+        let start = ProcessInfo.processInfo.systemUptime
+        app.launch()
+        let sample = app.buttons["welcome-sample"].firstMatch
+        XCTAssertTrue(sample.waitForExistence(timeout: 15))
+        sample.tap()
+        XCTAssertTrue(app.staticTexts["Octavian denarius"].firstMatch.waitForExistence(timeout: 15))
+        let elapsed = ProcessInfo.processInfo.systemUptime - start
+        print("NUMI_SAMPLE_SECONDS=\(elapsed)")
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "First value - iPad dark sample"
+        shot.lifetime = .keepAlways
+        add(shot)
+        app.buttons["Done"].firstMatch.tap()
+        XCTAssertTrue(sample.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Start scanning"].exists)
+        let scan = app.buttons["Start scanning"].firstMatch
+        XCTAssertLessThan(sample.frame.maxX, scan.frame.minX)
+        XCTAssertTrue((sample.frame.minY...sample.frame.maxY).contains(scan.frame.midY))
+        capture("First visit - iPad dark welcome")
+        app.buttons["Sign in or restore"].firstMatch.tap()
+        app.buttons["Restore backup"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["Choose .numiagent file"].firstMatch.waitForExistence(timeout: 5))
+
+    }
+
+    @MainActor
     func testDeviceRecordSurvivesNarrowToExpandedLayout() async throws {
         continueAfterFailure = false
         let device = XCUIDevice.shared
@@ -246,6 +276,32 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
+    func testFirstValueSampleAndReturn() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString]
+        let start = ProcessInfo.processInfo.systemUptime
+        app.launch()
+        let sample = app.buttons["welcome-sample"].firstMatch
+        XCTAssertTrue(sample.waitForExistence(timeout: 15))
+        sample.tap()
+        XCTAssertTrue(app.staticTexts["Octavian denarius"].firstMatch.waitForExistence(timeout: 15))
+        let elapsed = ProcessInfo.processInfo.systemUptime - start
+        print("NUMI_SAMPLE_SECONDS=\(elapsed)")
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = "First value - sample specimen"
+        shot.lifetime = .keepAlways
+        add(shot)
+        app.buttons["Done"].firstMatch.tap()
+        XCTAssertTrue(sample.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Start scanning"].exists)
+        sample.tap()
+        app.buttons["Scan my own piece"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))
+
+    }
+
+    @MainActor
     func testCabinetScanSettingsAndInspection() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -256,6 +312,15 @@ final class GuestV1Tests: XCTestCase {
         scan.tap()
         XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))
         app.buttons["Close"].firstMatch.tap()
+        XCTAssertEqual(scan.label, "Continue scanning")
+        recordScreenshot("Returning collector - unfinished piece", app)
+        app.buttons["Add item"].firstMatch.tap()
+        app.buttons["Start a new piece"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))
+        app.buttons["Close"].firstMatch.tap()
+        app.tabBars.buttons["Scan"].tap()
+        XCTAssertTrue(app.buttons["Piece 2"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Piece 3"].firstMatch.exists)
         let settings = app.tabBars.buttons["Settings"]
         settings.tap()
         XCTAssertTrue(app.buttons["Back up collection"].firstMatch.waitForExistence(timeout: 5))
@@ -355,7 +420,7 @@ final class GuestV1Tests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"]
         app.launch()
-        let resume = app.buttons["Resume batch"].firstMatch
+        let resume = app.buttons.matching(NSPredicate(format: "label == %@", "Continue scanning")).firstMatch
         XCTAssertTrue(resume.waitForExistence(timeout: 15))
         resume.tap()
         let open = app.buttons["Ask for a second opinion"].firstMatch
@@ -382,7 +447,7 @@ final class GuestV1Tests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"]
         app.launch()
-        let resume = app.buttons["Resume batch"]
+        let resume = app.buttons.matching(NSPredicate(format: "label == %@", "Continue scanning")).firstMatch
         XCTAssertTrue(resume.waitForExistence(timeout: 15), app.debugDescription)
         resume.tap()
         XCTAssertTrue(app.buttons["Zoom photo 1"].firstMatch.waitForExistence(timeout: 10))
@@ -413,7 +478,10 @@ final class GuestV1Tests: XCTestCase {
         for _ in 0..<10 {
             if button.exists {
                 let frame = button.frame
-                if !frame.isEmpty && viewport.contains(CGPoint(x: frame.midX, y: frame.midY)) {
+                let saveBar = app.buttons["guest-save-record"].firstMatch
+                let bottom = saveBar.exists && saveBar.isHittable
+                    ? min(viewport.maxY, saveBar.frame.minY - 24) : viewport.maxY
+                if !frame.isEmpty && frame.midY < bottom && viewport.contains(CGPoint(x: frame.midX, y: frame.midY)) {
                     XCTAssertTrue(button.isEnabled, file: file, line: line)
                     return
                 }
@@ -443,16 +511,19 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(app.buttons["Zoom photo 1"].firstMatch.waitForExistence(timeout: 10))
         app.terminate()
         app.launch()
-        let resume = app.buttons["Resume batch"]
+        let resume = app.buttons.matching(NSPredicate(format: "label == %@", "Continue scanning")).firstMatch
         XCTAssertTrue(resume.waitForExistence(timeout: 15))
         XCTAssertFalse(start.exists)
         resume.tap()
         XCTAssertTrue(app.buttons["Zoom photo 1"].firstMatch.waitForExistence(timeout: 10))
         let back = app.buttons["Add sample photo"]
-        if !back.isHittable { app.swipeUp() }
+        reveal(back, in: app)
         XCTAssertTrue(back.isHittable)
         back.tap()
-        XCTAssertTrue(app.buttons["Zoom photo 2"].firstMatch.waitForExistence(timeout: 10))
+        let secondPhoto = app.buttons["Zoom photo 2"].firstMatch
+        if !secondPhoto.waitForExistence(timeout: 3) { app.swipeDown() }
+        recordScreenshot("Resumed capture - two photo slots", app)
+        XCTAssertTrue(secondPhoto.waitForExistence(timeout: 10), app.debugDescription)
         let save = app.buttons["guest-save-record"]
         for _ in 0..<8 where !save.isHittable { app.swipeUp() }
         XCTAssertTrue(save.isHittable)

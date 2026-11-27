@@ -319,8 +319,8 @@ final class GuestStore: ObservableObject {
         active?.drafts.first { $0.id == id } ?? active?.pieces.first { $0.id == id }
     }
 
-    func draft() throws -> UUID {
-        if let id = active?.activeDraft { return id }
+    func draft(resumeActive: Bool = true) throws -> UUID {
+        if resumeActive, let id = active?.activeDraft { return id }
         let piece = GuestPiece()
         try change { collection in
             collection.drafts.append(piece)

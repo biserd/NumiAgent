@@ -425,24 +425,19 @@ final class DesignInventoryTests: XCTestCase {
     @MainActor
     func testInventory() {
         let app = XCUIApplication()
-        let orientations: [(UIDeviceOrientation, String)] = [(.portrait, "portrait"), (.landscapeLeft, "landscape")]
         func launch(_ args: [String]) {
             app.terminate()
             app.launchArguments = args
             app.launch()
             _ = app.windows.firstMatch.waitForExistence(timeout: 10)
+            XCUIDevice.shared.orientation = .landscapeLeft
         }
         func capture(_ name: String) {
-            let previous = XCUIDevice.shared.orientation
-            for (orientation, label) in orientations {
-                XCUIDevice.shared.orientation = orientation
-                Thread.sleep(forTimeInterval: 0.45)
-                let attachment = XCTAttachment(screenshot: app.screenshot())
-                attachment.name = name + "--" + label
-                attachment.lifetime = .keepAlways
-                add(attachment)
-            }
-            XCUIDevice.shared.orientation = previous
+            Thread.sleep(forTimeInterval: 0.65)
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = name + "--landscape"
+            attachment.lifetime = .keepAlways
+            add(attachment)
         }
         func tap(_ key: String, _ search: XCUIElement? = nil) -> Bool {
             let found = search ?? app.buttons[key].firstMatch
@@ -450,7 +445,8 @@ final class DesignInventoryTests: XCTestCase {
             found.tap()
             return true
         }
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
         launch(["--guest-test-" + UUID().uuidString])
         capture("guest-welcome")
         if tap("Start scanning") { capture("guest-new-draft") }
@@ -459,7 +455,12 @@ final class DesignInventoryTests: XCTestCase {
         capture("guest-gallery")
         if tap("Collection menu") {
             capture("guest-collection-menu")
-            if tap("Privacy & browser access") { capture("guest-privacy") }
+            if tap("Privacy & browser access") {
+                capture("guest-privacy")
+                let browser = app.buttons["Open web account"].firstMatch
+                if !browser.isHittable { app.swipeUp() }
+                if tap("Open web account") { capture("guest-browser-consent") }
+            }
         }
         for tool in ["Back up collection","Restore backup","Export spreadsheet"] {
             launch(guest)
@@ -474,6 +475,17 @@ final class DesignInventoryTests: XCTestCase {
                 _ = tap("Done")
             }
             if tap("Zoom photo 1") { capture("guest-zoom") }
+        }
+        launch(["--guest-test-" + UUID().uuidString, "--guest-consent-fixture"])
+        if tap("Resume batch") {
+            capture("guest-identification")
+            let online = app.buttons["guest-search-online"].firstMatch
+            for _ in 0..<3 where !online.isHittable { app.swipeUp() }
+            if online.isHittable {
+                capture("guest-online-disclosure")
+                online.tap()
+                capture("guest-fixture-result")
+            }
         }
         for route in ["sign-in","collection","capture","valuation","checklists","photo-review"] {
             launch(["--preview-" + route])

@@ -7,16 +7,14 @@ permissions:
 jobs:
   capture:
     runs-on: xcode-27
-    timeout-minutes: 44
+    timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
         family: [iPhone, iPad]
-        mode: [light, dark]
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
       FAMILY: ${{ matrix.family }}
-      MODE: ${{ matrix.mode }}
       SENTRY_DISABLED: 'true'
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +31,6 @@ jobs:
           print(chosen["name"], file=sys.stderr);print(chosen["udid"])')"
           xcrun simctl boot "$id"
           xcrun simctl bootstatus "$id" -b
-          xcrun simctl ui "$id" appearance "$MODE"
           xcrun simctl status_bar "$id" override --time "9:41" --batteryLevel 100 --batteryState discharging
           echo "DEVICE=$id" >> "$GITHUB_ENV"
           npm install --prefix "$RUNNER_TEMP/audit-tools" --no-audit --no-fund xcodebuildmcp@2.7.0
@@ -41,17 +38,24 @@ jobs:
         run: |
           set -euo pipefail
           params="$(python3 -c 'import os,json;print(json.dumps(dict(projectPath=os.path.abspath("ios/NumiAgent.xcodeproj"),scheme="NumiAgent",simulatorId=os.environ["DEVICE"],extraArgs=["-parallel-testing-enabled","NO","-only-testing:NumiAgentUITests/DesignInventoryTests","CODE_SIGNING_ALLOWED=NO"])))')"
-          "$RUNNER_TEMP/audit-tools/node_modules/.bin/xcodebuildmcp" simulator test --json "$params"
-      - name: Export actual screen captures and XCTest manifest
-        if: always()
-        run: |
-          result="$(find "$HOME/Library/Developer/XcodeBuildMCP" -name '*.xcresult' -type d | head -n 1)"
-          if [[ -n "$result" ]]; then
-            xcrun xcresulttool export attachments --path "$result" --output-path "$RUNNER_TEMP/audit-captures"
-          fi
+          for mode in light dark; do
+            xcrun simctl ui "$DEVICE" appearance "$mode"
+            marker="$RUNNER_TEMP/start-$mode"
+            touch "$marker"
+            "$RUNNER_TEMP/audit-tools/node_modules/.bin/xcodebuildmcp" simulator test --json "$params"
+            result="$(find "$HOME/Library/Developer/XcodeBuildMCP" -name '*.xcresult' -type d -newer "$marker" | head -n 1)"
+            test -n "$result"
+            xcrun xcresulttool export attachments --path "$result" --output-path "$RUNNER_TEMP/audit-captures/$mode"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: native-ux-${{ matrix.family }}-${{ matrix.mode }}
-          path: ${{ runner.temp }}/audit-captures/
+          name: native-ux-${{ matrix.family }}-light
+          path: ${{ runner.temp }}/audit-captures/light/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-ux-${{ matrix.family }}-dark
+          path: ${{ runner.temp }}/audit-captures/dark/
           if-no-files-found: error

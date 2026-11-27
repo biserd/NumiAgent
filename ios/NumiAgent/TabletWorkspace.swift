@@ -30,6 +30,7 @@ struct CollectorWorkspace: View {
     @AppStorage("collector-list-view") private var listView = false
     @State private var prepared = false
     @Environment(\.horizontalSizeClass) private var widthClass
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var section: CollectorTab? = PreviewLaunch.tab
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var compactColumn: NavigationSplitViewColumn = .content
@@ -55,7 +56,7 @@ struct CollectorWorkspace: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let expanded = geometry.size.width >= 680 && widthClass != .compact
+            let expanded = geometry.size.width >= 680 && widthClass != .compact && !textSize.isAccessibilitySize
             Group {
                 if expanded { split }
                 else { tabs }

@@ -11,6 +11,7 @@ struct CollectionCard<Photo: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Color.clear.aspectRatio(featured ? 2.35 : 1.6, contentMode: .fit)
+                .frame(maxHeight: featured ? 300 : nil)
                 .overlay { photo() }.clipped()
                 .background(featured ? CollectorDesign.photoPlate : CollectorDesign.highlight)
             VStack(alignment: .leading, spacing: 4) {
@@ -866,11 +867,11 @@ struct SpecimenScreen: View {
     }
 
     private var comparableSalesLink: some View {
-            NavigationLink {
-                SaleResearchScreen(api: api, item: item) { Task { await loadValuation() } }
-            } label: {
-                Label("Find comparable sales", systemImage: "chart.bar")
-            }
+        NavigationLink {
+            SaleResearchScreen(api: api, item: item) { Task { await loadValuation() } }
+        } label: {
+            Label("Find comparable sales", systemImage: "chart.bar")
+        }
     }
 
     private var itemActions: some View {

@@ -174,6 +174,9 @@ struct NumiAgentApp: App {
 
     private var collectorRoot: some View {
         root
+                #if DEBUG
+                .preferredColorScheme(ProcessInfo.processInfo.arguments.contains("--test-dark-appearance") ? .dark : nil)
+                #endif
                 .tint(CollectorDesign.tint)
                 .task {
                     if PreviewLaunch.screen != nil { session.openDemo() }

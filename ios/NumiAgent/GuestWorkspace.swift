@@ -44,6 +44,8 @@ private enum GuestFilter: String, CaseIterable, Identifiable {
 }
 
 struct GuestWorkspace: View {
+    @Environment(\.dynamicTypeSize) private var textSize
+    @ScaledMetric(relativeTo: .body) private var searchHeight: CGFloat = 48
     @AppStorage("collector-list-view") private var listView = false
     @ObservedObject var store: GuestStore
     let api: NumiAPI
@@ -75,7 +77,7 @@ struct GuestWorkspace: View {
 
     var body: some View {
         GeometryReader { geometry in
-            if geometry.size.width >= 1020 {
+            if geometry.size.width >= 1020 && !textSize.isAccessibilitySize {
                 NavigationSplitView {
                     List(Area.allCases, selection: Binding<Area?>(get: { area }, set: { if let value = $0 { area = value } })) { item in
                         NavigationLink(value: item) { Label(item.rawValue, systemImage: item.symbol) }
@@ -86,7 +88,7 @@ struct GuestWorkspace: View {
                     index(sidebar: true).navigationSplitViewColumnWidth(min: 220, ideal: 275, max: 350)
                 } detail: { NavigationStack { destination } }
                 .navigationSplitViewStyle(.balanced)
-            } else if geometry.size.width >= 680 {
+            } else if geometry.size.width >= 680 && !textSize.isAccessibilitySize {
                 NavigationSplitView {
                     index(sidebar: true).safeAreaInset(edge: .top) {
                         Picker("Workspace", selection: $area) {
@@ -157,6 +159,9 @@ struct GuestWorkspace: View {
 
     private func index(sidebar: Bool) -> some View {
         List {
+            CabinetSearchBar(query: $search)
+                .frame(height: max(48, searchHeight))
+                .listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
             Section {
                 Label("On this device", systemImage: "lock").font(.caption.weight(.semibold)).foregroundStyle(CollectorDesign.tint)
                 if let active = store.active, !active.drafts.isEmpty {
@@ -208,7 +213,7 @@ struct GuestWorkspace: View {
             if !sidebar { scanAction.padding(.horizontal, 16).padding(.vertical, 6).background(CollectorDesign.background) }
         }
         .navigationTitle(store.active?.name ?? "My collection")
-        .searchable(text: $search, prompt: "Name, year or inscription")
+        .scrollDismissesKeyboard(.interactively)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Menu("Collection menu", systemImage: "ellipsis.circle") {
@@ -332,11 +337,11 @@ struct GuestWorkspace: View {
 
     private var cabinetGallery: some View {
         let pieces = Array(filtered.reversed())
-        let featured = pieces.count > 2 ? pieces.first(where: { !$0.photos.isEmpty }) : nil
+        let featured = pieces.count != 2 ? pieces.first(where: { !$0.photos.isEmpty }) : nil
         return VStack(alignment: .leading, spacing: 12) {
             if let featured {
                 galleryCard(featured, featured: true)
-                Text("Recently added").font(.headline).accessibilityAddTraits(.isHeader)
+                if pieces.count > 1 { Text("Recently added").font(.headline).accessibilityAddTraits(.isHeader) }
             }
             let remaining = pieces.filter { $0.id != featured?.id }
             CollectionGrid(itemCount: remaining.count) {
@@ -375,6 +380,38 @@ struct GuestWorkspace: View {
     private func open(_ id: UUID) { act { try store.resume(id); editor = store.piece(id) } }
     private func act(_ action: () throws -> Void) {
         do { try action() } catch { store.error = error.localizedDescription }
+    }
+}
+
+private struct CabinetSearchBar: UIViewRepresentable {
+    @Binding var query: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(query: $query) }
+
+    func makeUIView(context: Context) -> UISearchBar {
+        let bar = UISearchBar()
+        bar.searchBarStyle = .minimal
+        bar.placeholder = "Name, year or inscription"
+        bar.searchTextField.accessibilityLabel = "Search collection"
+        bar.searchTextField.adjustsFontForContentSizeCategory = true
+        bar.searchTextField.font = .preferredFont(forTextStyle: .body)
+        bar.autocapitalizationType = .none
+        bar.delegate = context.coordinator
+        return bar
+    }
+
+    func updateUIView(_ bar: UISearchBar, context: Context) {
+        context.coordinator.query = $query
+        if bar.text != query { bar.text = query }
+    }
+
+    final class Coordinator: NSObject, UISearchBarDelegate {
+        var query: Binding<String>
+        init(query: Binding<String>) { self.query = query }
+        func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+            query.wrappedValue = searchText
+        }
+        func searchBarSearchButtonClicked(_ searchBar: UISearchBar) { searchBar.resignFirstResponder() }
     }
 }
 
@@ -463,6 +500,7 @@ private struct GuestPieceScreen: View {
     @State private var salesPresented = false
     @State private var editingRecord = false
     @State private var displayedSide = GuestSide.front
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var showAlternatives = false
     @State private var selectedMatch = false
     @State private var onlineCompleted = false
@@ -618,25 +656,25 @@ private struct GuestPieceScreen: View {
     private func photoNumber(_ side: GuestSide) -> Int { side == .front ? 1 : 2 }
 
     @ViewBuilder private func onlineSearch(_ piece: GuestPiece) -> some View {
-            if !piece.photos.isEmpty && !lookingOnline && !onlineCompleted && piece.recognition?.likely != true {
-                let retry = piece.onlineJob != nil || onlineError != nil
-                let photoDescription = piece.photos.count == 1 ? "the photo shown" : "both photos shown"
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        ForEach(GuestSide.allCases) { side in
-                            if let photo = piece.photos[side] {
-                                LocalThumbnail(url: store.photoURL(photo), type: piece.type)
-                                    .frame(width: 52, height: 44).clipShape(.rect(cornerRadius: 6))
-                            }
+        if !piece.photos.isEmpty && !lookingOnline && !onlineCompleted && piece.recognition?.likely != true {
+            let retry = piece.onlineJob != nil || onlineError != nil
+            let photoDescription = piece.photos.count == 1 ? "the photo shown" : "both photos shown"
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    ForEach(GuestSide.allCases) { side in
+                        if let photo = piece.photos[side] {
+                            LocalThumbnail(url: store.photoURL(photo), type: piece.type)
+                                .frame(width: 52, height: 44).clipShape(.rect(cornerRadius: 6))
                         }
-                    }.accessibilityHidden(true)
-                    Text("This sends \(photoDescription) to NumiAgent for processing by Cloudflare Workers AI. Notes and private details stay on this device.")
-                        .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("guest-online-disclosure")
-                    scanButton(retry ? "Retry online search" : "Search online", icon: "magnifyingglass", prominent: true) {
-                        Task { await searchOnline() }
-                    }.accessibilityIdentifier("guest-search-online").disabled(busy)
-                }
+                    }
+                }.accessibilityHidden(true)
+                Text("This sends \(photoDescription) to NumiAgent for processing by Cloudflare Workers AI. Notes and private details stay on this device.")
+                    .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("guest-online-disclosure")
+                scanButton(retry ? "Retry online search" : "Search online", icon: "magnifyingglass", prominent: true) {
+                    Task { await searchOnline() }
+                }.accessibilityIdentifier("guest-search-online").disabled(busy)
             }
+        }
     }
 
     private func inspection(_ piece: GuestPiece) -> some View {
@@ -669,10 +707,10 @@ private struct GuestPieceScreen: View {
                 .font(.subheadline.bold()).padding(10)
                 .background(confirmed ? CollectorDesign.highlight : CollectorDesign.warning, in: .capsule)
             VStack(alignment: .leading, spacing: 10) {
-                LabeledContent("Piece type", value: piece.type == "coin" ? "Coin" : "Banknote")
-                if !piece.denomination.isBlank { LabeledContent("Denomination", value: piece.denomination) }
+                fact("Piece type", piece.type == "coin" ? "Coin" : "Banknote")
+                if !piece.denomination.isBlank { fact("Denomination", piece.denomination) }
                 if let inscription = piece.inscription, !inscription.isBlank {
-                    LabeledContent("Inscription", value: inscription)
+                    fact("Inscription", inscription)
                 }
                 if let reference = piece.reference { Link("Saved reference", destination: reference) }
             }.padding().background(CollectorDesign.surface, in: .rect(cornerRadius: 12))
@@ -687,6 +725,15 @@ private struct GuestPieceScreen: View {
         }.frame(maxWidth: 760, alignment: .leading)
     }
 
+    @ViewBuilder private func fact(_ label: String, _ value: String) -> some View {
+        if textSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label).font(.caption.bold()).foregroundStyle(CollectorDesign.muted)
+                Text(value)
+            }.accessibilityElement(children: .combine)
+        } else { LabeledContent(label, value: value) }
+    }
+
     private func photoSection(_ piece: GuestPiece) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -698,20 +745,20 @@ private struct GuestPieceScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 if !piece.photos.isEmpty {
                     HStack(alignment: .top, spacing: 8) {
-                    ForEach(GuestSide.allCases) { side in
-                        if let photo = piece.photos[side], let image = UIImage(contentsOfFile: store.photoURL(photo).path) {
-                            Button { zoomedSide = side } label: {
-                                Image(uiImage: image).resizable().scaledToFit()
-                                    .frame(maxWidth: .infinity).frame(height: 115).padding(6)
-                                    .background(CollectorDesign.highlight.opacity(0.5), in: .rect(cornerRadius: 12))
-                                    .overlay(alignment: .bottomTrailing) {
-                                        Image(systemName: "magnifyingglass").padding(9)
-                                            .background(CollectorDesign.surface, in: .circle).padding(5)
-                                    }
-                                    .contentShape(Rectangle())
-                            }.buttonStyle(.plain).accessibilityLabel("Zoom photo \(photoNumber(side))")
+                        ForEach(GuestSide.allCases) { side in
+                            if let photo = piece.photos[side], let image = UIImage(contentsOfFile: store.photoURL(photo).path) {
+                                Button { zoomedSide = side } label: {
+                                    Image(uiImage: image).resizable().scaledToFit()
+                                        .frame(maxWidth: .infinity).frame(height: 115).padding(6)
+                                        .background(CollectorDesign.highlight.opacity(0.5), in: .rect(cornerRadius: 12))
+                                        .overlay(alignment: .bottomTrailing) {
+                                            Image(systemName: "magnifyingglass").padding(9)
+                                                .background(CollectorDesign.surface, in: .circle).padding(5)
+                                        }
+                                        .contentShape(Rectangle())
+                                }.buttonStyle(.plain).accessibilityLabel("Zoom photo \(photoNumber(side))")
+                            }
                         }
-                    }
                     }
                 }
                 if let side = nextSide(piece) {

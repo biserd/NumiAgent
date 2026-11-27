@@ -11,8 +11,9 @@ final class TabletWorkspaceTests: XCTestCase {
         device.appearance = .dark
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
-                               "--test-resizable-cabinet", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+                               "--test-resizable-cabinet", "--test-dark-appearance", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
+        device.appearance = .dark
         let card = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 15))
         if !card.isHittable { app.swipeUp() }
@@ -149,6 +150,30 @@ final class TabletWorkspaceTests: XCTestCase {
 }
 
 final class PhoneSignInAndReviewTests: XCTestCase {
+    @MainActor
+    func testPreviewScreensRenderBeforeCapture() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        for screen in ["sign-in", "collection", "capture", "valuation", "checklists"] {
+            app.launchArguments = ["--preview-" + screen]
+            app.launch()
+            let ready: XCUIElement
+            switch screen {
+            case "sign-in": ready = app.buttons["Send sign-in link"].firstMatch
+            case "collection": ready = app.buttons["specimen-demo-1"].firstMatch
+            case "capture": ready = app.buttons["Preview identification"].firstMatch
+            case "valuation": ready = app.staticTexts["Illustrative prices"].firstMatch
+            default: ready = app.navigationBars["Late Republican denarii"].firstMatch
+            }
+            XCTAssertTrue(ready.waitForExistence(timeout: 20), "Missing rendered content on " + screen)
+            let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            shot.name = "preview-" + screen
+            shot.lifetime = .keepAlways
+            add(shot)
+            app.terminate()
+        }
+    }
+
     @MainActor
     func testPhotoDraftAcceptsAnotherViewBeforeIdentification() {
         let app = XCUIApplication()
@@ -299,7 +324,7 @@ final class GuestV1Tests: XCTestCase {
         defer { XCUIDevice.shared.appearance = previousAppearance }
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
-                               "-collector-list-view", "YES",
+                               "-collector-list-view", "YES", "--test-dark-appearance",
                                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityM"]
         app.launch()
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "list-piece-")).firstMatch
@@ -408,6 +433,7 @@ final class GuestV1Tests: XCTestCase {
         app.launch()
         let start = app.buttons["Start scanning"]
         XCTAssertTrue(start.waitForExistence(timeout: 15))
+        recordScreenshot("Cabinet private welcome", app)
         start.tap()
         let front = app.buttons["Add sample photo"]
         XCTAssertTrue(front.waitForExistence(timeout: 10))

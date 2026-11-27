@@ -1,0 +1,57 @@
+name: Capture native UX audit evidence
+on:
+  push:
+    branches: [design/native-ux-audit-20261126]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: xcode-27
+    timeout-minutes: 44
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [iPhone, iPad]
+        mode: [light, dark]
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+      FAMILY: ${{ matrix.family }}
+      MODE: ${{ matrix.mode }}
+      SENTRY_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: ios
+          persist-credentials: false
+      - name: Launch the audit simulator and select its system appearance
+        run: |
+          set -euo pipefail
+          id="$(xcrun simctl list devices available -j | python3 -c '
+          import json,os,sys
+          items=[d for ds in json.load(sys.stdin)["devices"].values() for d in ds if d["name"].startswith(os.environ["FAMILY"])]
+          chosen=next((d for d in items if "17e" in d["name"] or "13-inch" in d["name"]),items[0])
+          print(chosen["name"], file=sys.stderr);print(chosen["udid"])')"
+          xcrun simctl boot "$id"
+          xcrun simctl bootstatus "$id" -b
+          xcrun simctl ui "$id" appearance "$MODE"
+          xcrun simctl status_bar "$id" override --time "9:41" --batteryLevel 100 --batteryState discharging
+          echo "DEVICE=$id" >> "$GITHUB_ENV"
+          npm install --prefix "$RUNNER_TEMP/audit-tools" --no-audit --no-fund xcodebuildmcp@2.7.0
+      - name: Exercise the unchanged app with XcodeBuildMCP
+        run: |
+          set -euo pipefail
+          params="$(python3 -c 'import os,json;print(json.dumps(dict(projectPath=os.path.abspath("ios/NumiAgent.xcodeproj"),scheme="NumiAgent",simulatorId=os.environ["DEVICE"],extraArgs=["-parallel-testing-enabled","NO","-only-testing:NumiAgentUITests/DesignInventoryTests","CODE_SIGNING_ALLOWED=NO"])))')"
+          "$RUNNER_TEMP/audit-tools/node_modules/.bin/xcodebuildmcp" simulator test --json "$params"
+      - name: Export actual screen captures and XCTest manifest
+        if: always()
+        run: |
+          result="$(find "$HOME/Library/Developer/XcodeBuildMCP" -name '*.xcresult' -type d | head -n 1)"
+          if [[ -n "$result" ]]; then
+            xcrun xcresulttool export attachments --path "$result" --output-path "$RUNNER_TEMP/audit-captures"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-ux-${{ matrix.family }}-${{ matrix.mode }}
+          path: ${{ runner.temp }}/audit-captures/
+          if-no-files-found: error

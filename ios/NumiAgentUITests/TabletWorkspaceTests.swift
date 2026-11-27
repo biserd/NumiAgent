@@ -419,3 +419,73 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(galleryCard(title, in: app).waitForExistence(timeout: 10))
     }
 }
+
+// Design evidence only. Exercises the shipping entry points using disposable simulator records.
+final class DesignInventoryTests: XCTestCase {
+    @MainActor
+    func testInventory() {
+        let app = XCUIApplication()
+        let orientations: [(UIDeviceOrientation, String)] = [(.portrait, "portrait"), (.landscapeLeft, "landscape")]
+        func launch(_ args: [String]) {
+            app.terminate()
+            app.launchArguments = args
+            app.launch()
+            _ = app.windows.firstMatch.waitForExistence(timeout: 10)
+        }
+        func capture(_ name: String) {
+            let previous = XCUIDevice.shared.orientation
+            for (orientation, label) in orientations {
+                XCUIDevice.shared.orientation = orientation
+                Thread.sleep(forTimeInterval: 0.45)
+                let attachment = XCTAttachment(screenshot: app.screenshot())
+                attachment.name = name + "--" + label
+                attachment.lifetime = .keepAlways
+                add(attachment)
+            }
+            XCUIDevice.shared.orientation = previous
+        }
+        func tap(_ key: String, _ search: XCUIElement? = nil) -> Bool {
+            let found = search ?? app.buttons[key].firstMatch
+            guard found.waitForExistence(timeout: 3), found.isHittable else { print("UNAVAILABLE: " + key); return false }
+            found.tap()
+            return true
+        }
+        XCUIDevice.shared.orientation = .portrait
+        launch(["--guest-test-" + UUID().uuidString])
+        capture("guest-welcome")
+        if tap("Start scanning") { capture("guest-new-draft") }
+        let guest = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture"]
+        launch(guest)
+        capture("guest-gallery")
+        if tap("Collection menu") {
+            capture("guest-collection-menu")
+            if tap("Privacy & browser access") { capture("guest-privacy") }
+        }
+        for tool in ["Back up collection","Restore backup","Export spreadsheet"] {
+            launch(guest)
+            if tap("Collection menu") && tap(tool) { capture(tool.replacingOccurrences(of: " ", with: "-")) }
+        }
+        launch(guest)
+        let card = app.buttons.matching(NSPredicate(format:"identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
+        if tap("guest-card", card) {
+            capture("guest-record")
+            if tap("guest-comparable-sales") {
+                capture("guest-sales")
+                _ = tap("Done")
+            }
+            if tap("Zoom photo 1") { capture("guest-zoom") }
+        }
+        for route in ["sign-in","collection","capture","valuation","checklists","photo-review"] {
+            launch(["--preview-" + route])
+            capture("account-" + route)
+            if route == "photo-review", tap("Open example photo batch") { capture("account-batch-review") }
+            if route == "collection" {
+                let demo = app.descendants(matching: .any)["specimen-demo-1"].firstMatch
+                if !app.buttons["Ask for a second opinion"].firstMatch.isHittable { _ = tap("demo-record",demo) }
+                if tap("Ask for a second opinion") { capture("account-opinion-card") }
+            }
+            if route == "checklists", tap("Late Republican denarii") { capture("account-checklist-detail") }
+        }
+    }
+}
+

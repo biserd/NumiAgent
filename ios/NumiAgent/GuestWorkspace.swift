@@ -12,39 +12,41 @@ struct GuestWelcome: View {
     let signIn: () -> Void
     let restore: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var textSize
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    Text("NumiAgent").font(.headline)
-                    Spacer()
-                    Label("Private", systemImage: "lock").font(.subheadline.weight(.semibold))
-                }
-                Text("See what your coin can tell you").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                Text("Scan a coin or banknote. Its photos stay on this device until you choose to search online.")
-                    .foregroundStyle(CollectorDesign.muted)
-                Button { samplePresented = true } label: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Image("DemoOctavian").resizable().scaledToFit().frame(maxWidth: .infinity).frame(height: 190)
-                            .background(CollectorDesign.photoPlate, in: .rect(cornerRadius: 14))
-                            .accessibilityHidden(true)
-                        Label("Explore a sample coin", systemImage: "magnifyingglass")
-                            .font(.headline).frame(minHeight: 44)
+        GeometryReader { window in
+            if window.size.width >= 760 && !textSize.isAccessibilitySize {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        identity
+                        HStack(alignment: .center, spacing: 32) {
+                            samplePhoto(height: 260)
+                            VStack(alignment: .leading, spacing: 16) {
+                                introduction
+                                startButton
+                                accountMenu
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
-                }.buttonStyle(.plain).foregroundStyle(CollectorDesign.tint)
-                    .accessibilityIdentifier("welcome-sample")
-                Menu("Sign in or restore", systemImage: "person.crop.circle") {
-                    Button("Sign in with email", systemImage: "envelope", action: signIn)
-                    Button("Restore backup", systemImage: "arrow.down.doc", action: restore)
-                }.frame(minHeight: 44)
-            }.frame(maxWidth: 500, alignment: .leading).padding(20)
-            .frame(maxWidth: .infinity)
-        }.safeAreaInset(edge: .bottom) {
-            Button(action: start) {
-                Label("Start scanning", systemImage: "camera").font(.headline)
-                    .foregroundStyle(CollectorDesign.onTint).frame(maxWidth: .infinity, minHeight: 44)
-            }.buttonStyle(.borderedProminent).frame(maxWidth: 500).padding()
-                .frame(maxWidth: .infinity).background(CollectorDesign.background)
+                    .frame(maxWidth: 920).padding(32)
+                    .frame(maxWidth: .infinity, minHeight: window.size.height)
+                }
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        identity
+                        introduction
+                        samplePhoto(height: 190)
+                        accountMenu
+                    }.frame(maxWidth: 500, alignment: .leading).padding(20)
+                        .frame(maxWidth: .infinity)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    startButton.frame(maxWidth: 500).padding()
+                        .frame(maxWidth: .infinity).background(CollectorDesign.background)
+                }
+            }
         }.background(CollectorDesign.background)
         .sheet(isPresented: $samplePresented, onDismiss: {
             if scanAfterSample { scanAfterSample = false; start() }
@@ -57,15 +59,60 @@ struct GuestWelcome: View {
                             ToolbarItem(placement: .cancellationAction) { Button("Done") { samplePresented = false } }
                         }
                         .safeAreaInset(edge: .bottom) {
-                            Button("Scan my own piece", systemImage: "camera") {
+                            Button {
                                 scanAfterSample = true
                                 samplePresented = false
+                            } label: {
+                                Label("Scan my own piece", systemImage: "camera").font(.headline)
+                                    .foregroundStyle(CollectorDesign.onTint)
                             }.buttonStyle(.borderedProminent).controlSize(.large)
                                 .frame(maxWidth: .infinity).padding(8).background(.bar)
                         }
                 }
             }
         }
+    }
+
+    private var identity: some View {
+        HStack {
+            Text("NumiAgent").font(.headline)
+            Spacer()
+            Label("Private", systemImage: "lock").font(.subheadline.weight(.semibold))
+        }
+    }
+
+    private var introduction: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("See what your coin can tell you").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+            Text("Scan a coin or banknote. Its photos stay on this device until you choose to search online.")
+                .foregroundStyle(CollectorDesign.muted)
+        }
+    }
+
+    private func samplePhoto(height: CGFloat) -> some View {
+        Button { samplePresented = true } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Image("DemoOctavian").resizable().scaledToFit().frame(maxWidth: .infinity).frame(height: height)
+                    .background(CollectorDesign.photoPlate, in: .rect(cornerRadius: 14))
+                    .accessibilityHidden(true)
+                Label("Explore a sample coin", systemImage: "magnifyingglass")
+                    .font(.headline).frame(minHeight: 44)
+            }
+        }.buttonStyle(.plain).foregroundStyle(CollectorDesign.tint).accessibilityIdentifier("welcome-sample")
+    }
+
+    private var accountMenu: some View {
+        Menu("Sign in or restore", systemImage: "person.crop.circle") {
+            Button("Sign in with email", systemImage: "envelope", action: signIn)
+            Button("Restore backup", systemImage: "arrow.down.doc", action: restore)
+        }.frame(minHeight: 44)
+    }
+
+    private var startButton: some View {
+        Button(action: start) {
+            Label("Start scanning", systemImage: "camera").font(.headline)
+                .foregroundStyle(CollectorDesign.onTint).frame(maxWidth: .infinity, minHeight: 44)
+        }.buttonStyle(.borderedProminent)
     }
 }
 

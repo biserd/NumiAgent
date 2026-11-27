@@ -21,6 +21,9 @@ final class TabletWorkspaceTests: XCTestCase {
         app.buttons["Done"].firstMatch.tap()
         XCTAssertTrue(sample.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Start scanning"].exists)
+        let scan = app.buttons["Start scanning"].firstMatch
+        XCTAssertLessThan(sample.frame.maxX, scan.frame.minX)
+        XCTAssertTrue((sample.frame.minY...sample.frame.maxY).contains(scan.frame.midY))
         capture("First visit - iPad dark welcome")
         app.buttons["Sign in or restore"].firstMatch.tap()
         app.buttons["Restore backup"].firstMatch.tap()

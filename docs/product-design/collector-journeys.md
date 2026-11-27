@@ -6,7 +6,7 @@ Reviewed against internal build 30.2 at `77db264`. The App Store listing showed 
 
 The welcome photograph now opens the Octavian denarius record, including its real image, issuer, date and museum reference. A collector can inspect it offline before granting permission or creating a collection. The large Start scanning button goes directly to the native camera when available. Permission is requested at that moment. Closing the camera leaves the import and manual routes in reach.
 
-Returning collectors see Continue scanning when a draft exists. Explicitly starting another piece creates a separate draft. Collection settings hold account and file actions. Email sign-in still opens the existing account flow. The device collection stays local. On iPad the collection sidebar retains a resume action while the detail pane can show a different record. Narrow windows use the compact navigation.
+Returning collectors see Continue scanning when a draft exists. Explicitly starting another piece creates a separate draft. Collection settings hold account and file actions. Email sign-in still opens the existing account flow. The device collection stays local. On wider welcome windows the specimen and scan action sit side by side. Compact and accessibility layouts keep the primary action at the bottom. On iPad the collection sidebar retains a resume action while the detail pane can show a different record. Narrow windows use the compact navigation.
 
 ## Interaction counts
 
@@ -38,7 +38,7 @@ A returning collector with a local collection bypasses welcome. Sample timing me
 
 ## Commercial design review
 
-[Existing and proposed journeys](https://www.figma.com/design/cUeeyjgMCTELK2OEX353n5/?node-id=36-579) · [Editable design and prototype starts](https://www.figma.com/design/cUeeyjgMCTELK2OEX353n5/?node-id=31-4)
+[Existing and proposed journeys](https://www.figma.com/design/cUeeyjgMCTELK2OEX353n5/?node-id=36-579) · [Choose one of the 12 offer variants](https://www.figma.com/proto/cUeeyjgMCTELK2OEX353n5/NumiAgent?node-id=39-462&starting-point-node-id=39%3A462) · [Editable design and prototype starts](https://www.figma.com/design/cUeeyjgMCTELK2OEX353n5/?node-id=31-4)
 
 | Concept | Main decision | Strength | Risk to test |
 | --- | --- | --- | --- |

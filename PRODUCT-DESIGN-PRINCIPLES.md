@@ -30,6 +30,16 @@ These standards apply to every product screen, flow, design review, and UX chang
 - Restrict event properties to the minimum necessary. Exclude names, emails, child profiles, education activity or answers, exact timestamps tied to children, persistent child or device IDs, and free text from product funnel events.
 - Establish a baseline before testing changes. For experiments, keep treatment stable at the permitted unit, define a success metric, and guard against access, trust, retention and accessibility regressions. Child-directed experiences require a privacy review before new collection. Distinguish observed results, proxy measures, hypotheses and missing data.
 
+## Design and prototype reviews
+
+Design the first visit and the return visit separately. Keep the most frequent task in reach and restore the person's selection when the window changes. Remove repeated explanations when native behavior or a clearer label can do the work.
+
+For a monetization redesign, use Figma MCP to create three editable alternatives: an outcome-led offer, a real product demonstration, and a contextual offer personalized from appropriate user activity. Cover iPhone and iPad in light and dark appearances. Connect contextual discovery, free-versus-paid comparison, eligible and ineligible offers, dismissal, purchase, trial, success, restore and management. Evaluate comprehension, task completion, accessibility, terms and reversibility. Recommend a design and record why. In a free product keep unapproved commercial ideas in clearly labeled prototypes.
+
+Compare onboarding, core journeys, navigation, premium discovery, contextual upselling and the paywall before and after. Include actual simulator evidence for implemented Apple journeys and distinguish proposals from shipping behavior. Use the Apple Human Interface Guidelines, semantic SwiftUI components, Dynamic Type, VoiceOver, Reduce Motion and automated UI tests.
+
+Define first launch, onboarding start and completion, first meaningful action and successful result. For commerce also define discovery, impression, dismissal, plan selection, purchase initiation, trial or paid activation, first paid renewal, cancellation and retained use. Establish the real sources and missing coverage. Run controlled experiments only with adequate data and appropriate consent. Never report a conversion lift from a prototype or test fixture.
+
 ## Review acceptance
 
 A review must identify the user outcome and primary action, include a before/after workflow count, justify remaining friction, and cite verification. For paid features, verify free and paid boundaries, localized purchase terms, opt-out, restore, and management. For native UI, check real simulator or device runs in available relevant layouts and appearances. Declare any untested conditions and whether product outcomes remain unmeasured.

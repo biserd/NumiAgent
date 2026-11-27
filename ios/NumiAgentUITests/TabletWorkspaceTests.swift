@@ -21,6 +21,11 @@ final class TabletWorkspaceTests: XCTestCase {
         app.buttons["Done"].firstMatch.tap()
         XCTAssertTrue(sample.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Start scanning"].exists)
+        capture("First visit - iPad dark welcome")
+        app.buttons["Sign in or restore"].firstMatch.tap()
+        app.buttons["Restore backup"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["Choose .numiagent file"].firstMatch.waitForExistence(timeout: 5))
+
     }
 
     @MainActor
@@ -287,6 +292,10 @@ final class GuestV1Tests: XCTestCase {
         app.buttons["Done"].firstMatch.tap()
         XCTAssertTrue(sample.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Start scanning"].exists)
+        sample.tap()
+        app.buttons["Scan my own piece"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))
+
     }
 
     @MainActor
@@ -301,6 +310,7 @@ final class GuestV1Tests: XCTestCase {
         XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))
         app.buttons["Close"].firstMatch.tap()
         XCTAssertEqual(scan.label, "Continue scanning")
+        recordScreenshot("Returning collector - unfinished piece", app)
         app.buttons["Add item"].firstMatch.tap()
         app.buttons["Start a new piece"].firstMatch.tap()
         XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))

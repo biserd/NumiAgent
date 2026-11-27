@@ -156,90 +156,91 @@ struct GuestWorkspace: View {
     }
 
     private func index(sidebar: Bool) -> some View {
-            List {
-                Section {
-                    Label("On this device", systemImage: "lock").font(.caption.weight(.semibold)).foregroundStyle(CollectorDesign.tint)
-                    if let active = store.active, !active.drafts.isEmpty {
-                        Button("Resume batch", systemImage: "camera.viewfinder") {
-                            if let draft = active.activeDraft ?? active.drafts.first?.id { open(draft) }
-                        }
-                        ForEach(active.drafts) { piece in
-                            Button(piece.title.isEmpty ? "Unfinished piece \(draftNumber(piece.id))" : piece.title) { open(piece.id) }
-                        }
+        List {
+            Section {
+                Label("On this device", systemImage: "lock").font(.caption.weight(.semibold)).foregroundStyle(CollectorDesign.tint)
+                if let active = store.active, !active.drafts.isEmpty {
+                    Button("Resume batch", systemImage: "camera.viewfinder") {
+                        if let draft = active.activeDraft ?? active.drafts.first?.id { open(draft) }
                     }
-                    if importing { ProgressView("Importing photos") }
-                }
-                Section("Items") {
-                    Picker("Show", selection: $filter) {
-                        ForEach(GuestFilter.allCases) { option in Text(option.rawValue).tag(option) }
-                    }
-                    if filtered.isEmpty {
-                        ContentUnavailableView(search.isEmpty ? "No pieces yet" : "No matches",
-                                               systemImage: "square.grid.2x2",
-                                               description: Text(search.isEmpty ? "Scan or enter a piece to get started." : "Try another search or filter."))
-                    }
-                    if !sidebar && !listView {
-                        cabinetGallery
-                            .listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
-                    } else {
-                        ForEach(filtered) { piece in
-                            Button { area = .collection; selected = piece.id } label: {
-                                HStack {
-                                    thumbnail(piece).frame(width: 46, height: 46).clipShape(.rect(cornerRadius: 8))
-                                    VStack(alignment: .leading) {
-                                        Text(piece.displayTitle)
-                                        Text([piece.issuer, piece.denomination, piece.year].filter { !$0.isEmpty }.joined(separator: " · "))
-                                            .font(.footnote).foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .listRowBackground(selected == piece.id ? CollectorDesign.highlight : CollectorDesign.surface)
-                            .accessibilityIdentifier("list-piece-\(piece.id)")
-                            .phoneRowDelete { deleteTarget = piece }
-                        }
+                    ForEach(active.drafts) { piece in
+                        Button(piece.title.isEmpty ? "Unfinished piece \(draftNumber(piece.id))" : piece.title) { open(piece.id) }
                     }
                 }
+                if importing { ProgressView("Importing photos") }
             }
-            .scrollContentBackground(.hidden)
-            .background(CollectorDesign.background)
-            .safeAreaInset(edge: .bottom) {
-                if !sidebar { scanAction.padding(.horizontal, 16).padding(.vertical, 6).background(CollectorDesign.background) }
-            }
-            .navigationTitle(store.active?.name ?? "My collection")
-            .searchable(text: $search, prompt: "Name, year or inscription")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu("Collection menu", systemImage: "ellipsis.circle") {
-                        Button(listView ? "Show gallery" : "Show list", systemImage: listView ? "square.grid.2x2" : "list.bullet") {
-                            listView.toggle()
-                        }
-                        if store.collections.count > 1 {
-                            Section("On this device") {
-                                ForEach(store.collections) { collection in
-                                    Button(collection.name) { act { try store.select(collection.id); selected = nil } }
+            Section("Items") {
+                Picker("Show", selection: $filter) {
+                    ForEach(GuestFilter.allCases) { option in Text(option.rawValue).tag(option) }
+                }
+                if filtered.isEmpty {
+                    ContentUnavailableView(search.isEmpty ? "No pieces yet" : "No matches",
+                                           systemImage: "square.grid.2x2",
+                                           description: Text(search.isEmpty ? "Scan or enter a piece to get started." : "Try another search or filter."))
+                }
+                if !sidebar && !listView {
+                    cabinetGallery
+                        .listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
+                } else {
+                    ForEach(filtered) { piece in
+                        Button { area = .collection; selected = piece.id } label: {
+                            HStack {
+                                thumbnail(piece).frame(width: 46, height: 46).clipShape(.rect(cornerRadius: 8))
+                                VStack(alignment: .leading) {
+                                    Text(piece.displayTitle)
+                                    Text([piece.issuer, piece.denomination, piece.year].filter { !$0.isEmpty }.joined(separator: " · "))
+                                        .font(.footnote).foregroundStyle(.secondary)
                                 }
                             }
                         }
-                        Button("Back up collection", systemImage: "lock") { menu = .backup }
-                        Button("Restore backup", systemImage: "arrow.down.doc") { menu = .restore }
-                        Button("Export spreadsheet", systemImage: "tablecells") { menu = .csv }
-                        Section("Settings") {
-                            Button("Privacy & browser access", systemImage: "hand.raised") { showPrivacy = true }
-                            Button(accountTitle ?? "Sign in with email", systemImage: "person.crop.circle", action: openAccount)
-                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(selected == piece.id ? CollectorDesign.highlight : CollectorDesign.surface)
+                        .accessibilityAddTraits(selected == piece.id ? .isSelected : [])
+                        .accessibilityIdentifier("list-piece-\(piece.id)")
+                        .phoneRowDelete { deleteTarget = piece }
                     }
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Menu("Add item", systemImage: "plus") {
-                        Button("Scan a piece", systemImage: "camera") { start() }
-                        PhotosPicker(selection: $imports, maxSelectionCount: 20, selectionBehavior: .ordered, matching: .images) {
-                            Label("Import a photo batch", systemImage: "photo.on.rectangle")
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(CollectorDesign.background)
+        .safeAreaInset(edge: .bottom) {
+            if !sidebar { scanAction.padding(.horizontal, 16).padding(.vertical, 6).background(CollectorDesign.background) }
+        }
+        .navigationTitle(store.active?.name ?? "My collection")
+        .searchable(text: $search, prompt: "Name, year or inscription")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Menu("Collection menu", systemImage: "ellipsis.circle") {
+                    Button(listView ? "Show gallery" : "Show list", systemImage: listView ? "square.grid.2x2" : "list.bullet") {
+                        listView.toggle()
+                    }
+                    if store.collections.count > 1 {
+                        Section("On this device") {
+                            ForEach(store.collections) { collection in
+                                Button(collection.name) { act { try store.select(collection.id); selected = nil } }
+                            }
                         }
-                        Button("Enter details manually", systemImage: "square.and.pencil") { start() }
-                    }.disabled(importing)
+                    }
+                    Button("Back up collection", systemImage: "lock") { menu = .backup }
+                    Button("Restore backup", systemImage: "arrow.down.doc") { menu = .restore }
+                    Button("Export spreadsheet", systemImage: "tablecells") { menu = .csv }
+                    Section("Settings") {
+                        Button("Privacy & browser access", systemImage: "hand.raised") { showPrivacy = true }
+                        Button(accountTitle ?? "Sign in with email", systemImage: "person.crop.circle", action: openAccount)
+                    }
                 }
             }
+            ToolbarItem(placement: .primaryAction) {
+                Menu("Add item", systemImage: "plus") {
+                    Button("Scan a piece", systemImage: "camera") { start() }
+                    PhotosPicker(selection: $imports, maxSelectionCount: 20, selectionBehavior: .ordered, matching: .images) {
+                        Label("Import a photo batch", systemImage: "photo.on.rectangle")
+                    }
+                    Button("Enter details manually", systemImage: "square.and.pencil") { start() }
+                }.disabled(importing)
+            }
+        }
     }
 
     @ViewBuilder private var destination: some View {
@@ -331,12 +332,13 @@ struct GuestWorkspace: View {
 
     private var cabinetGallery: some View {
         let pieces = Array(filtered.reversed())
+        let featured = pieces.count > 2 ? pieces.first(where: { !$0.photos.isEmpty }) : nil
         return VStack(alignment: .leading, spacing: 12) {
-            if pieces.count > 2, let featured = pieces.first {
+            if let featured {
                 galleryCard(featured, featured: true)
                 Text("Recently added").font(.headline).accessibilityAddTraits(.isHeader)
             }
-            let remaining = pieces.count > 2 ? Array(pieces.dropFirst()) : pieces
+            let remaining = pieces.filter { $0.id != featured?.id }
             CollectionGrid(itemCount: remaining.count) {
                 ForEach(remaining) { piece in galleryCard(piece, featured: false) }
             }
@@ -344,19 +346,19 @@ struct GuestWorkspace: View {
     }
 
     private func galleryCard(_ piece: GuestPiece, featured: Bool) -> some View {
-            let activate = {
-                if revealedPiece != nil { revealedPiece = nil }
-                else { selected = piece.id }
+        let activate = {
+            if revealedPiece != nil { revealedPiece = nil }
+            else { selected = piece.id }
+        }
+        return Button(action: activate) {
+            CollectionCard(featured: featured, title: piece.displayTitle, subtitle: [piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: " · ")) {
+                thumbnail(piece)
             }
-            return Button(action: activate) {
-                CollectionCard(featured: featured, title: piece.displayTitle, subtitle: [piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: " · ")) {
-                    thumbnail(piece)
-                }
-            }.buttonStyle(.plain)
-                .accessibilityLabel(piece.displayTitle)
-                .accessibilityValue([piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: ", "))
-                .accessibilityIdentifier("gallery-piece-\(piece.id)")
-                .phoneCardDelete(id: piece.id, revealed: $revealedPiece, activate: activate) { deleteTarget = piece }
+        }.buttonStyle(.plain)
+            .accessibilityLabel(piece.displayTitle)
+            .accessibilityValue([piece.issuer, piece.year].filter { !$0.isBlank }.joined(separator: ", "))
+            .accessibilityIdentifier("gallery-piece-\(piece.id)")
+            .phoneCardDelete(id: piece.id, revealed: $revealedPiece, activate: activate) { deleteTarget = piece }
     }
 
     private func thumbnail(_ piece: GuestPiece) -> some View {
@@ -514,7 +516,7 @@ private struct GuestPieceScreen: View {
                             if let sold = soldListingsURL([piece.issuer, piece.denomination, piece.year].filter { !$0.isBlank }.joined(separator: " ")) {
                                 Link("Compare sold listings on eBay", destination: sold)
                             }
-                            if !piece.title.isBlank && !canConfirm(piece) {
+                            if !piece.title.isBlank && piece.status != .confirmed {
                                 Button("Confirm and save", systemImage: "checkmark") { save(.confirmed) }
                             }
                             if isDraft, let newPiece {
@@ -662,7 +664,7 @@ private struct GuestPieceScreen: View {
                 }
             }
             let confirmed = piece.status == .confirmed
-            Label(confirmed ? "Confirmed" : "Tentative identification",
+            Label(confirmed ? "Confirmed" : piece.title.isBlank ? "Needs review" : "Tentative identification",
                   systemImage: confirmed ? "checkmark.circle" : "magnifyingglass")
                 .font(.subheadline.bold()).padding(10)
                 .background(confirmed ? CollectorDesign.highlight : CollectorDesign.warning, in: .capsule)
@@ -694,7 +696,8 @@ private struct GuestPieceScreen: View {
                     .accessibilityLabel("\(piece.photos.count) of 2 photos")
             }
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 8) {
+                if !piece.photos.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
                     ForEach(GuestSide.allCases) { side in
                         if let photo = piece.photos[side], let image = UIImage(contentsOfFile: store.photoURL(photo).path) {
                             Button { zoomedSide = side } label: {
@@ -707,12 +710,8 @@ private struct GuestPieceScreen: View {
                                     }
                                     .contentShape(Rectangle())
                             }.buttonStyle(.plain).accessibilityLabel("Zoom photo \(photoNumber(side))")
-                        } else {
-                            Image(systemName: "photo").font(.title2).foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity).frame(height: 127)
-                                .background(CollectorDesign.highlight.opacity(0.42), in: .rect(cornerRadius: 12))
-                                .accessibilityHidden(true)
                         }
+                    }
                     }
                 }
                 if let side = nextSide(piece) {
@@ -791,7 +790,7 @@ private struct GuestPieceScreen: View {
                 CollectorNotice(title: selectedMatch ? "Match selected" : "Likely match",
                                 message: "Review the filled details before saving.", icon: "checkmark.circle")
             } else if let result = piece.recognition, !result.suggestions.isEmpty {
-                CollectorNotice(title: "Possible match", message: "The first suggestion is filled in. Review it or choose another match.",
+                CollectorNotice(title: "Possible match", message: "Review the details the matches share. Choose a suggestion to use its full identification.",
                                 icon: "magnifyingglass", warning: true)
             } else if !busy {
                 CollectorNotice(title: "Needs review", message: "Review the details the scan could read. Leave uncertain fields blank.",
@@ -860,12 +859,12 @@ private struct GuestPieceScreen: View {
     }
 
     private func detailRow(_ title: String, field key: GuestDetailField) -> some View {
-        HStack(spacing: 8) {
-            Text(title).foregroundStyle(.secondary).accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.caption.bold()).foregroundStyle(CollectorDesign.muted).accessibilityHidden(true)
             TextField(title, text: field(key), prompt: Text("Enter value").foregroundStyle(.secondary))
-                .multilineTextAlignment(.trailing)
+                .multilineTextAlignment(.leading)
                 .accessibilityLabel(title).accessibilityIdentifier("guest-field-" + key.rawValue)
-        }.padding(.horizontal, 9).frame(minHeight: 44)
+        }.padding(9).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Color.secondary.opacity(0.24)))
     }
 

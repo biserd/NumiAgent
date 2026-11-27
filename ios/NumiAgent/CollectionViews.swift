@@ -178,6 +178,8 @@ extension View {
     @Published var loading = false
     @Published var error: String?
     @Published var requestedMore = 0
+    @Published var type = ""
+    @Published var folder = ""
     var loadGeneration = 0
 }
 
@@ -204,8 +206,8 @@ struct CatalogScreen: View {
     @State private var deleteTarget: Specimen?
     @State private var deletingIDs = Set<String>()
     @State private var deletionError: String?
-    @State private var type = ""
-    @State private var folder = ""
+    private var type: String { results.type }
+    private var folder: String { results.folder }
     @State private var folders: [CollectionFolder] = []
     @AppStorage("collector-list-view") private var listView = false
     private var items: [Specimen] { results.items }
@@ -238,29 +240,15 @@ struct CatalogScreen: View {
             if !items.isEmpty {
                 Section {
                     if workspaceSelection == nil && !listView {
-                        CollectionGrid(itemCount: items.count) {
-                            ForEach(items) { item in
-                                let activate = {
-                                    if revealedItem != nil { revealedItem = nil } else { openedItemID = item.id }
-                                }
-                                Button(action: activate) {
-                                    accountCard(item, api: api, demo: demo)
-                                }.buttonStyle(.plain).accessibilityIdentifier("specimen-\(item.id)")
-                                    .phoneCardDelete(id: item.id, revealed: $revealedItem, enabled: !demo, activate: activate) { deleteTarget = item }
-                                    .disabled(deletingIDs.contains(item.id))
-                            }
-                        }.listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
+                        gallery.listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
                     } else {
                         ForEach(items) { item in
                             if workspaceSelection != nil {
                                 NavigationLink(value: item.id) { row(item) }
                                     .accessibilityIdentifier("specimen-\(item.id)")
                             } else {
-                                NavigationLink {
-                                    SpecimenScreen(item: item, api: api, demo: demo, onChange: reload)
-                                } label: {
-                                    row(item)
-                                }
+                                Button { openedItemID = item.id } label: { row(item) }
+                                .buttonStyle(.plain)
                                 .phoneRowDelete(enabled: !demo) { deleteTarget = item }
                                 .disabled(deletingIDs.contains(item.id))
                             }
@@ -358,6 +346,31 @@ struct CatalogScreen: View {
         .init(query: query, type: type, folder: folder, revision: workspaceSelection?.revision ?? revision)
     }
 
+    private var gallery: some View {
+        let featured = items.count > 2 ? items.first(where: { $0.photo != nil || (demo && DemoCollection.photo(for: $0) != nil) }) : nil
+        let remaining = items.filter { $0.id != featured?.id }
+        return VStack(alignment: .leading, spacing: 12) {
+            if let featured {
+                cardButton(featured, featured: true)
+                Text("More pieces").font(.headline).accessibilityAddTraits(.isHeader)
+            }
+            CollectionGrid(itemCount: remaining.count) {
+                ForEach(remaining) { item in cardButton(item, featured: false) }
+            }
+        }
+    }
+
+    private func cardButton(_ item: Specimen, featured: Bool) -> some View {
+        let activate = {
+            if revealedItem != nil { revealedItem = nil } else { openedItemID = item.id }
+        }
+        return Button(action: activate) {
+            accountCard(item, api: api, demo: demo, featured: featured)
+        }.buttonStyle(.plain).accessibilityIdentifier("specimen-\(item.id)")
+            .phoneCardDelete(id: item.id, revealed: $revealedItem, enabled: !demo, activate: activate) { deleteTarget = item }
+            .disabled(deletingIDs.contains(item.id))
+    }
+
     private var collectionStart: some View {
         Section {
             if items.isEmpty && !loading {
@@ -365,9 +378,9 @@ struct CatalogScreen: View {
                                 icon: "camera")
             }
             Button {
-                addSheet = .actions
+                openCapture(nil)
             } label: {
-                Label("Add item", systemImage: "plus").frame(maxWidth: .infinity, minHeight: 30)
+                Label("Scan a piece", systemImage: "camera").frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("collection-add")
@@ -405,12 +418,12 @@ struct CatalogScreen: View {
             Button(listView ? "Show gallery" : "Show list", systemImage: listView ? "square.grid.2x2" : "list.bullet") {
                 listView.toggle()
             }
-            Picker("Item type", selection: $type) {
+            Picker("Item type", selection: $results.type) {
                 Text("All items").tag("")
                 Text("Coins").tag("coin")
                 Text("Banknotes").tag("banknote")
             }
-            Picker("Folder", selection: $folder) {
+            Picker("Folder", selection: $results.folder) {
                 Text("All folders").tag("")
                 ForEach(folders) { folder in Text(folder.name).tag(folder.id) }
             }
@@ -449,7 +462,7 @@ struct CatalogScreen: View {
     private func loadFolders() async {
         if let result: [CollectionFolder] = try? await api.get("/collections"), !Task.isCancelled {
             folders = result
-            if !folder.isEmpty && !result.contains(where: { $0.id == folder }) { folder = "" }
+            if !folder.isEmpty && !result.contains(where: { $0.id == folder }) { results.folder = "" }
         }
     }
 
@@ -495,8 +508,8 @@ struct CatalogScreen: View {
     }
 }
 
-@MainActor func accountCard(_ item: Specimen, api: NumiAPI, demo: Bool) -> some View {
-    CollectionCard(title: item.title, subtitle: item.subtitle) {
+@MainActor func accountCard(_ item: Specimen, api: NumiAPI, demo: Bool, featured: Bool = false) -> some View {
+    CollectionCard(featured: featured, title: item.title, subtitle: item.subtitle) {
         SpecimenImage(api: api, id: item.photo, sampleAsset: demo ? DemoCollection.photo(for: item) : nil)
     }
 }
@@ -1017,6 +1030,7 @@ struct ThemesScreen: View {
     let api: NumiAPI
     let demo: Bool
     var embedded = false
+    var compactSelection: Binding<ThemeSummary?>? = nil
     var workspaceSelection: WorkspaceListSelection<ThemeSummary>? = nil
     var captureForSlot: ((String) -> Void)? = nil
     var findForSlot: ((String) -> Void)? = nil
@@ -1028,7 +1042,18 @@ struct ThemesScreen: View {
 
     var body: some View {
         if workspaceSelection != nil || embedded { checklists }
-        else {
+        else if let compactSelection {
+            NavigationStack {
+                checklists.navigationDestination(isPresented: Binding(get: { compactSelection.wrappedValue != nil },
+                    set: { if !$0 { compactSelection.wrappedValue = nil } })) {
+                    if let theme = compactSelection.wrappedValue {
+                        ThemeScreen(api: api, theme: theme, demo: demo, onChange: { Task { await load() } },
+                                    onDelete: { compactSelection.wrappedValue = nil; Task { await load() } },
+                                    captureForSlot: captureForSlot, findForSlot: findForSlot)
+                    }
+                }
+            }
+        } else {
             NavigationStack {
                 checklists.navigationDestination(item: $preview) { _ in
                     ThemeScreen(api: api, theme: DemoCollection.theme, demo: demo, onChange: {})
@@ -1042,6 +1067,8 @@ struct ThemesScreen: View {
             ForEach(themes) { theme in
                 if workspaceSelection != nil {
                     NavigationLink(theme.name, value: theme.id)
+                } else if let compactSelection {
+                    Button(theme.name) { compactSelection.wrappedValue = theme }
                 } else {
                     NavigationLink(theme.name) {
                         ThemeScreen(api: api, theme: theme, demo: demo, onChange: { Task { await load() } },
@@ -1070,7 +1097,8 @@ struct ThemesScreen: View {
         .task(id: workspaceSelection?.revision ?? 0) {
             await load()
             if workspaceSelection == nil && demo && PreviewLaunch.screen == .checklists {
-                preview = DemoCollection.theme.id
+                if let compactSelection { compactSelection.wrappedValue = DemoCollection.theme }
+                else { preview = DemoCollection.theme.id }
             }
         }
     }
@@ -1115,6 +1143,7 @@ struct ThemeScreen: View {
                             Text("Missing items are checked for auction lots automatically.").font(.subheadline)
                             Toggle("Email me new lots for this checklist", isOn: Binding(get: { email }, set: { enabled in
                                 Task {
+                                    guard !savingEmail else { return }
                                     savingEmail = true
                                     defer { savingEmail = false }
                                     do {

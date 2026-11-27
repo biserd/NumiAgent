@@ -2,6 +2,37 @@ import XCTest
 
 final class TabletWorkspaceTests: XCTestCase {
     @MainActor
+    func testDeviceRecordSurvivesNarrowToExpandedLayout() async throws {
+        continueAfterFailure = false
+        let device = XCUIDevice.shared
+        let previousAppearance = device.appearance
+        defer { device.orientation = .portrait; device.appearance = previousAppearance }
+        device.orientation = .portrait
+        device.appearance = .dark
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
+                               "--test-resizable-cabinet", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        let card = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        if !card.isHittable { app.swipeUp() }
+        card.tap()
+        let sales = app.buttons["guest-comparable-sales"].firstMatch
+        XCTAssertTrue(sales.waitForExistence(timeout: 8))
+        capture("Cabinet dark narrow iPad at accessibility size")
+        device.orientation = .landscapeLeft
+        let window = app.windows.firstMatch
+        for _ in 0..<30 {
+            if window.frame.width > window.frame.height { break }
+            try await Task.sleep(for: .milliseconds(300))
+        }
+        XCTAssertGreaterThan(window.frame.width, window.frame.height)
+        XCTAssertTrue(sales.exists)
+        XCTAssertTrue(app.staticTexts["United States quarter"].firstMatch.exists)
+        capture("Cabinet dark expanded iPad at accessibility size")
+    }
+
+    @MainActor
     func testDeviceOnlyQuarterHasComparableSales() {
         let app = XCUIApplication()
         XCUIDevice.shared.orientation = .landscapeLeft

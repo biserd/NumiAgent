@@ -158,6 +158,13 @@ struct NumiAgentApp: App {
                         guestAcceptanceStatus = "Guest storage checks passed"
                     } catch { guestAcceptanceStatus = error.localizedDescription }
                 }
+            } else if ProcessInfo.processInfo.arguments.contains("--test-resizable-cabinet") {
+                GeometryReader { window in
+                    // Exercise a narrow content proposal on CI, then the full window after rotation.
+                    let narrow = window.size.width < window.size.height
+                    collectorRoot.frame(width: narrow ? min(520, window.size.width) : window.size.width)
+                        .frame(maxWidth: .infinity)
+                }
             } else { collectorRoot }
             #else
             collectorRoot
@@ -265,9 +272,9 @@ enum CollectorTab: Hashable, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .collection: return "Collection"
-        case .capture: return "Capture"
+        case .capture: return "Scan"
         case .checklists: return "Checklists"
-        case .settings: return "Account"
+        case .settings: return "Settings"
         }
     }
     var icon: String {
@@ -275,7 +282,7 @@ enum CollectorTab: Hashable, CaseIterable, Identifiable {
         case .collection: return "square.grid.2x2"
         case .capture: return "camera"
         case .checklists: return "checklist"
-        case .settings: return "person.crop.circle"
+        case .settings: return "gearshape"
         }
     }
 }

@@ -70,7 +70,8 @@ struct SpecimenPriceGuide: View {
     @Bindable var model: SpecimenGuideModel
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Numista price guide by grade").font(.headline)
+            Label("Numista price guide by grade", systemImage: "book").font(.headline)
+            Text("Guide estimates for the selected issue and condition.").font(.footnote).foregroundStyle(CollectorDesign.muted)
             if model.busy { ProgressView("Checking Numista") }
             if let error = model.error { Text(error).foregroundStyle(.secondary) }
             if let message = model.guide?.message { Text(message).font(.subheadline) }
@@ -182,7 +183,7 @@ struct GapAuctionScreen: View {
     var body: some View {
         List {
             Section {
-                Text(slot.label).font(.headline)
+                Text(slot.label).font(.headline).accessibilityAddTraits(.isHeader)
                 if let watch {
                     Text(watch.subtitle)
                     if emailAvailable || watch.alert == 1 {
@@ -190,16 +191,16 @@ struct GapAuctionScreen: View {
                             Task { await update(email: enabled) }
                         })).disabled(busy)
                     } else {
-                        Text("Email alerts are unavailable. The watch still checks for lots.").font(.footnote)
+                        Text("Email alerts are unavailable.").font(.footnote)
                     }
                     Button("Stop watching") { Task { await update(remove: true) } }
                 } else if ready, slot.slotKey != nil {
                     if check?.paused == true || stoppedHere {
                         Button("Resume auction checks") { Task { await update() } }
-                    } else { Text("Automatic watch scheduled") }
+                    } else { Label("Automatic watch scheduled", systemImage: "clock") }
                 }
             } footer: { Text("Alerts pause when you fill this slot. Check auction status on biddr for discovery leads.") }
-            Section("Auctions") {
+            Section("Auction listings") {
                 if search == nil, let lots = check?.lots, !stoppedHere {
                     ForEach(lots, id: \.url) { lot in Link(lot.title + " · " + lot.label, destination: lot.url) }
                 }

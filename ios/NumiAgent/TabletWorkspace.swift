@@ -89,7 +89,7 @@ struct CollectorWorkspace: View {
             CaptureScreen(api: session.api, account: account, store: capture, reviewID: $importID,
                           onUpload: nil, onSave: openNewItem, checklistLabel: checklistLabel)
                 .tabItem { Label("Scan", systemImage: CollectorTab.capture.icon) }.tag(CollectorTab.capture)
-            ThemesScreen(api: session.api, demo: demo, captureForSlot: captureForSlot, findForSlot: findForSlot)
+            ThemesScreen(api: session.api, demo: demo, compactSelection: $checklist, captureForSlot: captureForSlot, findForSlot: findForSlot)
                 .tabItem { Label("Checklists", systemImage: CollectorTab.checklists.icon) }.tag(CollectorTab.checklists)
             AccountScreen(session: session, account: account)
                 .tabItem { Label("Settings", systemImage: "gearshape") }.tag(CollectorTab.settings)

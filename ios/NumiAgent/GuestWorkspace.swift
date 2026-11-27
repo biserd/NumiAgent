@@ -602,10 +602,7 @@ private struct GuestPieceScreen: View {
                                     .font(.subheadline).foregroundStyle(CollectorDesign.muted)
                             }
                         }
-                        if !isDraft || !piece.denomination.isBlank || !piece.title.isBlank {
-                            scanButton("Find comparable sales", icon: "chart.bar") { salesPresented = true }
-                                .accessibilityIdentifier("guest-comparable-sales")
-                        }
+                        if !isDraft { comparableSalesButton }
                         if !isDraft && !editingRecord {
                             inspection(piece)
                         } else {
@@ -619,6 +616,9 @@ private struct GuestPieceScreen: View {
                                     recordSection(piece)
                                 }
                             }
+                        }
+                        if isDraft && (!piece.denomination.isBlank || !piece.title.isBlank) {
+                            comparableSalesButton
                         }
                     }
                     .frame(maxWidth: 1040, alignment: .leading).padding(20)
@@ -763,6 +763,11 @@ private struct GuestPieceScreen: View {
                 }.accessibilityIdentifier("guest-search-online").disabled(busy)
             }
         }
+    }
+
+    private var comparableSalesButton: some View {
+        scanButton("Find comparable sales", icon: "chart.bar") { salesPresented = true }
+            .accessibilityIdentifier("guest-comparable-sales")
     }
 
     private func inspection(_ piece: GuestPiece) -> some View {

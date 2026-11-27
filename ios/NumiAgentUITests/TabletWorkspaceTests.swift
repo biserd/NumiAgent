@@ -478,7 +478,10 @@ final class GuestV1Tests: XCTestCase {
         for _ in 0..<10 {
             if button.exists {
                 let frame = button.frame
-                if !frame.isEmpty && viewport.contains(CGPoint(x: frame.midX, y: frame.midY)) {
+                let saveBar = app.buttons["guest-save-record"].firstMatch
+                let bottom = saveBar.exists && saveBar.isHittable
+                    ? min(viewport.maxY, saveBar.frame.minY - 24) : viewport.maxY
+                if !frame.isEmpty && frame.midY < bottom && viewport.contains(CGPoint(x: frame.midX, y: frame.midY)) {
                     XCTAssertTrue(button.isEnabled, file: file, line: line)
                     return
                 }
@@ -514,10 +517,13 @@ final class GuestV1Tests: XCTestCase {
         resume.tap()
         XCTAssertTrue(app.buttons["Zoom photo 1"].firstMatch.waitForExistence(timeout: 10))
         let back = app.buttons["Add sample photo"]
-        if !back.isHittable { app.swipeUp() }
+        reveal(back, in: app)
         XCTAssertTrue(back.isHittable)
         back.tap()
-        XCTAssertTrue(app.buttons["Zoom photo 2"].firstMatch.waitForExistence(timeout: 10))
+        let secondPhoto = app.buttons["Zoom photo 2"].firstMatch
+        if !secondPhoto.waitForExistence(timeout: 3) { app.swipeDown() }
+        recordScreenshot("Resumed capture - two photo slots", app)
+        XCTAssertTrue(secondPhoto.waitForExistence(timeout: 10), app.debugDescription)
         let save = app.buttons["guest-save-record"]
         for _ in 0..<8 where !save.isHittable { app.swipeUp() }
         XCTAssertTrue(save.isHittable)

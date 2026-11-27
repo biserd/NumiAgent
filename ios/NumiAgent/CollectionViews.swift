@@ -3,17 +3,18 @@ import PhotosUI
 import ImageIO
 
 struct CollectionCard<Photo: View>: View {
+    var featured = false
     let title: String
     let subtitle: String
     @ViewBuilder let photo: () -> Photo
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Color.clear.aspectRatio(1.35, contentMode: .fit)
+            Color.clear.aspectRatio(featured ? 2.35 : 1.6, contentMode: .fit)
                 .overlay { photo() }.clipped()
-                .background(CollectorDesign.highlight.opacity(0.35))
+                .background(featured ? CollectorDesign.photoPlate : CollectorDesign.highlight)
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline).lineLimit(2)
+                Text(title).font(featured ? .title3.bold() : .headline).foregroundStyle(CollectorDesign.ink).fixedSize(horizontal: false, vertical: true)
                 if !subtitle.isEmpty { Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
             }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
         }.background(CollectorDesign.surface, in: .rect(cornerRadius: 12))
@@ -636,6 +637,7 @@ struct SpecimenScreen: View {
                         if !item.subtitle.isEmpty { Text(item.subtitle).foregroundStyle(.secondary) }
                     }
                     .padding(.vertical, 6)
+                    if !demo { comparableSalesLink }
                     photosSection
                     if (demo && DemoCollection.photo(for: item) != nil) ||
                         (loaded && (item.photo != nil || item.photos?.isEmpty == false)) {
@@ -850,13 +852,16 @@ struct SpecimenScreen: View {
         }
     }
 
-    private var itemActions: some View {
-        Section {
+    private var comparableSalesLink: some View {
             NavigationLink {
                 SaleResearchScreen(api: api, item: item) { Task { await loadValuation() } }
             } label: {
                 Label("Find comparable sales", systemImage: "chart.bar")
             }
+    }
+
+    private var itemActions: some View {
+        Section {
             NavigationLink {
                 ThemesScreen(api: api, demo: false, embedded: true)
             } label: {
@@ -1108,16 +1113,16 @@ struct ThemeScreen: View {
                     if !demo {
                         if let email = details.emailNewLots {
                             Text("Missing items are checked for auction lots automatically.").font(.subheadline)
-                            Button(email ? "Turn off checklist emails" : "Email me new lots for this checklist") {
+                            Toggle("Email me new lots for this checklist", isOn: Binding(get: { email }, set: { enabled in
                                 Task {
                                     savingEmail = true
                                     defer { savingEmail = false }
                                     do {
-                                        try await api.write("/watchlists/themes/" + theme.id + "/email", method: "PUT", payload: ["enabled": !email])
+                                        try await api.write("/watchlists/themes/" + theme.id + "/email", method: "PUT", payload: ["enabled": enabled])
                                         await load()
                                     } catch { self.error = error.localizedDescription }
                                 }
-                            }.disabled(savingEmail || (!email && details.auctionEmailAvailable == false))
+                            })).disabled(savingEmail || (!email && details.auctionEmailAvailable == false))
                         }
                         NavigationLink("Manage auction watches") { ChecklistWatchesScreen(api: api, themeID: theme.id) }
                     }

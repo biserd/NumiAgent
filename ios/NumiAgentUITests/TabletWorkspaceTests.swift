@@ -10,11 +10,16 @@ final class TabletWorkspaceTests: XCTestCase {
         app.launch()
         let quarter = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
         XCTAssertTrue(quarter.waitForExistence(timeout: 15))
-        let gallery = XCTAttachment(screenshot: app.screenshot())
+        let gallery = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         gallery.name = "Device collection gallery on iPad"
         gallery.lifetime = .keepAlways
         add(gallery)
         quarter.tap()
+        XCTAssertFalse(app.buttons["guest-save-record"].exists)
+        let inspector = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        inspector.name = "Cabinet iPad specimen inspection"
+        inspector.lifetime = .keepAlways
+        add(inspector)
         let sales = app.buttons["guest-comparable-sales"].firstMatch
         XCTAssertTrue(sales.waitForExistence(timeout: 10))
         XCTAssertTrue(sales.isHittable)
@@ -185,6 +190,37 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
+    func testCabinetScanSettingsAndInspection() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture"]
+        app.launch()
+        let scan = app.buttons["cabinet-scan"].firstMatch
+        XCTAssertTrue(scan.waitForExistence(timeout: 15))
+        scan.tap()
+        XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))
+        app.buttons["Close"].firstMatch.tap()
+        let settings = app.tabBars.buttons["Settings"]
+        settings.tap()
+        XCTAssertTrue(app.buttons["Back up collection"].firstMatch.waitForExistence(timeout: 5))
+        app.tabBars.buttons["Collection"].tap()
+        let card = galleryCard("United States quarter", in: app)
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        card.tap()
+        let sales = app.buttons["guest-comparable-sales"]
+        XCTAssertTrue(sales.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["guest-save-record"].exists)
+        recordScreenshot("Cabinet iPhone specimen inspection", app)
+        let edit = app.buttons["cabinet-edit-record"]
+        reveal(edit, in: app)
+        edit.tap()
+        XCTAssertTrue(app.textFields["guest-field-year"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["guest-field-year"].value as? String, "1991")
+        app.buttons["Done editing"].firstMatch.tap()
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSwipeGalleryCardCancelsThenDeletesOnlyThatPiece() {
         continueAfterFailure = false
         let previousAppearance = XCUIDevice.shared.appearance
@@ -252,7 +288,7 @@ final class GuestV1Tests: XCTestCase {
 
     @MainActor
     private func recordScreenshot(_ name: String, _ app: XCUIApplication) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)

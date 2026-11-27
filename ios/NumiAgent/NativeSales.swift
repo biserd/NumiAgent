@@ -186,9 +186,11 @@ struct GapAuctionScreen: View {
                 if let watch {
                     Text(watch.subtitle)
                     if emailAvailable || watch.alert == 1 {
-                        Button(watch.alert == 1 ? "Turn off email alerts" : "Email me new lots") {
-                            Task { await update(email: watch.alert == 0) }
-                        }
+                        Toggle("Email me new lots", isOn: Binding(get: { watch.alert == 1 }, set: { enabled in
+                            Task { await update(email: enabled) }
+                        })).disabled(busy)
+                    } else {
+                        Text("Email alerts are unavailable. The watch still checks for lots.").font(.footnote)
                     }
                     Button("Stop watching") { Task { await update(remove: true) } }
                 } else if ready, slot.slotKey != nil {

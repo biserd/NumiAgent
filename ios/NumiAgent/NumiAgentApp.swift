@@ -2,11 +2,15 @@ import SwiftUI
 import UIKit
 
 enum CollectorDesign {
-    static let tint = adaptive(0x1E5745, dark: 0xA9DBBF)
-    static let background = adaptive(0xF6F3EB, dark: 0x181E1A)
-    static let surface = adaptive(0xFFFDF7, dark: 0x252E28)
-    static let highlight = adaptive(0xE0ECE2, dark: 0x283E32)
-    static let warning = adaptive(0xFAEAC8, dark: 0x453619)
+    static let tint = adaptive(0x174F3B, dark: 0xA1DEBC)
+    static let background = adaptive(0xF6F3EC, dark: 0x151B18)
+    static let surface = adaptive(0xFFFEF9, dark: 0x202924)
+    static let highlight = adaptive(0xE0EDE2, dark: 0x243E31)
+    static let warning = adaptive(0xF4E8D2, dark: 0x3A3222)
+    static let ink = adaptive(0x172C23, dark: 0xF0F4EB)
+    static let muted = adaptive(0x4E6055, dark: 0xB7C6B8)
+    static let onTint = adaptive(0xFFFFFF, dark: 0x123121)
+    static let photoPlate = adaptive(0x252922, dark: 0x101512)
     static let forest = Color(red: 0.08, green: 0.23, blue: 0.19)
 
     private static func adaptive(_ light: Int, dark: Int) -> Color {
@@ -242,11 +246,7 @@ struct NumiAgentApp: App {
 
     @ViewBuilder
     private func workspace(account: Account?) -> some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            TabletWorkspace(session: session, account: account)
-        } else {
-            CollectorTabs(session: session, account: account)
-        }
+        CollectorWorkspace(session: session, account: account)
     }
 
     private func openLink(_ url: URL) {
@@ -501,78 +501,6 @@ private struct SignInScreen: View {
         defer { busy = false }
         do { try await session.signIn(url) }
         catch { self.error = error.localizedDescription }
-    }
-}
-
-private struct CollectorTabs: View {
-    @StateObject private var catalogResults = CatalogResults()
-    @ObservedObject var session: AppSession
-    let account: Account?
-    @StateObject private var capture: CaptureDraftStore
-    @State private var selectedTab = PreviewLaunch.tab
-    @State private var reviewID: String?
-    @State private var openedItemID: String?
-    @State private var search = ""
-    @State private var showAccount = false
-    @State private var checklistLabel: String?
-    @State private var catalogRevision = 0
-
-    private var demo: Bool { account == nil }
-
-    init(session: AppSession, account: Account?) {
-        self.session = session
-        self.account = account
-        _capture = StateObject(wrappedValue: CaptureDraftStore(account: account))
-    }
-
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            CatalogScreen(results: catalogResults, api: session.api, demo: demo, capture: capture, query: $search,
-                          openedItemID: $openedItemID, openCapture: openCapture,
-                          openAccount: { showAccount = true }, itemCreated: openNewItem, revision: catalogRevision)
-                .tabItem { Label(CollectorTab.collection.title, systemImage: CollectorTab.collection.icon) }
-                .tag(CollectorTab.collection)
-            CaptureScreen(api: session.api, account: account, store: capture, reviewID: $reviewID,
-                          onUpload: nil, onSave: openNewItem, checklistLabel: checklistLabel)
-                .tabItem { Label(CollectorTab.capture.title, systemImage: CollectorTab.capture.icon) }
-                .tag(CollectorTab.capture)
-            ThemesScreen(api: session.api, demo: demo, captureForSlot: captureForSlot, findForSlot: findForSlot)
-                .tabItem { Label(CollectorTab.checklists.title, systemImage: CollectorTab.checklists.icon) }
-                .tag(CollectorTab.checklists)
-        }
-        .sheet(isPresented: $showAccount) {
-            NavigationStack {
-                AccountScreen(session: session, account: account, showClose: true)
-            }
-        }
-        .onChange(of: selectedTab) { _, new in
-            if new == .collection { catalogRevision += 1 }
-        }
-    }
-
-    private func openCapture(_ batchID: String?) {
-        checklistLabel = nil
-        reviewID = batchID
-        selectedTab = .capture
-    }
-
-    private func captureForSlot(_ label: String) {
-        openCapture(nil)
-        checklistLabel = label
-    }
-
-    private func findForSlot(_ term: String) {
-        search = term
-        openedItemID = nil
-        selectedTab = .collection
-    }
-
-    private func openNewItem(_ id: String) {
-        checklistLabel = nil
-        search = ""
-        openedItemID = id
-        catalogRevision += 1
-        selectedTab = .collection
     }
 }
 

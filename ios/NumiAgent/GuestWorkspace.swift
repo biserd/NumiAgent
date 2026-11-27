@@ -5,6 +5,9 @@ import SwiftUI
 import UIKit
 
 struct GuestWelcome: View {
+    let api: NumiAPI
+    @State private var samplePresented = false
+    @State private var scanAfterSample = false
     let start: () -> Void
     let signIn: () -> Void
     let restore: () -> Void
@@ -17,15 +20,23 @@ struct GuestWelcome: View {
                     Spacer()
                     Label("Private", systemImage: "lock").font(.subheadline.weight(.semibold))
                 }
-                Image("DemoCoin").resizable().scaledToFit().frame(maxWidth: .infinity).frame(height: 200)
-                    .background(CollectorDesign.photoPlate, in: .rect(cornerRadius: 14))
-                    .accessibilityLabel("Portrait on a Roman bronze coin")
-                Text("Roman bronze").font(.caption.weight(.semibold)).foregroundStyle(CollectorDesign.muted)
-                Text("A collection of your own").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                Text("Photograph a coin or banknote. Keep the photos and record on this device.")
+                Text("See what your coin can tell you").font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
+                Text("Scan a coin or banknote. Its photos stay on this device until you choose to search online.")
                     .foregroundStyle(CollectorDesign.muted)
-                Button("Sign in with email", systemImage: "person.crop.circle", action: signIn).buttonStyle(.bordered)
-                Button("Restore backup", systemImage: "arrow.down.doc", action: restore).buttonStyle(.bordered)
+                Button { samplePresented = true } label: {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Image("DemoOctavian").resizable().scaledToFit().frame(maxWidth: .infinity).frame(height: 190)
+                            .background(CollectorDesign.photoPlate, in: .rect(cornerRadius: 14))
+                            .accessibilityHidden(true)
+                        Label("Explore a sample coin", systemImage: "magnifyingglass")
+                            .font(.headline).frame(minHeight: 44)
+                    }
+                }.buttonStyle(.plain).foregroundStyle(CollectorDesign.tint)
+                    .accessibilityIdentifier("welcome-sample")
+                Menu("Sign in or restore", systemImage: "person.crop.circle") {
+                    Button("Sign in with email", systemImage: "envelope", action: signIn)
+                    Button("Restore backup", systemImage: "arrow.down.doc", action: restore)
+                }.frame(minHeight: 44)
             }.frame(maxWidth: 500, alignment: .leading).padding(20)
             .frame(maxWidth: .infinity)
         }.safeAreaInset(edge: .bottom) {
@@ -35,6 +46,26 @@ struct GuestWelcome: View {
             }.buttonStyle(.borderedProminent).frame(maxWidth: 500).padding()
                 .frame(maxWidth: .infinity).background(CollectorDesign.background)
         }.background(CollectorDesign.background)
+        .sheet(isPresented: $samplePresented, onDismiss: {
+            if scanAfterSample { scanAfterSample = false; start() }
+        }) {
+            if let sample = DemoCollection.specimens.first {
+                NavigationStack {
+                    SpecimenScreen(item: sample, api: api, demo: true, onChange: {})
+                        .navigationTitle("Sample specimen")
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) { Button("Done") { samplePresented = false } }
+                        }
+                        .safeAreaInset(edge: .bottom) {
+                            Button("Scan my own piece", systemImage: "camera") {
+                                scanAfterSample = true
+                                samplePresented = false
+                            }.buttonStyle(.borderedProminent).controlSize(.large)
+                                .frame(maxWidth: .infinity).padding(8).background(.bar)
+                        }
+                }
+            }
+        }
     }
 }
 
@@ -65,6 +96,7 @@ struct GuestWorkspace: View {
     }
     @State private var area = Area.collection
     @State private var selected: UUID?
+    @State private var firstCameraID: UUID?
     @State private var editor: GuestPiece?
     @State private var revealedPiece: UUID?
     @State private var deleteTarget: GuestPiece?
@@ -111,7 +143,11 @@ struct GuestWorkspace: View {
         .task {
             if scanOnOpen {
                 scanOnOpen = false
-                start()
+                act {
+                    let id = try store.draft()
+                    if UIImagePickerController.isSourceTypeAvailable(.camera) { firstCameraID = id }
+                    editor = store.piece(id)
+                }
             }
         }
         .onChange(of: imports) { _, picks in
@@ -133,10 +169,10 @@ struct GuestWorkspace: View {
                 if failures > 0 { store.error = "\(failures) photos could not be imported. The others are saved as drafts." }
             }
         }
-        .sheet(item: $editor) { item in
+        .sheet(item: $editor, onDismiss: { firstCameraID = nil }) { item in
             NavigationStack {
-                GuestPieceScreen(store: store, api: api, id: item.id, newPiece: {
-                    start()
+                GuestPieceScreen(store: store, api: api, id: item.id, openCameraOnArrival: firstCameraID == item.id, newPiece: {
+                    startNew()
                 }) { editor = nil }
                 .id(item.id)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { editor = nil } } }
@@ -164,13 +200,8 @@ struct GuestWorkspace: View {
                 .listRowInsets(EdgeInsets()).listRowBackground(CollectorDesign.background)
             Section {
                 Label("On this device", systemImage: "lock").font(.caption.weight(.semibold)).foregroundStyle(CollectorDesign.tint)
-                if let active = store.active, !active.drafts.isEmpty {
-                    Button("Resume batch", systemImage: "camera.viewfinder") {
-                        if let draft = active.activeDraft ?? active.drafts.first?.id { open(draft) }
-                    }
-                    ForEach(active.drafts) { piece in
-                        Button(piece.title.isEmpty ? "Unfinished piece \(draftNumber(piece.id))" : piece.title) { open(piece.id) }
-                    }
+                if sidebar, let draft = resumableDraft {
+                    Button("Continue scanning", systemImage: "camera.viewfinder") { open(draft) }
                 }
                 if importing { ProgressView("Importing photos") }
             }
@@ -227,22 +258,18 @@ struct GuestWorkspace: View {
                             }
                         }
                     }
-                    Button("Back up collection", systemImage: "lock") { menu = .backup }
-                    Button("Restore backup", systemImage: "arrow.down.doc") { menu = .restore }
-                    Button("Export spreadsheet", systemImage: "tablecells") { menu = .csv }
-                    Section("Settings") {
-                        Button("Privacy & browser access", systemImage: "hand.raised") { showPrivacy = true }
-                        Button(accountTitle ?? "Sign in with email", systemImage: "person.crop.circle", action: openAccount)
-                    }
+
                 }
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu("Add item", systemImage: "plus") {
-                    Button("Scan a piece", systemImage: "camera") { start() }
+                    if resumableDraft != nil {
+                        Button("Start a new piece", systemImage: "plus") { startNew() }
+                    }
                     PhotosPicker(selection: $imports, maxSelectionCount: 20, selectionBehavior: .ordered, matching: .images) {
                         Label("Import a photo batch", systemImage: "photo.on.rectangle")
                     }
-                    Button("Enter details manually", systemImage: "square.and.pencil") { start() }
+                    Button("Enter details manually", systemImage: "square.and.pencil") { startNew() }
                 }.disabled(importing)
             }
         }
@@ -278,9 +305,14 @@ struct GuestWorkspace: View {
         GuestPieceScreen(store: store, api: api, id: id, newPiece: nil) { selected = nil }.id(id)
     }
 
+    private var resumableDraft: UUID? { store.active?.activeDraft ?? store.active?.drafts.first?.id }
+
     private var scanAction: some View {
-        Button(action: start) {
-            Label("Scan a piece", systemImage: "camera").font(.headline).frame(maxWidth: .infinity, minHeight: 44)
+        Button {
+            if let draft = resumableDraft { open(draft) } else { start() }
+        } label: {
+            Label(resumableDraft == nil ? "Scan a piece" : "Continue scanning", systemImage: "camera")
+                .font(.headline).frame(maxWidth: .infinity, minHeight: 44)
         }.buttonStyle(.borderedProminent).foregroundStyle(CollectorDesign.onTint).keyboardShortcut("n", modifiers: .command)
             .accessibilityIdentifier("cabinet-scan")
     }
@@ -376,6 +408,7 @@ struct GuestWorkspace: View {
         return (store.active?.pieces.count ?? 0) + index + 1
     }
 
+    private func startNew() { act { editor = store.piece(try store.draft(resumeActive: false)) } }
     private func start() { act { let id = try store.draft(); editor = store.piece(id) } }
     private func open(_ id: UUID) { act { try store.resume(id); editor = store.piece(id) } }
     private func act(_ action: () throws -> Void) {
@@ -482,6 +515,8 @@ private struct GuestPieceScreen: View {
     @ObservedObject var store: GuestStore
     let api: NumiAPI
     let id: UUID
+    var openCameraOnArrival = false
+    @State private var startedCamera = false
     let newPiece: (() -> Void)?
     let done: () -> Void
     @State private var picking: [PhotosPickerItem] = []
@@ -574,6 +609,12 @@ private struct GuestPieceScreen: View {
                             editingRecord = false
                         }.padding().background(CollectorDesign.surface)
                     }
+                }
+                .task {
+                    guard openCameraOnArrival, !startedCamera, piece.photos.isEmpty else { return }
+                    startedCamera = true
+                    if AVCaptureDevice.authorizationStatus(for: .video) != .denied &&
+                        AVCaptureDevice.authorizationStatus(for: .video) != .restricted { take(.front) }
                 }
                 .task(id: photoVersion(piece)) { await recognize(piece) }
             }

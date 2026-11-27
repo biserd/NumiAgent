@@ -85,7 +85,7 @@ struct GuestFiles: View {
     private var backup: some View {
         Section {
             Text("An encrypted backup includes your saved pieces, private fields, photos, and unfinished drafts.")
-            Text("Save the file outside this iPhone, for example in iCloud Drive or on your Mac. Keep the recovery key separately. Without the key, you can’t restore the file.")
+            Text("Save the file outside this device, for example in iCloud Drive or on your Mac. Keep the recovery key separately. Without the key, you can’t restore the file.")
                 .foregroundStyle(.secondary)
             if backupKey.isEmpty {
                 Button("Create encrypted backup") { Task { await prepareBackup() } }
@@ -108,7 +108,7 @@ struct GuestFiles: View {
             if let preview {
                 let contents = preview.snapshot.collection
                 Text("\(contents.pieces.count) saved pieces, \(contents.drafts.count) drafts, \(contents.photoIDs.count) photos")
-                if store.active != nil { Text("The backup opens as a separate collection on this iPhone.") }
+                if store.active != nil { Text("The backup opens as a separate collection on this device.") }
                 Button("Restore collection") {
                     do {
                         try store.restore(preview)

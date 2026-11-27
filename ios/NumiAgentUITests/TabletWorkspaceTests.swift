@@ -2,6 +2,38 @@ import XCTest
 
 final class TabletWorkspaceTests: XCTestCase {
     @MainActor
+    func testDeviceRecordSurvivesNarrowToExpandedLayout() async throws {
+        continueAfterFailure = false
+        let device = XCUIDevice.shared
+        let previousAppearance = device.appearance
+        defer { device.orientation = .portrait; device.appearance = previousAppearance }
+        device.orientation = .portrait
+        device.appearance = .dark
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
+                               "--test-resizable-cabinet", "--test-dark-appearance", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        device.appearance = .dark
+        let card = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        if !card.isHittable { app.swipeUp() }
+        card.tap()
+        let sales = app.buttons["guest-comparable-sales"].firstMatch
+        XCTAssertTrue(sales.waitForExistence(timeout: 8))
+        capture("Cabinet dark narrow iPad at accessibility size")
+        device.orientation = .landscapeLeft
+        let window = app.windows.firstMatch
+        for _ in 0..<30 {
+            if window.frame.width > window.frame.height { break }
+            try await Task.sleep(for: .milliseconds(300))
+        }
+        XCTAssertGreaterThan(window.frame.width, window.frame.height)
+        XCTAssertTrue(sales.exists)
+        XCTAssertTrue(app.staticTexts["United States quarter"].firstMatch.exists)
+        capture("Cabinet dark expanded iPad at accessibility size")
+    }
+
+    @MainActor
     func testDeviceOnlyQuarterHasComparableSales() {
         let app = XCUIApplication()
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -10,11 +42,16 @@ final class TabletWorkspaceTests: XCTestCase {
         app.launch()
         let quarter = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "gallery-piece-")).firstMatch
         XCTAssertTrue(quarter.waitForExistence(timeout: 15))
-        let gallery = XCTAttachment(screenshot: app.screenshot())
+        let gallery = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         gallery.name = "Device collection gallery on iPad"
         gallery.lifetime = .keepAlways
         add(gallery)
         quarter.tap()
+        XCTAssertFalse(app.buttons["guest-save-record"].exists)
+        let inspector = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        inspector.name = "Cabinet iPad specimen inspection"
+        inspector.lifetime = .keepAlways
+        add(inspector)
         let sales = app.buttons["guest-comparable-sales"].firstMatch
         XCTAssertTrue(sales.waitForExistence(timeout: 10))
         XCTAssertTrue(sales.isHittable)
@@ -114,6 +151,30 @@ final class TabletWorkspaceTests: XCTestCase {
 
 final class PhoneSignInAndReviewTests: XCTestCase {
     @MainActor
+    func testPreviewScreensRenderBeforeCapture() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        for screen in ["sign-in", "collection", "capture", "valuation", "checklists"] {
+            app.launchArguments = ["--preview-" + screen]
+            app.launch()
+            let ready: XCUIElement
+            switch screen {
+            case "sign-in": ready = app.buttons["Send sign-in link"].firstMatch
+            case "collection": ready = app.buttons["specimen-demo-1"].firstMatch
+            case "capture": ready = app.buttons["Preview identification"].firstMatch
+            case "valuation": ready = app.staticTexts["Illustrative prices"].firstMatch
+            default: ready = app.navigationBars["Late Republican denarii"].firstMatch
+            }
+            XCTAssertTrue(ready.waitForExistence(timeout: 20), "Missing rendered content on " + screen)
+            let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            shot.name = "preview-" + screen
+            shot.lifetime = .keepAlways
+            add(shot)
+            app.terminate()
+        }
+    }
+
+    @MainActor
     func testPhotoDraftAcceptsAnotherViewBeforeIdentification() {
         let app = XCUIApplication()
         app.launchArguments = ["--preview-photo-review"]
@@ -185,6 +246,37 @@ final class PhoneSignInAndReviewTests: XCTestCase {
 
 final class GuestV1Tests: XCTestCase {
     @MainActor
+    func testCabinetScanSettingsAndInspection() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture"]
+        app.launch()
+        let scan = app.buttons["cabinet-scan"].firstMatch
+        XCTAssertTrue(scan.waitForExistence(timeout: 15))
+        scan.tap()
+        XCTAssertTrue(app.buttons["Import photos"].firstMatch.waitForExistence(timeout: 10))
+        app.buttons["Close"].firstMatch.tap()
+        let settings = app.tabBars.buttons["Settings"]
+        settings.tap()
+        XCTAssertTrue(app.buttons["Back up collection"].firstMatch.waitForExistence(timeout: 5))
+        app.tabBars.buttons["Collection"].tap()
+        let card = galleryCard("United States quarter", in: app)
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        card.tap()
+        let sales = app.buttons["guest-comparable-sales"]
+        XCTAssertTrue(sales.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["guest-save-record"].exists)
+        recordScreenshot("Cabinet iPhone specimen inspection", app)
+        let edit = app.buttons["cabinet-edit-record"]
+        reveal(edit, in: app)
+        edit.tap()
+        XCTAssertTrue(app.textFields["guest-field-year"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["guest-field-year"].value as? String, "1991")
+        app.buttons["Done editing"].firstMatch.tap()
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSwipeGalleryCardCancelsThenDeletesOnlyThatPiece() {
         continueAfterFailure = false
         let previousAppearance = XCUIDevice.shared.appearance
@@ -232,7 +324,7 @@ final class GuestV1Tests: XCTestCase {
         defer { XCUIDevice.shared.appearance = previousAppearance }
         let app = XCUIApplication()
         app.launchArguments = ["--guest-test-" + UUID().uuidString, "--guest-sales-fixture",
-                               "-collector-list-view", "YES",
+                               "-collector-list-view", "YES", "--test-dark-appearance",
                                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityM"]
         app.launch()
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "list-piece-")).firstMatch
@@ -252,7 +344,7 @@ final class GuestV1Tests: XCTestCase {
 
     @MainActor
     private func recordScreenshot(_ name: String, _ app: XCUIApplication) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
@@ -277,9 +369,11 @@ final class GuestV1Tests: XCTestCase {
         let share = app.buttons["Share card"].firstMatch
         XCTAssertTrue(share.isHittable)
         share.tap()
-        XCTAssertTrue(app.otherElements["ActivityListView"].firstMatch.waitForExistence(timeout: 8)
-                      || app.buttons["Copy"].firstMatch.exists || app.buttons["Save Image"].firstMatch.exists,
-                      app.debugDescription)
+        // The system share extension publishes its actions asynchronously as collection cells.
+        let activities = app.collectionViews["activityCollectionView"].firstMatch
+        XCTAssertTrue(activities.waitForExistence(timeout: 45), app.debugDescription)
+        let copy = activities.cells.matching(NSPredicate(format: "label == %@", "Copy")).firstMatch
+        XCTAssertTrue(copy.waitForExistence(timeout: 15), "The shared card must offer a real image action.")
     }
 
     @MainActor
@@ -341,6 +435,7 @@ final class GuestV1Tests: XCTestCase {
         app.launch()
         let start = app.buttons["Start scanning"]
         XCTAssertTrue(start.waitForExistence(timeout: 15))
+        recordScreenshot("Cabinet private welcome", app)
         start.tap()
         let front = app.buttons["Add sample photo"]
         XCTAssertTrue(front.waitForExistence(timeout: 10))

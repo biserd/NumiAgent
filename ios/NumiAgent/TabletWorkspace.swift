@@ -18,7 +18,7 @@ struct WorkspaceListSelection<Item: Identifiable> {
     }
 }
 
-struct TabletWorkspace: View {
+struct CollectorWorkspace: View {
     private enum SettingsPage: String {
         case account, exports
     }
@@ -28,6 +28,9 @@ struct TabletWorkspace: View {
     @StateObject private var capture: CaptureDraftStore
     @StateObject private var catalogResults = CatalogResults()
     @AppStorage("collector-list-view") private var listView = false
+    @State private var prepared = false
+    @Environment(\.horizontalSizeClass) private var widthClass
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var section: CollectorTab? = PreviewLaunch.tab
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var compactColumn: NavigationSplitViewColumn = .content
@@ -49,19 +52,54 @@ struct TabletWorkspace: View {
         self.session = session
         self.account = account
         _capture = StateObject(wrappedValue: CaptureDraftStore(account: account))
-        if account == nil {
-            switch PreviewLaunch.screen {
-            case .collection, .valuation:
-                _specimen = State(initialValue: DemoCollection.specimens.first)
-            case .checklists:
-                _checklist = State(initialValue: DemoCollection.theme)
-            default:
-                break
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let expanded = geometry.size.width >= 680 && widthClass != .compact && !textSize.isAccessibilitySize
+            Group {
+                if expanded { split }
+                else { tabs }
+            }.onAppear {
+                guard !prepared else { return }
+                prepared = true
+                if expanded && demo {
+                    switch PreviewLaunch.screen {
+                    case .collection, .valuation: specimen = DemoCollection.specimens.first
+                    case .checklists: checklist = DemoCollection.theme
+                    default: break
+                    }
+                }
             }
         }
     }
 
-    var body: some View {
+    private var compactSelection: Binding<String?> {
+        Binding(get: { specimen?.id ?? openedItemID }, set: { id in
+            specimen = nil
+            openedItemID = id
+        })
+    }
+
+    private var tabs: some View {
+        TabView(selection: Binding(get: { activeSection }, set: { section = $0 })) {
+            CatalogScreen(results: catalogResults, api: session.api, demo: demo, capture: capture, query: $search,
+                          openedItemID: compactSelection, openCapture: openCapture,
+                          openAccount: { section = .settings }, itemCreated: openNewItem, revision: catalogRevision)
+                .tabItem { Label("Collection", systemImage: CollectorTab.collection.icon) }.tag(CollectorTab.collection)
+            CaptureScreen(api: session.api, account: account, store: capture, reviewID: $importID,
+                          onUpload: nil, onSave: openNewItem, checklistLabel: checklistLabel)
+                .tabItem { Label("Scan", systemImage: CollectorTab.capture.icon) }.tag(CollectorTab.capture)
+            ThemesScreen(api: session.api, demo: demo, compactSelection: $checklist, captureForSlot: captureForSlot, findForSlot: findForSlot)
+                .tabItem { Label("Checklists", systemImage: CollectorTab.checklists.icon) }.tag(CollectorTab.checklists)
+            AccountScreen(session: session, account: account)
+                .tabItem { Label("Settings", systemImage: "gearshape") }.tag(CollectorTab.settings)
+        }.onChange(of: section) { _, area in
+            if area == .collection { catalogRevision += 1 }
+        }
+    }
+
+    private var split: some View {
         NavigationSplitView(columnVisibility: $columns, preferredCompactColumn: $compactColumn) {
             List(CollectorTab.allCases, selection: $section) { area in
                 NavigationLink(value: area) {

@@ -369,9 +369,11 @@ final class GuestV1Tests: XCTestCase {
         let share = app.buttons["Share card"].firstMatch
         XCTAssertTrue(share.isHittable)
         share.tap()
-        XCTAssertTrue(app.otherElements["ActivityListView"].firstMatch.waitForExistence(timeout: 8)
-                      || app.buttons["Copy"].firstMatch.exists || app.buttons["Save Image"].firstMatch.exists,
-                      app.debugDescription)
+        // The system share extension publishes its actions asynchronously as collection cells.
+        let activities = app.collectionViews["activityCollectionView"].firstMatch
+        XCTAssertTrue(activities.waitForExistence(timeout: 45), app.debugDescription)
+        let copy = activities.cells.matching(NSPredicate(format: "label == %@", "Copy")).firstMatch
+        XCTAssertTrue(copy.waitForExistence(timeout: 15), "The shared card must offer a real image action.")
     }
 
     @MainActor
